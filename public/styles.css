@@ -1,0 +1,393 @@
+:root {
+  --bg: #f4efe8;
+  --bg-accent: radial-gradient(circle at 5% 10%, #f5c97d 0%, transparent 25%),
+    radial-gradient(circle at 85% 15%, #7eb7f0 0%, transparent 22%),
+    linear-gradient(135deg, #f4efe8, #efe3d0 65%, #ead8ba);
+  --surface: rgba(255, 255, 255, 0.78);
+  --surface-strong: #fffaf2;
+  --border: #bfae96;
+  --text: #2a241c;
+  --muted: #675b4b;
+  --primary: #0f6a52;
+  --primary-strong: #0a503e;
+  --warning: #9f4300;
+  --shadow: 0 16px 34px rgba(52, 37, 18, 0.14);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Space Grotesk", sans-serif;
+  color: var(--text);
+  background: var(--bg-accent);
+}
+
+.app-shell {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 18px 32px;
+}
+
+.topbar {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(8px);
+}
+
+.topbar-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+}
+
+.controls-row {
+  border-top: 1px solid rgba(191, 174, 150, 0.8);
+  padding-top: 12px;
+}
+
+.brand-wrap h1 {
+  margin: 0;
+  font-size: clamp(1.2rem, 2.2vw, 1.85rem);
+  letter-spacing: 0.01em;
+}
+
+.account-wrap {
+  position: relative;
+}
+
+.account-toggle {
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.account-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: min(380px, 82vw);
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  z-index: 3;
+}
+
+.account-panel.hidden {
+  display: none;
+}
+
+.account-panel label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.account-panel input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.roles-block p {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.roles-block ul {
+  margin: 0;
+  padding-left: 16px;
+  max-height: 180px;
+  overflow: auto;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.82rem;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.dictionary-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-strong);
+  font-size: 0.9rem;
+}
+
+.dictionary-select-wrap select {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  min-width: 280px;
+  font-family: "IBM Plex Mono", monospace;
+  background: #fff;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.btn,
+.chip {
+  border-radius: 9px;
+  padding: 9px 13px;
+  border: 1px solid transparent;
+  font-weight: 600;
+  font-family: "Space Grotesk", sans-serif;
+  cursor: pointer;
+}
+
+.btn:disabled,
+.chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn.primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.btn.btn-save {
+  background: #1f6f55;
+  color: #ffffff;
+}
+
+.btn.btn-save:not(:disabled):hover {
+  background: #14523f;
+}
+
+.btn.btn-discard {
+  background: #f3e6d8;
+  border-color: #d7bda0;
+  color: #63492f;
+}
+
+.btn.btn-discard:not(:disabled):hover {
+  background: #ead8c3;
+}
+
+.btn.btn-publish {
+  background: #dde7f2;
+  border-color: #afc2d6;
+  color: #2d4f71;
+}
+
+.btn.btn-publish:not(:disabled):hover {
+  background: #cfddef;
+}
+
+.content {
+  display: grid;
+  gap: 12px;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  background: #fff7ec;
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 1.06rem;
+}
+
+#tableMeta {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.table-wrap {
+  overflow: auto;
+  max-height: 70vh;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.87rem;
+  background: #fffdf9;
+  border: 1px solid #d6c1a6;
+}
+
+th,
+td {
+  border-bottom: 1px solid #e3d3bc;
+  padding: 9px 10px;
+  text-align: left;
+  white-space: nowrap;
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background: #f5ebdd;
+  z-index: 1;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+tbody tr:hover {
+  background: #fff4e4;
+}
+
+.row-edit-btn {
+  border: 1px solid #afc2d6;
+  border-radius: 8px;
+  background: #e9f0f7;
+  color: #214a6e;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.row-edit-btn:hover {
+  background: #d8e5f2;
+}
+
+.empty-state,
+.error-state {
+  padding: 24px;
+  font-size: 0.95rem;
+}
+
+.error-state {
+  color: #8d1600;
+}
+
+.edit-dialog {
+  width: min(1400px, 96vw);
+  height: min(92vh, 980px);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0;
+}
+
+.edit-form {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.edit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: #fff5e9;
+}
+
+.edit-header h3 {
+  margin: 0;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.edit-fields {
+  overflow: auto;
+  padding: 14px 16px 24px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.edit-field {
+  display: grid;
+  gap: 6px;
+}
+
+.edit-field label {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.edit-field input,
+.edit-field textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.85rem;
+}
+
+.edit-field textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+@media (max-width: 900px) {
+  .controls-row,
+  .topbar-row {
+    flex-wrap: wrap;
+  }
+
+  .actions,
+  .dictionary-select-wrap,
+  .account-wrap {
+    width: 100%;
+  }
+
+  .dictionary-select-wrap {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .dictionary-select-wrap select {
+    min-width: 0;
+    width: 62%;
+  }
+
+  .edit-fields {
+    grid-template-columns: 1fr;
+  }
+}

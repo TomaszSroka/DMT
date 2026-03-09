@@ -1,0 +1,18 @@
+{
+  "name": "dmt",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Web app for browsing and editing Snowflake dictionaries",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "node --watch src/app.js",
+    "local:start": "powershell -ExecutionPolicy Bypass -File scripts/run-local.ps1",
+    "local:restart": "powershell -ExecutionPolicy Bypass -File scripts/run-local.ps1 -Restart"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "snowflake-sdk": "^1.13.1"
+  }
+}

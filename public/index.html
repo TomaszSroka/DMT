@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DMT Dictionary Console</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="topbar-row">
+          <div class="brand-wrap">
+            <h1>Dictionary Management Tool (DMT)</h1>
+          </div>
+
+          <div class="account-wrap">
+            <button id="accountToggle" class="account-toggle" aria-haspopup="true" aria-expanded="false">
+              User Account
+            </button>
+
+            <div id="accountPanel" class="account-panel hidden">
+              <label for="userNameField">User</label>
+              <input id="userNameField" type="text" readonly />
+
+              <div class="roles-block">
+                <p>Roles</p>
+                <ul id="rolesList"></ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="topbar-row controls-row">
+          <label class="dictionary-select-wrap" for="dictionarySelect">
+            <span>Dictionary Name:</span>
+            <select id="dictionarySelect" aria-label="Dictionary selector">
+              <option value="">Select dictionary</option>
+            </select>
+          </label>
+
+          <div class="actions">
+            <button id="saveButton" class="btn btn-save" disabled>Save</button>
+            <button id="discardButton" class="btn btn-discard" disabled>Discard</button>
+            <button id="publishButton" class="btn btn-publish" disabled>Publish</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <section class="card">
+          <div class="card-header">
+            <h2 id="tableTitle">Loading...</h2>
+            <span id="tableMeta"></span>
+          </div>
+          <div id="tableContainer" class="table-wrap"></div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="editDialog" class="edit-dialog">
+      <form id="editForm" class="edit-form" method="dialog">
+        <div class="edit-header">
+          <h3>Edit Record</h3>
+          <div class="edit-actions">
+            <button id="rowSaveButton" type="button" class="btn btn-save">Save</button>
+            <button id="rowCancelButton" type="button" class="btn btn-discard">Cancel</button>
+          </div>
+        </div>
+        <div id="editFields" class="edit-fields"></div>
+      </form>
+    </dialog>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
