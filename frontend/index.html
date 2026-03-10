@@ -1,15 +1,9 @@
 <!doctype html>
-<html lang="pl">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title></title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -41,6 +35,11 @@
           <label class="dictionary-select-wrap" for="dictionarySelect">
             <span id="dictionaryLabel"></span>
             <select id="dictionarySelect"></select>
+          </label>
+
+          <label class="dictionary-select-wrap version-select-wrap" for="dictionaryVersionSelect">
+            <span id="dictionaryVersionLabel"></span>
+            <select id="dictionaryVersionSelect" disabled></select>
           </label>
 
           <div class="actions">
@@ -79,6 +78,54 @@
           </div>
         </div>
         <div id="editFields" class="edit-fields"></div>
+      </form>
+    </dialog>
+
+    <dialog id="discardDialog" class="confirm-dialog">
+      <form id="discardForm" class="confirm-form" method="dialog">
+        <div class="edit-header">
+          <h3 id="discardDialogTitle"></h3>
+          <div class="edit-actions">
+            <button id="discardStayButton" type="button" class="btn btn-discard"></button>
+            <button id="discardConfirmButton" type="button" class="btn btn-save"></button>
+          </div>
+        </div>
+        <div class="confirm-body">
+          <p id="discardDialogIntro"></p>
+          <ul id="discardChangesList" class="confirm-changes"></ul>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="saveDialog" class="confirm-dialog">
+      <form id="saveForm" class="confirm-form" method="dialog">
+        <div class="edit-header">
+          <h3 id="saveDialogTitle"></h3>
+          <div class="edit-actions">
+            <button id="saveStayButton" type="button" class="btn btn-discard"></button>
+            <button id="saveConfirmButton" type="button" class="btn btn-save"></button>
+          </div>
+        </div>
+        <div class="confirm-body">
+          <p id="saveDialogIntro"></p>
+          <ul id="saveChangesList" class="confirm-changes"></ul>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="discardAllDialog" class="confirm-dialog">
+      <form id="discardAllForm" class="confirm-form" method="dialog">
+        <div class="edit-header">
+          <h3 id="discardAllDialogTitle"></h3>
+          <div class="edit-actions">
+            <button id="discardAllStayButton" type="button" class="btn btn-discard"></button>
+            <button id="discardAllConfirmButton" type="button" class="btn btn-save"></button>
+          </div>
+        </div>
+        <div class="confirm-body">
+          <p id="discardAllDialogIntro"></p>
+          <ul id="discardAllChangesList" class="confirm-changes"></ul>
+        </div>
       </form>
     </dialog>
 

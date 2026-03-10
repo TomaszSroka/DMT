@@ -33,5 +33,5 @@ module.exports = {
     clientSessionKeepAlive: String(process.env.SNOWFLAKE_CLIENT_SESSION_KEEP_ALIVE || "false").toLowerCase() === "true",
     queryTag: process.env.SNOWFLAKE_QUERY_TAG || ""
   },
-  staticUser: process.env.SNOWFLAKE_USER
+  staticUser: process.env.APP_STATIC_USER || "SUPTOSR@flsmidth.com"
 };

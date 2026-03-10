@@ -1,4 +1,4 @@
-const FRONTEND_CONFIG = window.FRONTEND_CONFIG || {};
+﻿const FRONTEND_CONFIG = window.FRONTEND_CONFIG || {};
 const UI_TEXT = FRONTEND_CONFIG.text || {};
 const UI_DEFAULTS = FRONTEND_CONFIG.defaults || {};
 const UI_TYPOGRAPHY = FRONTEND_CONFIG.typography || {};
@@ -20,16 +20,42 @@ const userNameLabel = document.getElementById("userNameLabel");
 const rolesLabel = document.getElementById("rolesLabel");
 const rolesList = document.getElementById("rolesList");
 const dictionaryLabel = document.getElementById("dictionaryLabel");
+const dictionaryVersionLabel = document.getElementById("dictionaryVersionLabel");
+const dictionaryVersionSelect = document.getElementById("dictionaryVersionSelect");
 const appTitle = document.getElementById("appTitle");
 const editDialog = document.getElementById("editDialog");
 const editFields = document.getElementById("editFields");
 const editDialogTitle = document.getElementById("editDialogTitle");
 const rowSaveButton = document.getElementById("rowSaveButton");
 const rowCancelButton = document.getElementById("rowCancelButton");
+const discardDialog = document.getElementById("discardDialog");
+const discardDialogTitle = document.getElementById("discardDialogTitle");
+const discardDialogIntro = document.getElementById("discardDialogIntro");
+const discardChangesList = document.getElementById("discardChangesList");
+const discardStayButton = document.getElementById("discardStayButton");
+const discardConfirmButton = document.getElementById("discardConfirmButton");
+const saveDialog = document.getElementById("saveDialog");
+const saveDialogTitle = document.getElementById("saveDialogTitle");
+const saveDialogIntro = document.getElementById("saveDialogIntro");
+const saveChangesList = document.getElementById("saveChangesList");
+const saveStayButton = document.getElementById("saveStayButton");
+const saveConfirmButton = document.getElementById("saveConfirmButton");
+const discardAllDialog = document.getElementById("discardAllDialog");
+const discardAllDialogTitle = document.getElementById("discardAllDialogTitle");
+const discardAllDialogIntro = document.getElementById("discardAllDialogIntro");
+const discardAllChangesList = document.getElementById("discardAllChangesList");
+const discardAllStayButton = document.getElementById("discardAllStayButton");
+const discardAllConfirmButton = document.getElementById("discardAllConfirmButton");
 
 const MAX_CELL_CHARS = Number(UI_DEFAULTS.maxCellChars) || 120;
 const PAGE_SIZE = Number(UI_DEFAULTS.pageSize) || 100;
 const LONG_TEXT_THRESHOLD = Number(UI_DEFAULTS.longTextThreshold) || 90;
+const USER_DETAILS_DROPDOWN_THRESHOLD = Number(UI_DEFAULTS.userDetailsDropdownThreshold) || 15;
+const HIDDEN_COLUMNS = new Set(
+  Array.isArray(UI_DEFAULTS.hiddenColumns)
+    ? UI_DEFAULTS.hiddenColumns.map((column) => String(column || "").trim().toUpperCase())
+    : ["DICTIONARY_INSTANCE_KEY"]
+);
 
 let activeDictionary = "";
 let dictionaries = [];
@@ -43,30 +69,77 @@ let modalOriginalDraft = null;
 let currentPage = 1;
 let totalPages = 1;
 let totalRows = 0;
+let currentDictionaryCanUpdate = false;
+let dictionaryVersions = [];
+let selectedDictionaryVersionKey = "";
 
-function textValue(key, fallback) {
-  return UI_TEXT[key] || fallback;
+function textValue(key) {
+  return UI_TEXT[key] || `[${key}]`;
+}
+
+function applyTypographyAssets() {
+  if (Array.isArray(UI_TYPOGRAPHY.preconnectUrls)) {
+    UI_TYPOGRAPHY.preconnectUrls.forEach((url) => {
+      if (!url || document.head.querySelector(`link[rel="preconnect"][href="${url}"]`)) {
+        return;
+      }
+
+      const link = document.createElement("link");
+      link.rel = "preconnect";
+      link.href = url;
+      if (url.includes("gstatic")) {
+        link.crossOrigin = "";
+      }
+      document.head.appendChild(link);
+    });
+  }
+
+  if (UI_TYPOGRAPHY.stylesheetUrl) {
+    const existing = document.head.querySelector(`link[rel="stylesheet"][href="${UI_TYPOGRAPHY.stylesheetUrl}"]`);
+    if (!existing) {
+      const stylesheet = document.createElement("link");
+      stylesheet.rel = "stylesheet";
+      stylesheet.href = UI_TYPOGRAPHY.stylesheetUrl;
+      document.head.appendChild(stylesheet);
+    }
+  }
 }
 
 function applyStaticConfig() {
-  document.title = textValue("documentTitle", "DMT Dictionary Console");
-  appTitle.textContent = textValue("appTitle", "Dictionary Management Tool (DMT)");
-  accountToggle.textContent = textValue("accountButton", "User Account");
-  userNameLabel.textContent = textValue("userLabel", "User");
-  rolesLabel.textContent = textValue("rolesLabel", "Roles");
-  dictionaryLabel.textContent = textValue("dictionaryLabel", "Dictionary Name:");
-  dictionarySelect.setAttribute("aria-label", textValue("dictionarySelectorAriaLabel", "Dictionary selector"));
-  saveButton.textContent = textValue("save", "Save");
-  discardButton.textContent = textValue("discard", "Discard");
-  publishButton.textContent = textValue("publish", "Publish");
-  prevPageButton.textContent = textValue("previous", "Previous");
-  nextPageButton.textContent = textValue("next", "Next");
-  rowSaveButton.textContent = textValue("save", "Save");
-  rowCancelButton.textContent = textValue("cancel", "Cancel");
-  editDialogTitle.textContent = textValue("editRecordTitle", "Edit Record");
-  tableTitle.textContent = textValue("loadingShort", "Loading...");
-  tableMeta.textContent = textValue("rowsInitial", "Rows: 0");
-  pageInfo.textContent = textValue("pageInfoInitial", "Pages: 0 / 0");
+  applyTypographyAssets();
+  document.title = textValue("documentTitle");
+  appTitle.textContent = textValue("appTitle");
+  accountToggle.textContent = textValue("accountButton");
+  userNameLabel.textContent = textValue("userLabel");
+  rolesLabel.textContent = textValue("rolesLabel");
+  dictionaryLabel.textContent = textValue("dictionaryLabel");
+  dictionaryVersionLabel.textContent = textValue("dictionaryVersionLabel");
+  dictionarySelect.setAttribute("aria-label", textValue("dictionarySelectorAriaLabel"));
+  dictionaryVersionSelect.setAttribute("aria-label", textValue("dictionaryVersionSelectorAriaLabel"));
+  saveButton.textContent = textValue("save");
+  discardButton.textContent = textValue("discard");
+  publishButton.textContent = textValue("publish");
+  prevPageButton.textContent = textValue("previous");
+  nextPageButton.textContent = textValue("next");
+  rowSaveButton.textContent = textValue("save");
+  rowCancelButton.textContent = textValue("cancel");
+  discardDialogTitle.textContent = textValue("discardDialogTitle");
+  discardDialogIntro.textContent = textValue("discardDialogIntro");
+  discardStayButton.textContent = textValue("discardDialogKeepEditing");
+  discardConfirmButton.textContent = textValue("discardDialogConfirm");
+  saveDialogTitle.textContent = textValue("saveDialogTitle");
+  saveDialogIntro.textContent = textValue("saveDialogIntro");
+  saveStayButton.textContent = textValue("saveDialogBack");
+  saveConfirmButton.textContent = textValue("saveDialogConfirm");
+  discardAllDialogTitle.textContent = textValue("discardAllDialogTitle");
+  discardAllDialogIntro.textContent = textValue("discardAllDialogIntro");
+  discardAllStayButton.textContent = textValue("discardAllDialogBack");
+  discardAllConfirmButton.textContent = textValue("discardAllDialogConfirm");
+  editDialogTitle.textContent = textValue("editRecordTitle");
+  tableTitle.textContent = "";
+  tableMeta.textContent = textValue("rowsInitial");
+  pageInfo.textContent = textValue("pageInfoInitial");
+  resetDictionaryVersionSelect();
 
   if (UI_TYPOGRAPHY.primaryFont) {
     document.documentElement.style.setProperty("--font-primary", UI_TYPOGRAPHY.primaryFont);
@@ -77,14 +150,14 @@ function applyStaticConfig() {
 }
 
 function formatRowsMeta(visibleRowsCount, allRowsCount) {
-  return `${textValue("rowsLabel", "Rows")}: ${visibleRowsCount} / ${allRowsCount}`;
+  return `${textValue("rowsLabel")}: ${visibleRowsCount} / ${allRowsCount}`;
 }
 
 function formatPagesMeta(page, pages) {
-  return `${textValue("pageLabel", "Pages")}: ${page} / ${pages}`;
+  return `${textValue("pageLabel")}: ${page} / ${pages}`;
 }
 
-function setLoading(message = textValue("loadingData", "Loading data...")) {
+function setLoading(message = textValue("loadingData")) {
   tableContainer.innerHTML = `<div class="empty-state">${message}</div>`;
 }
 
@@ -92,10 +165,46 @@ function setError(message) {
   tableContainer.innerHTML = `<div class="error-state">${message}</div>`;
 }
 
+function resetDictionaryVersionSelect() {
+  dictionaryVersions = [];
+  selectedDictionaryVersionKey = "";
+  dictionaryVersionSelect.innerHTML = `<option value="">${escapeHtml(textValue("dictionaryVersionDisabledOption"))}</option>`;
+  dictionaryVersionSelect.disabled = true;
+}
+
+function setDictionaryVersionLoading() {
+  selectedDictionaryVersionKey = "";
+  dictionaryVersionSelect.innerHTML = `<option value="">${escapeHtml(textValue("dictionaryVersionLoadingOption"))}</option>`;
+  dictionaryVersionSelect.disabled = true;
+}
+
+function populateDictionaryVersions(versions) {
+  dictionaryVersions = Array.isArray(versions) ? versions : [];
+
+  if (dictionaryVersions.length === 0) {
+    dictionaryVersionSelect.innerHTML = `<option value="">${escapeHtml(textValue("dictionaryVersionEmptyOption"))}</option>`;
+    dictionaryVersionSelect.disabled = true;
+    return;
+  }
+
+  const baseOption = `<option value="">${escapeHtml(textValue("selectDictionaryVersionOption"))}</option>`;
+  const options = dictionaryVersions
+    .map((item) => {
+      const id = item && item.id != null ? String(item.id) : "";
+      const label = item && typeof item.label === "string" ? item.label : id;
+      return `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`;
+    })
+    .join("");
+
+  dictionaryVersionSelect.innerHTML = `${baseOption}${options}`;
+  dictionaryVersionSelect.disabled = false;
+}
+
 function updatePaginationControls() {
+  const hasVersionSelection = Boolean(selectedDictionaryVersionKey);
   pageInfo.textContent = formatPagesMeta(currentPage, totalPages);
-  prevPageButton.disabled = !activeDictionary || currentPage <= 1;
-  nextPageButton.disabled = !activeDictionary || currentPage >= totalPages;
+  prevPageButton.disabled = !activeDictionary || !hasVersionSelection || currentPage <= 1;
+  nextPageButton.disabled = !activeDictionary || !hasVersionSelection || currentPage >= totalPages;
 }
 
 function escapeHtml(value) {
@@ -116,31 +225,43 @@ function truncateValue(value, maxLength = MAX_CELL_CHARS) {
   return `${text.slice(0, maxLength - 1)}...`;
 }
 
+function isHiddenColumn(columnName) {
+  return HIDDEN_COLUMNS.has(String(columnName || "").trim().toUpperCase());
+}
+
+function getVisibleColumnsFromRow(row) {
+  return Object.keys(row || {}).filter((column) => !isHiddenColumn(column));
+}
+
 function updateActionButtons() {
   const hasPending = pendingRowChanges.size > 0;
-  saveButton.disabled = !hasPending;
-  discardButton.disabled = !hasPending;
+  saveButton.disabled = !currentDictionaryCanUpdate || !hasPending;
+  discardButton.disabled = !currentDictionaryCanUpdate || !hasPending;
   publishButton.disabled = !hasSavedChanges;
 }
 
 function renderTable(rows) {
   if (!Array.isArray(rows) || rows.length === 0) {
-    tableContainer.innerHTML = `<div class="empty-state">${textValue("noRowsReturned", "No rows returned.")}</div>`;
+    tableContainer.innerHTML = `<div class="empty-state">${textValue("noRowsReturned")}</div>`;
     tableMeta.textContent = formatRowsMeta(0, totalRows);
     updateActionButtons();
     updatePaginationControls();
     return;
   }
 
-  const columns = Object.keys(rows[0]);
-  const head = `<th>${escapeHtml(textValue("tableActionHeader", "Action"))}</th>${columns
+  const columns = getVisibleColumnsFromRow(rows[0]);
+  const head = `<th>${escapeHtml(textValue("tableActionHeader"))}</th>${columns
     .map((col) => `<th>${escapeHtml(col)}</th>`)
     .join("")}`;
 
   const body = rows
     .map((row, rowIndex) => {
-      const actionCell = `<td><button class="row-edit-btn" data-row-index="${rowIndex}">${escapeHtml(
-        textValue("editRowButton", "Edit")
+      const rowActionLabel = currentDictionaryCanUpdate
+        ? textValue("editRowButton")
+        : textValue("showRowButton");
+      const disabledAttr = currentDictionaryCanUpdate ? "" : "disabled";
+      const actionCell = `<td><button class="row-edit-btn" data-row-index="${rowIndex}" ${disabledAttr}>${escapeHtml(
+        rowActionLabel
       )}</button></td>`;
       const tds = columns
         .map((col) => {
@@ -176,41 +297,71 @@ async function fetchJson(url) {
   }
 
   if (!response.ok) {
-    throw new Error(payload.error || textValue("unknownApiError", "Unknown API error"));
+    throw new Error(payload.error || textValue("unknownApiError"));
   }
 
   return payload;
 }
 
-function renderRoles(roles) {
-  if (!Array.isArray(roles) || roles.length === 0) {
-    rolesList.innerHTML = `<li>${escapeHtml(textValue("noRolesLoaded", "No roles loaded."))}</li>`;
+function renderRoles(dictionaryRoles) {
+  if (!Array.isArray(dictionaryRoles) || dictionaryRoles.length === 0) {
+    rolesList.innerHTML = `<li>${escapeHtml(textValue("noRolesLoaded"))}</li>`;
     return;
   }
 
-  rolesList.innerHTML = roles.map((role) => `<li>${escapeHtml(role)}</li>`).join("");
+  const labels = dictionaryRoles.map((item) => {
+    const dictionary = item && typeof item.dictionary === "string" ? item.dictionary : "";
+    const role = item && typeof item.role === "string" ? item.role : "";
+    return dictionary && role ? `${dictionary} - ${role}` : dictionary || role;
+  });
+
+  if (labels.length > USER_DETAILS_DROPDOWN_THRESHOLD) {
+    const options = labels
+      .map((label) => `<option value="${escapeHtml(label)}">${escapeHtml(label)}</option>`)
+      .join("");
+
+    rolesList.innerHTML = `<li><select class="roles-select" aria-label="${escapeHtml(
+      textValue("rolesSelectAriaLabel")
+    )}">${options}</select></li>`;
+    return;
+  }
+
+  rolesList.innerHTML = labels.map((label) => `<li>${escapeHtml(label)}</li>`).join("");
 }
 
 async function loadUserContext() {
   try {
     const data = await fetchJson("/api/user-context");
     userNameField.value = data.user || "";
-    renderRoles(data.roles || []);
+    renderRoles(data.dictionaryRoles || []);
   } catch (error) {
     userNameField.value = "";
     rolesList.innerHTML = `<li>${escapeHtml(error.message)}</li>`;
   }
 }
 
-async function loadRows(dictionaryName, requestedPage = 1) {
+async function loadRows(dictionaryName, requestedPage = 1, dictionaryInstanceKey = "") {
   activeDictionary = dictionaryName;
   const selected = dictionaries.find((item) => item.id === dictionaryName);
-  tableTitle.textContent = selected ? selected.label : textValue("dictionaryDataTitle", "Dictionary data");
+  currentDictionaryCanUpdate = Boolean(selected && selected.canUpdate);
+  tableTitle.textContent = "";
+
+  const normalizedVersionKey = String(dictionaryInstanceKey || "").trim();
+  if (!normalizedVersionKey) {
+    totalRows = 0;
+    totalPages = 1;
+    currentPage = 1;
+    updatePaginationControls();
+    setLoading(textValue("selectDictionaryVersionPrompt"));
+    return;
+  }
+
+  selectedDictionaryVersionKey = normalizedVersionKey;
   setLoading();
 
   try {
     const data = await fetchJson(
-      `/api/dictionaries/${encodeURIComponent(dictionaryName)}/rows?page=${requestedPage}&pageSize=${PAGE_SIZE}`
+      `/api/dictionaries/${encodeURIComponent(dictionaryName)}/rows?page=${requestedPage}&pageSize=${PAGE_SIZE}&dictionaryInstanceKey=${encodeURIComponent(normalizedVersionKey)}`
     );
     originalRows = data.rows || [];
     workingRows = JSON.parse(JSON.stringify(originalRows));
@@ -219,13 +370,34 @@ async function loadRows(dictionaryName, requestedPage = 1) {
     currentPage = data.page || 1;
     totalPages = data.totalPages || 1;
     totalRows = data.totalRows || 0;
+    currentDictionaryCanUpdate = Boolean(data.canUpdate);
     renderTable(workingRows);
   } catch (error) {
+    selectedDictionaryVersionKey = "";
+    currentDictionaryCanUpdate = false;
     totalRows = 0;
     totalPages = 1;
     currentPage = 1;
     updatePaginationControls();
     setError(error.message);
+  }
+}
+
+async function loadDictionaryVersions(dictionaryName) {
+  setDictionaryVersionLoading();
+  totalRows = 0;
+  totalPages = 1;
+  currentPage = 1;
+  tableMeta.textContent = textValue("rowsInitial");
+  updatePaginationControls();
+  setLoading(textValue("selectDictionaryVersionPrompt"));
+
+  try {
+    const data = await fetchJson(`/api/dictionaries/${encodeURIComponent(dictionaryName)}/versions`);
+    populateDictionaryVersions(data.versions || []);
+  } catch (error) {
+    dictionaryVersionSelect.innerHTML = `<option value="">${escapeHtml(error.message)}</option>`;
+    dictionaryVersionSelect.disabled = true;
   }
 }
 
@@ -239,28 +411,48 @@ function applyMeta(meta) {
   dictionarySelect.insertAdjacentHTML(
     "afterbegin",
     `<option value="" selected data-placeholder="true">${escapeHtml(
-      textValue("selectDictionaryOption", "Select dictionary")
+      textValue("selectDictionaryOption")
     )}</option>`
   );
 
-  tableTitle.textContent = textValue("selectDictionaryTitle", "Select dictionary");
-  tableMeta.textContent = textValue("rowsInitial", "Rows: 0");
+  tableTitle.textContent = "";
+  tableMeta.textContent = textValue("rowsInitial");
+  currentDictionaryCanUpdate = false;
   currentPage = 1;
   totalPages = 1;
   totalRows = 0;
   updatePaginationControls();
-  setLoading(textValue("selectDictionaryPrompt", "Select Dictionary Name to load data."));
+  setLoading(textValue("selectDictionaryPrompt"));
   updateActionButtons();
+  resetDictionaryVersionSelect();
+}
+
+function normalizeRowForModal(row) {
+  const source = row && typeof row === "object" ? row : {};
+  const normalized = {};
+
+  Object.keys(source).forEach((key) => {
+    if (isHiddenColumn(key)) {
+      return;
+    }
+    normalized[key] = source[key] == null ? "" : String(source[key]);
+  });
+
+  return normalized;
 }
 
 function openEditDialog(rowIndex) {
+  if (!currentDictionaryCanUpdate) {
+    return;
+  }
+
   if (!Number.isInteger(rowIndex) || rowIndex < 0 || rowIndex >= workingRows.length) {
     return;
   }
 
   editRowIndex = rowIndex;
-  editedDraft = JSON.parse(JSON.stringify(workingRows[rowIndex]));
-  modalOriginalDraft = JSON.parse(JSON.stringify(workingRows[rowIndex]));
+  editedDraft = normalizeRowForModal(workingRows[rowIndex]);
+  modalOriginalDraft = normalizeRowForModal(workingRows[rowIndex]);
 
   const fields = Object.keys(editedDraft)
     .map((key) => {
@@ -300,11 +492,135 @@ function isModalDirty() {
   return JSON.stringify(current) !== JSON.stringify(modalOriginalDraft);
 }
 
+function getModalChanges() {
+  if (!modalOriginalDraft) {
+    return [];
+  }
+
+  const current = collectDraftFromModal();
+  const keys = Array.from(new Set([...Object.keys(modalOriginalDraft), ...Object.keys(current)])).sort((a, b) =>
+    a.localeCompare(b)
+  );
+
+  return keys
+    .map((key) => {
+      const oldValue = modalOriginalDraft[key] == null ? "" : String(modalOriginalDraft[key]);
+      const newValue = current[key] == null ? "" : String(current[key]);
+      return {
+        field: key,
+        oldValue,
+        newValue,
+        changed: oldValue !== newValue
+      };
+    })
+    .filter((item) => item.changed);
+}
+
+function getPendingChanges() {
+  const allChanges = [];
+
+  pendingRowChanges.forEach((_, rowIndex) => {
+    const originalRow = normalizeRowForModal(originalRows[rowIndex] || {});
+    const currentRow = normalizeRowForModal(workingRows[rowIndex] || {});
+    const keys = Array.from(new Set([...Object.keys(originalRow), ...Object.keys(currentRow)])).sort((a, b) =>
+      a.localeCompare(b)
+    );
+
+    keys.forEach((key) => {
+      const oldValue = originalRow[key] == null ? "" : String(originalRow[key]);
+      const newValue = currentRow[key] == null ? "" : String(currentRow[key]);
+      if (oldValue === newValue) {
+        return;
+      }
+
+      allChanges.push({
+        field: `${textValue("rowLabel")} ${rowIndex + 1} / ${key}`,
+        oldValue,
+        newValue,
+        changed: true
+      });
+    });
+  });
+
+  return allChanges;
+}
+
+function renderChangesList(container, changes) {
+  const emptyValue = textValue("emptyValue");
+  container.innerHTML = changes
+    .map((item) => {
+      const oldText = item.oldValue.length > 0 ? item.oldValue : emptyValue;
+      const newText = item.newValue.length > 0 ? item.newValue : emptyValue;
+      return `<li><strong>${escapeHtml(item.field)}</strong>: ${escapeHtml(oldText)} -> ${escapeHtml(newText)}</li>`;
+    })
+    .join("");
+}
+
+function askConfirmationWithChanges(dialog, listContainer, stayButton, confirmButton, changes, showChanges = true) {
+  if (showChanges) {
+    renderChangesList(listContainer, changes);
+    listContainer.hidden = false;
+  } else {
+    listContainer.innerHTML = "";
+    listContainer.hidden = true;
+  }
+
+  return new Promise((resolve) => {
+    const onStay = () => {
+      cleanup();
+      dialog.close();
+      resolve(false);
+    };
+
+    const onConfirm = () => {
+      cleanup();
+      dialog.close();
+      resolve(true);
+    };
+
+    const onCancel = (event) => {
+      event.preventDefault();
+      cleanup();
+      resolve(false);
+    };
+
+    const cleanup = () => {
+      stayButton.removeEventListener("click", onStay);
+      confirmButton.removeEventListener("click", onConfirm);
+      dialog.removeEventListener("cancel", onCancel);
+    };
+
+    stayButton.addEventListener("click", onStay);
+    confirmButton.addEventListener("click", onConfirm);
+    dialog.addEventListener("cancel", onCancel);
+    dialog.showModal();
+  });
+}
+
+function askDiscardWithChanges(changes) {
+  return askConfirmationWithChanges(discardDialog, discardChangesList, discardStayButton, discardConfirmButton, changes);
+}
+
+function askSaveWithChanges(changes) {
+  return askConfirmationWithChanges(saveDialog, saveChangesList, saveStayButton, saveConfirmButton, changes);
+}
+
+function askDiscardAllWithChanges(changes) {
+  return askConfirmationWithChanges(
+    discardAllDialog,
+    discardAllChangesList,
+    discardAllStayButton,
+    discardAllConfirmButton,
+    changes,
+    false
+  );
+}
+
 function updateModalSaveState() {
   rowSaveButton.disabled = !isModalDirty();
 }
 
-function saveModalChanges() {
+async function saveModalChanges() {
   if (editRowIndex < 0 || !editedDraft) {
     editDialog.close();
     return;
@@ -315,11 +631,20 @@ function saveModalChanges() {
     return;
   }
 
-  editedDraft = collectDraftFromModal();
-  workingRows[editRowIndex] = editedDraft;
+  const changes = getModalChanges();
+  const shouldSave = await askSaveWithChanges(changes);
+  if (!shouldSave) {
+    return;
+  }
 
-  const original = JSON.stringify(originalRows[editRowIndex] || {});
-  const current = JSON.stringify(editedDraft || {});
+  editedDraft = collectDraftFromModal();
+  workingRows[editRowIndex] = {
+    ...(workingRows[editRowIndex] || {}),
+    ...editedDraft
+  };
+
+  const original = JSON.stringify(normalizeRowForModal(originalRows[editRowIndex] || {}));
+  const current = JSON.stringify(normalizeRowForModal(workingRows[editRowIndex] || {}));
   if (original === current) {
     pendingRowChanges.delete(editRowIndex);
   } else {
@@ -332,29 +657,51 @@ function saveModalChanges() {
   editDialog.close();
 }
 
-function handleModalCancel() {
+async function handleModalCancel() {
   if (!isModalDirty()) {
     modalOriginalDraft = null;
     editDialog.close();
     return;
   }
 
-  const shouldDiscard = window.confirm(textValue("discardUnsavedConfirm", "Discard unsaved changes?"));
+  const changes = getModalChanges();
+  const shouldDiscard = await askDiscardWithChanges(changes);
   if (shouldDiscard) {
     modalOriginalDraft = null;
     editDialog.close();
   }
 }
 
-function discardAllChanges() {
+async function discardAllChanges() {
+  if (!currentDictionaryCanUpdate) {
+    return;
+  }
+
+  if (pendingRowChanges.size > 0) {
+    const shouldDiscardAll = await askDiscardAllWithChanges([]);
+    if (!shouldDiscardAll) {
+      return;
+    }
+  }
+
   workingRows = JSON.parse(JSON.stringify(originalRows));
   pendingRowChanges = new Map();
   hasSavedChanges = false;
   renderTable(workingRows);
 }
 
-function saveAllChanges() {
+async function saveAllChanges() {
+  if (!currentDictionaryCanUpdate) {
+    return;
+  }
+
   if (pendingRowChanges.size === 0) {
+    return;
+  }
+
+  const changes = getPendingChanges();
+  const shouldSave = await askSaveWithChanges(changes);
+  if (!shouldSave) {
     return;
   }
 
@@ -369,12 +716,16 @@ function publishChanges() {
     return;
   }
 
-  window.alert(textValue("publishNotReady", "Publish flow will be enabled in next iteration."));
+  window.alert(textValue("publishNotReady"));
 }
 
 function handleTableClick(event) {
   const button = event.target.closest(".row-edit-btn");
   if (!button) {
+    return;
+  }
+
+  if (button.disabled || !currentDictionaryCanUpdate) {
     return;
   }
 
@@ -389,7 +740,7 @@ function handleAccountToggle() {
 
 async function initialize() {
   applyStaticConfig();
-  setLoading(textValue("loadingWorkspace", "Loading workspace..."));
+  setLoading(textValue("loadingWorkspace"));
 
   try {
     const meta = await fetchJson("/api/meta");
@@ -403,13 +754,17 @@ async function initialize() {
 dictionarySelect.addEventListener("change", (event) => {
   if (!event.target.value) {
     activeDictionary = "";
-    tableTitle.textContent = textValue("selectDictionaryTitle", "Select dictionary");
-    tableMeta.textContent = textValue("rowsInitial", "Rows: 0");
+    currentDictionaryCanUpdate = false;
+    pendingRowChanges = new Map();
+    hasSavedChanges = false;
+    tableTitle.textContent = textValue("selectDictionaryTitle");
+    tableMeta.textContent = textValue("rowsInitial");
     currentPage = 1;
     totalPages = 1;
     totalRows = 0;
     updatePaginationControls();
-    setLoading(textValue("selectDictionaryPrompt", "Select Dictionary Name to load data."));
+    setLoading(textValue("selectDictionaryPrompt"));
+    resetDictionaryVersionSelect();
     return;
   }
 
@@ -418,23 +773,41 @@ dictionarySelect.addEventListener("change", (event) => {
     placeholder.remove();
   }
 
-  loadRows(event.target.value, 1);
+  activeDictionary = event.target.value;
+  loadDictionaryVersions(event.target.value);
+});
+
+dictionaryVersionSelect.addEventListener("change", (event) => {
+  const versionKey = String(event.target.value || "").trim();
+  selectedDictionaryVersionKey = versionKey;
+
+  if (!activeDictionary || !versionKey) {
+    totalRows = 0;
+    totalPages = 1;
+    currentPage = 1;
+    tableMeta.textContent = textValue("rowsInitial");
+    updatePaginationControls();
+    setLoading(textValue("selectDictionaryVersionPrompt"));
+    return;
+  }
+
+  loadRows(activeDictionary, 1, versionKey);
 });
 
 prevPageButton.addEventListener("click", () => {
-  if (!activeDictionary || currentPage <= 1) {
+  if (!activeDictionary || !selectedDictionaryVersionKey || currentPage <= 1) {
     return;
   }
 
-  loadRows(activeDictionary, currentPage - 1);
+  loadRows(activeDictionary, currentPage - 1, selectedDictionaryVersionKey);
 });
 
 nextPageButton.addEventListener("click", () => {
-  if (!activeDictionary || currentPage >= totalPages) {
+  if (!activeDictionary || !selectedDictionaryVersionKey || currentPage >= totalPages) {
     return;
   }
 
-  loadRows(activeDictionary, currentPage + 1);
+  loadRows(activeDictionary, currentPage + 1, selectedDictionaryVersionKey);
 });
 
 saveButton.addEventListener("click", saveAllChanges);
@@ -458,3 +831,4 @@ document.addEventListener("click", (event) => {
 });
 
 initialize();
+
