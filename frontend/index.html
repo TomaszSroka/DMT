@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DMT Dictionary Console</title>
+    <title></title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -17,20 +17,20 @@
       <header class="topbar">
         <div class="topbar-row">
           <div class="brand-wrap">
-            <h1>Dictionary Management Tool (DMT)</h1>
+            <h1 id="appTitle"></h1>
           </div>
 
           <div class="account-wrap">
             <button id="accountToggle" class="account-toggle" aria-haspopup="true" aria-expanded="false">
-              User Account
+              
             </button>
 
             <div id="accountPanel" class="account-panel hidden">
-              <label for="userNameField">User</label>
+              <label id="userNameLabel" for="userNameField"></label>
               <input id="userNameField" type="text" readonly />
 
               <div class="roles-block">
-                <p>Roles</p>
+                <p id="rolesLabel"></p>
                 <ul id="rolesList"></ul>
               </div>
             </div>
@@ -39,16 +39,14 @@
 
         <div class="topbar-row controls-row">
           <label class="dictionary-select-wrap" for="dictionarySelect">
-            <span>Dictionary Name:</span>
-            <select id="dictionarySelect" aria-label="Dictionary selector">
-              <option value="">Select dictionary</option>
-            </select>
+            <span id="dictionaryLabel"></span>
+            <select id="dictionarySelect"></select>
           </label>
 
           <div class="actions">
-            <button id="saveButton" class="btn btn-save" disabled>Save</button>
-            <button id="discardButton" class="btn btn-discard" disabled>Discard</button>
-            <button id="publishButton" class="btn btn-publish" disabled>Publish</button>
+            <button id="saveButton" class="btn btn-save" disabled></button>
+            <button id="discardButton" class="btn btn-discard" disabled></button>
+            <button id="publishButton" class="btn btn-publish" disabled></button>
           </div>
         </div>
       </header>
@@ -56,8 +54,15 @@
       <main class="content">
         <section class="card">
           <div class="card-header">
-            <h2 id="tableTitle">Loading...</h2>
-            <span id="tableMeta"></span>
+            <h2 id="tableTitle"></h2>
+            <div class="table-header-actions">
+              <span id="tableMeta"></span>
+              <span id="pageInfo"></span>
+              <div class="pager-controls">
+                <button id="prevPageButton" type="button" class="btn btn-discard" disabled></button>
+                <button id="nextPageButton" type="button" class="btn btn-discard" disabled></button>
+              </div>
+            </div>
           </div>
           <div id="tableContainer" class="table-wrap"></div>
         </section>
@@ -67,16 +72,17 @@
     <dialog id="editDialog" class="edit-dialog">
       <form id="editForm" class="edit-form" method="dialog">
         <div class="edit-header">
-          <h3>Edit Record</h3>
+          <h3 id="editDialogTitle"></h3>
           <div class="edit-actions">
-            <button id="rowSaveButton" type="button" class="btn btn-save">Save</button>
-            <button id="rowCancelButton" type="button" class="btn btn-discard">Cancel</button>
+            <button id="rowSaveButton" type="button" class="btn btn-save"></button>
+            <button id="rowCancelButton" type="button" class="btn btn-discard"></button>
           </div>
         </div>
         <div id="editFields" class="edit-fields"></div>
       </form>
     </dialog>
 
+    <script src="./config-frontend.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>

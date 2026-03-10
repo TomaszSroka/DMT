@@ -97,7 +97,23 @@ if ($psProcess.MainWindowHandle -ne 0) {
 }
 
 Start-Sleep -Seconds 2
-Start-Process $Url | Out-Null
+
+$firefoxCmd = $null
+$firefox = Get-Command firefox -ErrorAction SilentlyContinue
+if ($firefox) {
+  $firefoxCmd = $firefox.Source
+} elseif (Test-Path "C:\Program Files\Mozilla Firefox\firefox.exe") {
+  $firefoxCmd = "C:\Program Files\Mozilla Firefox\firefox.exe"
+} elseif (Test-Path "C:\Program Files (x86)\Mozilla Firefox\firefox.exe") {
+  $firefoxCmd = "C:\Program Files (x86)\Mozilla Firefox\firefox.exe"
+}
+
+if ($firefoxCmd) {
+  Start-Process -FilePath $firefoxCmd -ArgumentList "-new-window", $Url | Out-Null
+} else {
+  Write-Host "Firefox not found, opening in default browser instead."
+  Start-Process $Url | Out-Null
+}
 
 Write-Host "App start command sent. Browser opened at $Url"
 Write-Host "Tip: use -Restart to stop current app on port $Port before starting again."

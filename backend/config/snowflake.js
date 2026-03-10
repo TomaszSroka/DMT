@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const snowflake = require("snowflake-sdk");
+const snowflakeLogger = require("snowflake-sdk/lib/logger");
 const { snowflake: snowflakeConfig } = require("./env");
 
 const logsDir = path.resolve(process.cwd(), "logs");
@@ -9,6 +10,13 @@ const snowflakeLogPath = path.join(logsDir, "snowflake.log");
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
+
+// Pre-configure SDK logger before snowflake.configure() so no bootstrap log is written to project root.
+snowflakeLogger.getInstance().configure({
+  level: 2,
+  filePath: snowflakeLogPath,
+  additionalLogToConsole: true
+});
 
 snowflake.configure({
   logLevel: "INFO",

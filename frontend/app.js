@@ -1,20 +1,35 @@
+const FRONTEND_CONFIG = window.FRONTEND_CONFIG || {};
+const UI_TEXT = FRONTEND_CONFIG.text || {};
+const UI_DEFAULTS = FRONTEND_CONFIG.defaults || {};
+const UI_TYPOGRAPHY = FRONTEND_CONFIG.typography || {};
+
 const dictionarySelect = document.getElementById("dictionarySelect");
 const tableContainer = document.getElementById("tableContainer");
 const tableTitle = document.getElementById("tableTitle");
 const tableMeta = document.getElementById("tableMeta");
+const prevPageButton = document.getElementById("prevPageButton");
+const nextPageButton = document.getElementById("nextPageButton");
+const pageInfo = document.getElementById("pageInfo");
 const discardButton = document.getElementById("discardButton");
 const saveButton = document.getElementById("saveButton");
 const publishButton = document.getElementById("publishButton");
 const accountToggle = document.getElementById("accountToggle");
 const accountPanel = document.getElementById("accountPanel");
 const userNameField = document.getElementById("userNameField");
+const userNameLabel = document.getElementById("userNameLabel");
+const rolesLabel = document.getElementById("rolesLabel");
 const rolesList = document.getElementById("rolesList");
+const dictionaryLabel = document.getElementById("dictionaryLabel");
+const appTitle = document.getElementById("appTitle");
 const editDialog = document.getElementById("editDialog");
 const editFields = document.getElementById("editFields");
+const editDialogTitle = document.getElementById("editDialogTitle");
 const rowSaveButton = document.getElementById("rowSaveButton");
 const rowCancelButton = document.getElementById("rowCancelButton");
 
-const MAX_CELL_CHARS = 120;
+const MAX_CELL_CHARS = Number(UI_DEFAULTS.maxCellChars) || 120;
+const PAGE_SIZE = Number(UI_DEFAULTS.pageSize) || 100;
+const LONG_TEXT_THRESHOLD = Number(UI_DEFAULTS.longTextThreshold) || 90;
 
 let activeDictionary = "";
 let dictionaries = [];
@@ -25,13 +40,62 @@ let hasSavedChanges = false;
 let editRowIndex = -1;
 let editedDraft = null;
 let modalOriginalDraft = null;
+let currentPage = 1;
+let totalPages = 1;
+let totalRows = 0;
 
-function setLoading(message = "Loading data...") {
+function textValue(key, fallback) {
+  return UI_TEXT[key] || fallback;
+}
+
+function applyStaticConfig() {
+  document.title = textValue("documentTitle", "DMT Dictionary Console");
+  appTitle.textContent = textValue("appTitle", "Dictionary Management Tool (DMT)");
+  accountToggle.textContent = textValue("accountButton", "User Account");
+  userNameLabel.textContent = textValue("userLabel", "User");
+  rolesLabel.textContent = textValue("rolesLabel", "Roles");
+  dictionaryLabel.textContent = textValue("dictionaryLabel", "Dictionary Name:");
+  dictionarySelect.setAttribute("aria-label", textValue("dictionarySelectorAriaLabel", "Dictionary selector"));
+  saveButton.textContent = textValue("save", "Save");
+  discardButton.textContent = textValue("discard", "Discard");
+  publishButton.textContent = textValue("publish", "Publish");
+  prevPageButton.textContent = textValue("previous", "Previous");
+  nextPageButton.textContent = textValue("next", "Next");
+  rowSaveButton.textContent = textValue("save", "Save");
+  rowCancelButton.textContent = textValue("cancel", "Cancel");
+  editDialogTitle.textContent = textValue("editRecordTitle", "Edit Record");
+  tableTitle.textContent = textValue("loadingShort", "Loading...");
+  tableMeta.textContent = textValue("rowsInitial", "Rows: 0");
+  pageInfo.textContent = textValue("pageInfoInitial", "Pages: 0 / 0");
+
+  if (UI_TYPOGRAPHY.primaryFont) {
+    document.documentElement.style.setProperty("--font-primary", UI_TYPOGRAPHY.primaryFont);
+  }
+  if (UI_TYPOGRAPHY.monoFont) {
+    document.documentElement.style.setProperty("--font-mono", UI_TYPOGRAPHY.monoFont);
+  }
+}
+
+function formatRowsMeta(visibleRowsCount, allRowsCount) {
+  return `${textValue("rowsLabel", "Rows")}: ${visibleRowsCount} / ${allRowsCount}`;
+}
+
+function formatPagesMeta(page, pages) {
+  return `${textValue("pageLabel", "Pages")}: ${page} / ${pages}`;
+}
+
+function setLoading(message = textValue("loadingData", "Loading data...")) {
   tableContainer.innerHTML = `<div class="empty-state">${message}</div>`;
 }
 
 function setError(message) {
   tableContainer.innerHTML = `<div class="error-state">${message}</div>`;
+}
+
+function updatePaginationControls() {
+  pageInfo.textContent = formatPagesMeta(currentPage, totalPages);
+  prevPageButton.disabled = !activeDictionary || currentPage <= 1;
+  nextPageButton.disabled = !activeDictionary || currentPage >= totalPages;
 }
 
 function escapeHtml(value) {
@@ -61,18 +125,23 @@ function updateActionButtons() {
 
 function renderTable(rows) {
   if (!Array.isArray(rows) || rows.length === 0) {
-    tableContainer.innerHTML = "<div class=\"empty-state\">No rows returned.</div>";
-    tableMeta.textContent = "Rows: 0";
+    tableContainer.innerHTML = `<div class="empty-state">${textValue("noRowsReturned", "No rows returned.")}</div>`;
+    tableMeta.textContent = formatRowsMeta(0, totalRows);
     updateActionButtons();
+    updatePaginationControls();
     return;
   }
 
   const columns = Object.keys(rows[0]);
-  const head = `<th>Action</th>${columns.map((col) => `<th>${escapeHtml(col)}</th>`).join("")}`;
+  const head = `<th>${escapeHtml(textValue("tableActionHeader", "Action"))}</th>${columns
+    .map((col) => `<th>${escapeHtml(col)}</th>`)
+    .join("")}`;
 
   const body = rows
     .map((row, rowIndex) => {
-      const actionCell = `<td><button class="row-edit-btn" data-row-index="${rowIndex}">Edit</button></td>`;
+      const actionCell = `<td><button class="row-edit-btn" data-row-index="${rowIndex}">${escapeHtml(
+        textValue("editRowButton", "Edit")
+      )}</button></td>`;
       const tds = columns
         .map((col) => {
           const fullValue = row[col] == null ? "" : String(row[col]);
@@ -85,8 +154,9 @@ function renderTable(rows) {
     .join("");
 
   tableContainer.innerHTML = `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
-  tableMeta.textContent = `Rows: ${rows.length}`;
+  tableMeta.textContent = formatRowsMeta(rows.length, totalRows);
   updateActionButtons();
+  updatePaginationControls();
 }
 
 async function fetchJson(url) {
@@ -98,12 +168,15 @@ async function fetchJson(url) {
     payload = raw ? JSON.parse(raw) : {};
   } catch (error) {
     throw new Error(
-      "API returned non-JSON response. Open app via http://localhost:3000 and ensure backend is running."
+      textValue(
+        "nonJsonApiError",
+        "API returned non-JSON response. Open app via http://localhost:3000 and ensure backend is running."
+      )
     );
   }
 
   if (!response.ok) {
-    throw new Error(payload.error || "Unknown API error");
+    throw new Error(payload.error || textValue("unknownApiError", "Unknown API error"));
   }
 
   return payload;
@@ -111,7 +184,7 @@ async function fetchJson(url) {
 
 function renderRoles(roles) {
   if (!Array.isArray(roles) || roles.length === 0) {
-    rolesList.innerHTML = "<li>No roles loaded.</li>";
+    rolesList.innerHTML = `<li>${escapeHtml(textValue("noRolesLoaded", "No roles loaded."))}</li>`;
     return;
   }
 
@@ -129,20 +202,29 @@ async function loadUserContext() {
   }
 }
 
-async function loadRows(dictionaryName) {
+async function loadRows(dictionaryName, requestedPage = 1) {
   activeDictionary = dictionaryName;
   const selected = dictionaries.find((item) => item.id === dictionaryName);
-  tableTitle.textContent = selected ? selected.label : "Dictionary data";
+  tableTitle.textContent = selected ? selected.label : textValue("dictionaryDataTitle", "Dictionary data");
   setLoading();
 
   try {
-    const data = await fetchJson(`/api/dictionaries/${encodeURIComponent(dictionaryName)}/rows?limit=200`);
+    const data = await fetchJson(
+      `/api/dictionaries/${encodeURIComponent(dictionaryName)}/rows?page=${requestedPage}&pageSize=${PAGE_SIZE}`
+    );
     originalRows = data.rows || [];
     workingRows = JSON.parse(JSON.stringify(originalRows));
     pendingRowChanges = new Map();
     hasSavedChanges = false;
+    currentPage = data.page || 1;
+    totalPages = data.totalPages || 1;
+    totalRows = data.totalRows || 0;
     renderTable(workingRows);
   } catch (error) {
+    totalRows = 0;
+    totalPages = 1;
+    currentPage = 1;
+    updatePaginationControls();
     setError(error.message);
   }
 }
@@ -156,12 +238,18 @@ function applyMeta(meta) {
 
   dictionarySelect.insertAdjacentHTML(
     "afterbegin",
-    '<option value="" selected>Select dictionary</option>'
+    `<option value="" selected data-placeholder="true">${escapeHtml(
+      textValue("selectDictionaryOption", "Select dictionary")
+    )}</option>`
   );
 
-  tableTitle.textContent = "Select dictionary";
-  tableMeta.textContent = "Rows: 0";
-  setLoading("Select Dictionary Name to load data.");
+  tableTitle.textContent = textValue("selectDictionaryTitle", "Select dictionary");
+  tableMeta.textContent = textValue("rowsInitial", "Rows: 0");
+  currentPage = 1;
+  totalPages = 1;
+  totalRows = 0;
+  updatePaginationControls();
+  setLoading(textValue("selectDictionaryPrompt", "Select Dictionary Name to load data."));
   updateActionButtons();
 }
 
@@ -177,7 +265,7 @@ function openEditDialog(rowIndex) {
   const fields = Object.keys(editedDraft)
     .map((key) => {
       const value = editedDraft[key] == null ? "" : String(editedDraft[key]);
-      const isLong = value.length > 90;
+      const isLong = value.length > LONG_TEXT_THRESHOLD;
       const control = isLong
         ? `<textarea data-field="${escapeHtml(key)}">${escapeHtml(value)}</textarea>`
         : `<input data-field="${escapeHtml(key)}" value="${escapeHtml(value)}" />`;
@@ -251,7 +339,7 @@ function handleModalCancel() {
     return;
   }
 
-  const shouldDiscard = window.confirm("Discard unsaved changes?");
+  const shouldDiscard = window.confirm(textValue("discardUnsavedConfirm", "Discard unsaved changes?"));
   if (shouldDiscard) {
     modalOriginalDraft = null;
     editDialog.close();
@@ -281,7 +369,7 @@ function publishChanges() {
     return;
   }
 
-  alert("Publish flow will be enabled in next iteration.");
+  window.alert(textValue("publishNotReady", "Publish flow will be enabled in next iteration."));
 }
 
 function handleTableClick(event) {
@@ -300,7 +388,8 @@ function handleAccountToggle() {
 }
 
 async function initialize() {
-  setLoading("Loading workspace...");
+  applyStaticConfig();
+  setLoading(textValue("loadingWorkspace", "Loading workspace..."));
 
   try {
     const meta = await fetchJson("/api/meta");
@@ -314,13 +403,38 @@ async function initialize() {
 dictionarySelect.addEventListener("change", (event) => {
   if (!event.target.value) {
     activeDictionary = "";
-    tableTitle.textContent = "Select dictionary";
-    tableMeta.textContent = "Rows: 0";
-    setLoading("Select Dictionary Name to load data.");
+    tableTitle.textContent = textValue("selectDictionaryTitle", "Select dictionary");
+    tableMeta.textContent = textValue("rowsInitial", "Rows: 0");
+    currentPage = 1;
+    totalPages = 1;
+    totalRows = 0;
+    updatePaginationControls();
+    setLoading(textValue("selectDictionaryPrompt", "Select Dictionary Name to load data."));
     return;
   }
 
-  loadRows(event.target.value);
+  const placeholder = dictionarySelect.querySelector('option[data-placeholder="true"]');
+  if (placeholder) {
+    placeholder.remove();
+  }
+
+  loadRows(event.target.value, 1);
+});
+
+prevPageButton.addEventListener("click", () => {
+  if (!activeDictionary || currentPage <= 1) {
+    return;
+  }
+
+  loadRows(activeDictionary, currentPage - 1);
+});
+
+nextPageButton.addEventListener("click", () => {
+  if (!activeDictionary || currentPage >= totalPages) {
+    return;
+  }
+
+  loadRows(activeDictionary, currentPage + 1);
 });
 
 saveButton.addEventListener("click", saveAllChanges);

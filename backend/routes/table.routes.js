@@ -1,6 +1,6 @@
 const express = require("express");
 const { staticUser } = require("../config/env");
-const { dictionaryDefinitions, getDictionaryRows, getUserRoles } = require("../services/table.service");
+const { dictionaryDefinitions, getDictionaryRowsPage, getUserRoles } = require("../services/table.service");
 
 const router = express.Router();
 
@@ -26,9 +26,10 @@ router.get("/user-context", async (req, res) => {
 
 router.get("/dictionaries/:name/rows", async (req, res) => {
   try {
-    const limit = Number.parseInt(req.query.limit, 10);
-    const rows = await getDictionaryRows(req.params.name, limit);
-    res.json({ rows });
+    const page = Number.parseInt(req.query.page, 10);
+    const pageSize = Number.parseInt(req.query.pageSize, 10);
+    const payload = await getDictionaryRowsPage(req.params.name, page, pageSize);
+    res.json(payload);
   } catch (error) {
     const message = error.message || error.code || "Snowflake query failed.";
     res.status(400).json({ error: message });
