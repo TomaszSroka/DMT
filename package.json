@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "description": "Web app for browsing and editing Snowflake dictionaries",
-  "main": "src/app.js",
+  "main": "backend/api/app.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "node --watch src/app.js",
+    "start": "node backend/api/app.js",
+    "dev": "node --watch backend/api/app.js",
     "local:start": "powershell -ExecutionPolicy Bypass -File scripts/run-local.ps1",
     "local:restart": "powershell -ExecutionPolicy Bypass -File scripts/run-local.ps1 -Restart"
   },

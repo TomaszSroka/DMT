@@ -47,10 +47,15 @@ if (`$buffer.Height -lt `$newHeight) { `$buffer.Height = `$newHeight }
 `$raw.BufferSize = `$buffer
 `$raw.WindowSize = New-Object Management.Automation.Host.Size(`$newWidth, `$newHeight)
 
-Add-Type -TypeDefinition @'
+Set-Location -Path '$repoRoot'
+& '$npmCmd' start
+"@
+
+if (-not ("ConsoleWinApi" -as [type])) {
+  Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
-public static class WinApi {
+public static class ConsoleWinApi {
   [StructLayout(LayoutKind.Sequential)]
   public struct RECT {
     public int Left;
@@ -58,9 +63,6 @@ public static class WinApi {
     public int Right;
     public int Bottom;
   }
-
-  [DllImport("kernel32.dll")]
-  public static extern IntPtr GetConsoleWindow();
 
   [DllImport("user32.dll")]
   public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
@@ -71,26 +73,28 @@ public static class WinApi {
   [DllImport("user32.dll")]
   public static extern int GetSystemMetrics(int nIndex);
 }
-'@ -ErrorAction SilentlyContinue
-
-`$hWnd = [WinApi]::GetConsoleWindow()
-if (`$hWnd -ne [IntPtr]::Zero) {
-  `$rect = New-Object WinApi+RECT
-  if ([WinApi]::GetWindowRect(`$hWnd, [ref]`$rect)) {
-    `$width = `$rect.Right - `$rect.Left
-    `$height = `$rect.Bottom - `$rect.Top
-    `$screenWidth = [WinApi]::GetSystemMetrics(0)
-    `$screenHeight = [WinApi]::GetSystemMetrics(1)
-    `$x = [Math]::Max(0, [int]((`$screenWidth - `$width) / 2))
-    `$y = [Math]::Max(0, [int]((`$screenHeight - `$height) / 2))
-    [WinApi]::MoveWindow(`$hWnd, `$x, `$y, `$width, `$height, `$true) | Out-Null
-  }
+"@
 }
 
-Set-Location -Path '$repoRoot'
-& '$npmCmd' start
-"@
-Start-Process -FilePath "powershell" -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-Command", $startCommand | Out-Null
+$psProcess = Start-Process -FilePath "powershell" -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-Command", $startCommand -PassThru
+
+for ($i = 0; $i -lt 25 -and $psProcess.MainWindowHandle -eq 0; $i++) {
+  Start-Sleep -Milliseconds 100
+  $psProcess.Refresh()
+}
+
+if ($psProcess.MainWindowHandle -ne 0) {
+  $rect = New-Object ConsoleWinApi+RECT
+  if ([ConsoleWinApi]::GetWindowRect($psProcess.MainWindowHandle, [ref]$rect)) {
+    $width = $rect.Right - $rect.Left
+    $height = $rect.Bottom - $rect.Top
+    $screenWidth = [ConsoleWinApi]::GetSystemMetrics(0)
+    $screenHeight = [ConsoleWinApi]::GetSystemMetrics(1)
+    $x = [Math]::Max(0, [int](($screenWidth - $width) / 2))
+    $y = [Math]::Max(0, [int](($screenHeight - $height) / 2))
+    [ConsoleWinApi]::MoveWindow($psProcess.MainWindowHandle, $x, $y, $width, $height, $true) | Out-Null
+  }
+}
 
 Start-Sleep -Seconds 2
 Start-Process $Url | Out-Null

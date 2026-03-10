@@ -1,6 +1,20 @@
 const fs = require("fs");
+const path = require("path");
 const snowflake = require("snowflake-sdk");
 const { snowflake: snowflakeConfig } = require("./env");
+
+const logsDir = path.resolve(process.cwd(), "logs");
+const snowflakeLogPath = path.join(logsDir, "snowflake.log");
+
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
+
+snowflake.configure({
+  logLevel: "INFO",
+  logFilePath: snowflakeLogPath,
+  additionalLogToConsole: true
+});
 
 function assertPrivateKeyFileExists() {
   if (!fs.existsSync(snowflakeConfig.privateKeyPath)) {
