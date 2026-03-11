@@ -26,8 +26,13 @@ snowflake.configure({
 
 const MIN_POOL_SIZE = 1;
 const MAX_POOL_SIZE = 10;
+const MIN_WAIT_TIMEOUT_MS = 1000;
 const normalizedPoolSize = Number.isFinite(snowflakeConfig.poolSize) ? snowflakeConfig.poolSize : 2;
 const poolSize = Math.min(Math.max(normalizedPoolSize, MIN_POOL_SIZE), MAX_POOL_SIZE);
+const poolWaitTimeoutMs = Math.max(
+  Number.isFinite(snowflakeConfig.poolWaitTimeoutMs) ? snowflakeConfig.poolWaitTimeoutMs : 15000,
+  MIN_WAIT_TIMEOUT_MS
+);
 const poolDebug = Boolean(snowflakeConfig.poolDebug);
 
 const pool = Array.from({ length: poolSize }, () => ({
@@ -217,6 +222,13 @@ function rejectQueuedWaiter(waiter, error) {
   waiter.reject(error);
 }
 
+function createPoolError(message, status, code) {
+  const error = new Error(message);
+  error.status = status;
+  error.code = code;
+  return error;
+}
+
 function acquireSlot() {
   if (isShuttingDown) {
     return Promise.reject(new Error("Snowflake pool is shutting down."));
@@ -231,7 +243,26 @@ function acquireSlot() {
   }
 
   return new Promise((resolve, reject) => {
-    waitQueue.push({ resolve, reject, waitStart });
+    const waiter = {
+      resolve,
+      reject,
+      waitStart,
+      timeoutId: null
+    };
+
+    waiter.timeoutId = setTimeout(() => {
+      const index = waitQueue.indexOf(waiter);
+      if (index >= 0) {
+        waitQueue.splice(index, 1);
+      }
+
+      rejectQueuedWaiter(
+        waiter,
+        createPoolError("Snowflake query queue timeout.", 503, "SNOWFLAKE_POOL_QUEUE_TIMEOUT")
+      );
+    }, poolWaitTimeoutMs);
+
+    waitQueue.push(waiter);
     poolMetrics.maxObservedQueue = Math.max(poolMetrics.maxObservedQueue, waitQueue.length);
     logPoolDebug("queue-wait", { queued: waitQueue.length });
   });
@@ -240,6 +271,10 @@ function acquireSlot() {
 function releaseSlot(slot) {
   const nextWaiter = waitQueue.shift();
   if (nextWaiter) {
+    if (nextWaiter.timeoutId) {
+      clearTimeout(nextWaiter.timeoutId);
+      nextWaiter.timeoutId = null;
+    }
     slot.busy = true;
     resolveQueuedWaiter(nextWaiter, slot);
     return;
@@ -282,6 +317,10 @@ async function shutdownPool() {
   const shutdownError = new Error("Snowflake pool is shutting down.");
   while (waitQueue.length > 0) {
     const waiter = waitQueue.shift();
+    if (waiter && waiter.timeoutId) {
+      clearTimeout(waiter.timeoutId);
+      waiter.timeoutId = null;
+    }
     rejectQueuedWaiter(waiter, shutdownError);
   }
 

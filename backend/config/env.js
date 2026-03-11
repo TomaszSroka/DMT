@@ -1,7 +1,75 @@
 const path = require("path");
 const dotenv = require("dotenv");
 
-dotenv.config({ path: path.resolve(process.cwd(), ".env"), override: true });
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
+
+function readJsonConfig() {
+  const raw = process.env.DMT_CONFIG_JSON;
+  if (!raw) {
+    throw new Error("Missing required environment variable: DMT_CONFIG_JSON");
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("DMT_CONFIG_JSON must be a JSON object.");
+    }
+    return parsed;
+  } catch (error) {
+    throw new Error(`Invalid DMT_CONFIG_JSON: ${error.message}`);
+  }
+}
+
+const jsonConfig = readJsonConfig();
+
+function hasOwn(obj, key) {
+  return Object.prototype.hasOwnProperty.call(obj, key);
+}
+
+function resolveJsonRef(value) {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const match = value.match(/^\$\{([A-Z0-9_]+)\}$/);
+  if (!match) {
+    return value;
+  }
+
+  const envKey = match[1];
+  if (hasOwn(process.env, envKey) && process.env[envKey] !== undefined) {
+    return process.env[envKey];
+  }
+
+  return "";
+}
+
+function getRawValue(key, fallbackValue) {
+  if (hasOwn(jsonConfig, key) && jsonConfig[key] !== undefined) {
+    return resolveJsonRef(jsonConfig[key]);
+  }
+  return fallbackValue;
+}
+
+function toNumber(value, fallbackValue) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallbackValue;
+}
+
+function toInteger(value, fallbackValue) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : fallbackValue;
+}
+
+function toBoolean(value, fallbackValue) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (value === undefined || value === null) {
+    return fallbackValue;
+  }
+  return String(value).toLowerCase() === "true";
+}
 
 const required = [
   "SNOWFLAKE_ACCOUNT",
@@ -14,26 +82,28 @@ const required = [
   "SNOWFLAKE_PRIVATE_KEY_PASSPHRASE"
 ];
 
-const missing = required.filter((key) => !process.env[key]);
+const missing = required.filter((key) => !getRawValue(key));
 if (missing.length > 0) {
   throw new Error(`Missing required environment variables: ${missing.join(", ")}`);
 }
 
 module.exports = {
-  port: Number(process.env.PORT || 3000),
+  port: toNumber(getRawValue("DMT_PORT", 3000), 3000),
+  readinessCacheMs: toInteger(getRawValue("READINESS_CACHE_MS", 5000), 5000),
   snowflake: {
-    account: process.env.SNOWFLAKE_ACCOUNT,
-    username: process.env.SNOWFLAKE_USER,
-    role: process.env.SNOWFLAKE_ROLE,
-    warehouse: process.env.SNOWFLAKE_WAREHOUSE,
-    database: process.env.SNOWFLAKE_DATABASE,
-    schema: process.env.SNOWFLAKE_SCHEMA,
-    privateKeyPath: process.env.SNOWFLAKE_PRIVATE_KEY_PATH,
-    privateKeyPassphrase: process.env.SNOWFLAKE_PRIVATE_KEY_PASSPHRASE,
-    poolSize: Number.parseInt(process.env.SNOWFLAKE_POOL_SIZE || "2", 10),
-    poolDebug: String(process.env.SNOWFLAKE_POOL_DEBUG || "false").toLowerCase() === "true",
-    clientSessionKeepAlive: String(process.env.SNOWFLAKE_CLIENT_SESSION_KEEP_ALIVE || "false").toLowerCase() === "true",
-    queryTag: process.env.SNOWFLAKE_QUERY_TAG || ""
+    account: getRawValue("SNOWFLAKE_ACCOUNT"),
+    username: getRawValue("SNOWFLAKE_USER"),
+    role: getRawValue("SNOWFLAKE_ROLE"),
+    warehouse: getRawValue("SNOWFLAKE_WAREHOUSE"),
+    database: getRawValue("SNOWFLAKE_DATABASE"),
+    schema: getRawValue("SNOWFLAKE_SCHEMA"),
+    privateKeyPath: getRawValue("SNOWFLAKE_PRIVATE_KEY_PATH"),
+    privateKeyPassphrase: getRawValue("SNOWFLAKE_PRIVATE_KEY_PASSPHRASE"),
+    poolSize: toInteger(getRawValue("SNOWFLAKE_POOL_SIZE", 2), 2),
+    poolWaitTimeoutMs: toInteger(getRawValue("SNOWFLAKE_POOL_WAIT_TIMEOUT_MS", 15000), 15000),
+    poolDebug: toBoolean(getRawValue("SNOWFLAKE_POOL_DEBUG", false), false),
+    clientSessionKeepAlive: toBoolean(getRawValue("SNOWFLAKE_CLIENT_SESSION_KEEP_ALIVE", false), false),
+    queryTag: String(getRawValue("SNOWFLAKE_QUERY_TAG", ""))
   },
-  staticUser: process.env.APP_STATIC_USER || "SUPTOSR@flsmidth.com"
+  staticUser: String(getRawValue("APP_STATIC_USER", "SUPTOSR@flsmidth.com"))
 };

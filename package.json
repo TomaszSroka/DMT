@@ -8,7 +8,8 @@
     "start": "node backend/api/app.js",
     "dev": "node --watch backend/api/app.js",
     "local:start": "powershell -ExecutionPolicy Bypass -File scripts/run-local.ps1",
-    "local:restart": "powershell -ExecutionPolicy Bypass -File scripts/run-local.ps1 -Restart"
+    "local:restart": "powershell -ExecutionPolicy Bypass -File scripts/run-local.ps1 -Restart",
+    "test:api-contract": "node --test backend/api.contract.test.js"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
