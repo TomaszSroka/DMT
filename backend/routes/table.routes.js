@@ -26,7 +26,7 @@ router.get("/meta", async (req, res) => {
       }))
     });
   } catch (error) {
-    sendApiError(res, error, "Could not load dictionaries for user.", "META_LOAD_FAILED");
+    sendApiError(res, error, "Could not load Dictionaries for user.", "META_LOAD_FAILED");
   }
 });
 
@@ -66,7 +66,7 @@ router.get("/dictionaries/:name/versions", async (req, res) => {
     const payload = await getDictionaryVersionsForUser(staticUser, req.params.name);
     res.json(payload);
   } catch (error) {
-    sendApiError(res, error, "Could not load dictionary versions.", "VERSIONS_LOAD_FAILED");
+    sendApiError(res, error, "Could not load Dictionary versions.", "VERSIONS_LOAD_FAILED");
   }
 });
 
