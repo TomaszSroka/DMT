@@ -15,11 +15,13 @@ function getErrorPayload(error, fallbackMessage, fallbackCode) {
   const status = Number.isInteger(error && error.status) ? error.status : 500;
   const message = status >= 500 ? fallbackMessage : (error && error.message) || fallbackMessage;
   const errorCode = (error && error.code) || fallbackCode;
+  const details = status >= 500 && error && error.message ? String(error.message) : undefined;
 
   return {
     status,
     message,
-    errorCode
+    errorCode,
+    details
   };
 }
 

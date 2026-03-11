@@ -6,9 +6,21 @@ const accessConfigTable = "DMT.MET_USER_DICTIONARY_ROLE_DETAILS";
 const dictionaryInstanceDetailsView = "DMT.MET_DICTIONARY_INSTANCE_DETAILS";
 const ROLE_READER = "DICTIONARY_READER";
 const ROLE_UPDATER = "DICTIONARY_UPDATER";
+const ROLE_READER_KEY = "1";
+const ROLE_UPDATER_KEY = "2";
 const DEFAULT_PAGE_SIZE = 100;
 const MAX_PAGE_SIZE = 1000;
-const allowedRoles = new Set([ROLE_READER, ROLE_UPDATER]);
+const allowedRoleKeys = new Set([ROLE_READER_KEY, ROLE_UPDATER_KEY]);
+const ACCESS_CACHE_TTL_MS = 60 * 1000;
+const USER_CONTEXT_CACHE_TTL_MS = 60 * 1000;
+
+const accessCache = {
+  rows: null,
+  expiresAt: 0,
+  userKeyByLogin: new Map()
+};
+
+const userContextCache = new Map();
 
 function normalizeDictionaryName(name) {
   return String(name || "").trim().toUpperCase();
@@ -16,6 +28,38 @@ function normalizeDictionaryName(name) {
 
 function normalizeUserLogin(userLogin) {
   return String(userLogin || "").trim().toUpperCase();
+}
+
+function normalizeUserKey(userKey) {
+  const value = String(userKey || "").trim();
+  return value.length > 0 ? value.toUpperCase() : "";
+}
+
+async function getAllAccessRows() {
+  const now = Date.now();
+  if (Array.isArray(accessCache.rows) && accessCache.expiresAt > now) {
+    return accessCache.rows;
+  }
+
+  const sqlText = `
+    SELECT *
+    FROM ${accessConfigTable}
+  `;
+
+  const rows = await runQuery(sqlText);
+  accessCache.rows = rows;
+  accessCache.expiresAt = now + ACCESS_CACHE_TTL_MS;
+  accessCache.userKeyByLogin.clear();
+
+  rows.forEach((row) => {
+    const login = normalizeUserLogin(row && row.USER_LOGIN);
+    const key = normalizeUserKey(row && row.USER_KEY);
+    if (login && key && !accessCache.userKeyByLogin.has(login)) {
+      accessCache.userKeyByLogin.set(login, key);
+    }
+  });
+
+  return rows;
 }
 
 function normalizeRole(roleName) {
@@ -45,13 +89,21 @@ function extractCountValue(row) {
 }
 
 function extractDictionaryId(row) {
+  const value = row && row.DICTIONARY_KEY;
+  if (value === undefined || value === null) {
+    return "";
+  }
+
+  const normalized = String(value).trim();
+  return normalized.length > 0 ? normalized : "";
+}
+
+function extractDictionaryTableIdentifier(row) {
   const candidates = [
-    row.DICTIONARY_LOCATION,
-    row.DICTIONARY_ID,
-    row.DICTIONARY_OBJECT_NAME,
-    row.DICTIONARY_TABLE,
-    row.DICTIONARY_CODE,
-    row.DICTIONARY_NAME
+    row && row.DICTIONARY_LOCATION,
+    row && row.DICTIONARY_TABLE,
+    row && row.DICTIONARY_OBJECT_NAME,
+    row && row.DICTIONARY_ID
   ];
 
   const value = candidates.find((item) => typeof item === "string" && item.trim().length > 0);
@@ -102,8 +154,77 @@ function extractDictionaryVersionLabel(row) {
   return "Version";
 }
 
+function mapRoleKeyToRoleName(roleKey) {
+  const normalizedRoleKey = normalizeUserKey(roleKey);
+  if (normalizedRoleKey === ROLE_UPDATER_KEY) {
+    return ROLE_UPDATER;
+  }
+  if (normalizedRoleKey === ROLE_READER_KEY) {
+    return ROLE_READER;
+  }
+  return "";
+}
+
 function isSafeDictionaryIdentifier(identifier) {
   return /^[A-Za-z0-9_.$"]+$/.test(identifier);
+}
+
+function extractSortOrderPhrase(row) {
+  return String((row && row.DICTIONARY_SORT_ORDER) || "").trim();
+}
+
+function isSafeOrderByPhrase(orderByPhrase) {
+  const phrase = String(orderByPhrase || "").trim();
+  if (!phrase) {
+    return false;
+  }
+
+  const parts = phrase.split(",").map((item) => item.trim()).filter((item) => item.length > 0);
+  if (parts.length === 0) {
+    return false;
+  }
+
+  const pattern = /^([A-Za-z0-9_$"]+\.)*[A-Za-z0-9_$"]+(\s+(ASC|DESC))?(\s+NULLS\s+(FIRST|LAST))?$/i;
+  return parts.every((part) => pattern.test(part));
+}
+
+async function getDictionaryInstanceDetailsRowsForPermission(permission) {
+  const sqlText = `
+    SELECT *
+    FROM ${dictionaryInstanceDetailsView}
+    WHERE UPPER(TRIM(DICTIONARY_KEY)) = ?
+    ORDER BY DICTIONARY_INSTANCE_VERSION_CODE DESC
+  `;
+
+  return runQuery(sqlText, [normalizeDictionaryName(permission.id)]);
+}
+
+function getDictionarySortOrderFromVersionRows(rows, dictionaryInstanceKey) {
+  const normalizedKey = String(dictionaryInstanceKey || "").trim();
+  const versionRow = (Array.isArray(rows) ? rows : []).find((row) => {
+    const rowKey = row && row.DICTIONARY_INSTANCE_KEY != null ? String(row.DICTIONARY_INSTANCE_KEY).trim() : "";
+    return rowKey === normalizedKey;
+  });
+
+  const phrase = extractSortOrderPhrase(versionRow);
+
+  if (!phrase) {
+    throw createAppError(
+      "Dictionary sort order is required for selected version.",
+      400,
+      "DICTIONARY_SORT_ORDER_REQUIRED"
+    );
+  }
+
+  if (!isSafeOrderByPhrase(phrase)) {
+    throw createAppError(
+      "Dictionary sort order is invalid for selected version.",
+      400,
+      "DICTIONARY_SORT_ORDER_INVALID"
+    );
+  }
+
+  return phrase;
 }
 
 function buildSnapshotToken(rows, totalRows, dictionaryInstanceKey) {
@@ -150,15 +271,25 @@ function mergeRowColumns(target, row) {
 }
 
 async function getUserAccessRows(userLogin) {
-  const normalizedUser = normalizeUserLogin(userLogin);
-  const sqlText = `
-    SELECT *
-    FROM ${accessConfigTable}
-    WHERE UPPER(TRIM(USER_LOGIN)) = ?
-      AND UPPER(TRIM(ROLE_NAME)) IN (?, ?)
-  `;
+  const normalizedUserRef = normalizeUserLogin(userLogin);
+  const rows = await getAllAccessRows();
+  const userKeyFromInput = normalizeUserKey(userLogin);
+  const matchedByKey = rows.find((row) => normalizeUserKey(row && row.USER_KEY) === userKeyFromInput);
+  const resolvedFromLogin = accessCache.userKeyByLogin.get(normalizedUserRef) || "";
+  const matchedByLogin = rows.find((row) => normalizeUserLogin(row && row.USER_LOGIN) === normalizedUserRef);
+  const resolvedUserKey = normalizeUserKey(
+    (matchedByKey && matchedByKey.USER_KEY) || resolvedFromLogin || (matchedByLogin && matchedByLogin.USER_KEY)
+  );
 
-  return runQuery(sqlText, [normalizedUser, ROLE_READER, ROLE_UPDATER]);
+  if (!resolvedUserKey) {
+    return [];
+  }
+
+  return rows.filter((row) => {
+    const rowUserKey = normalizeUserKey(row && row.USER_KEY);
+    const rowRoleKey = normalizeUserKey(row && row.ROLE_KEY);
+    return rowUserKey === resolvedUserKey && allowedRoleKeys.has(rowRoleKey);
+  });
 }
 
 function buildDictionaryPermissions(accessRows) {
@@ -170,14 +301,18 @@ function buildDictionaryPermissions(accessRows) {
       return;
     }
 
-    const role = normalizeRole(row.ROLE_NAME);
-    if (!allowedRoles.has(role)) {
+    const roleKey = normalizeUserKey(row.ROLE_KEY);
+    if (!allowedRoleKeys.has(roleKey)) {
       return;
     }
 
+    const role = mapRoleKeyToRoleName(roleKey);
+
     const key = normalizeDictionaryName(dictionaryId);
+    const tableIdentifier = extractDictionaryTableIdentifier(row);
     const existing = permissions.get(key) || {
       id: dictionaryId,
+      tableIdentifier,
       label: extractDictionaryLabel(row, dictionaryId),
       roles: new Set(),
       canRead: false,
@@ -188,7 +323,10 @@ function buildDictionaryPermissions(accessRows) {
 
     existing.roles.add(role);
     existing.canRead = true;
-    if (role === ROLE_UPDATER) {
+    if (!existing.tableIdentifier && tableIdentifier) {
+      existing.tableIdentifier = tableIdentifier;
+    }
+    if (roleKey === ROLE_UPDATER_KEY) {
       existing.canUpdate = true;
     }
 
@@ -206,10 +344,12 @@ function buildDictionaryRolePairs(accessRows) {
   const seen = new Set();
 
   accessRows.forEach((row) => {
-    const role = normalizeRole(row.ROLE_NAME);
-    if (!allowedRoles.has(role)) {
+    const roleKey = normalizeUserKey(row.ROLE_KEY);
+    if (!allowedRoleKeys.has(roleKey)) {
       return;
     }
+
+    const role = mapRoleKeyToRoleName(roleKey);
 
     const dictionaryId = extractDictionaryId(row);
     const dictionaryLabel = extractDictionaryLabel(row, dictionaryId || "");
@@ -241,6 +381,12 @@ function buildDictionaryRolePairs(accessRows) {
 
 async function getUserDictionaryContext(userLogin) {
   const normalizedUser = normalizeUserLogin(userLogin);
+  const now = Date.now();
+  const cachedContext = userContextCache.get(normalizedUser);
+  if (cachedContext && cachedContext.expiresAt > now) {
+    return cachedContext.value;
+  }
+
   const accessRows = await getUserAccessRows(normalizedUser);
   const permissions = buildDictionaryPermissions(accessRows);
 
@@ -248,7 +394,7 @@ async function getUserDictionaryContext(userLogin) {
     .filter((item) => item.canRead)
     .map((item) => ({
       id: item.id,
-      label: item.label,
+      label: item.label || item.id,
       canUpdate: item.canUpdate,
       roles: Array.from(item.roles).sort((a, b) => a.localeCompare(b))
     }))
@@ -257,20 +403,27 @@ async function getUserDictionaryContext(userLogin) {
   const roles = Array.from(
     new Set(
       accessRows
-        .map((row) => normalizeRole(row.ROLE_NAME))
-        .filter((role) => allowedRoles.has(role))
+        .map((row) => mapRoleKeyToRoleName(row.ROLE_KEY))
+        .filter((role) => role.length > 0)
     )
   ).sort((a, b) => a.localeCompare(b));
 
   const dictionaryRoles = buildDictionaryRolePairs(accessRows);
 
-  return {
+  const context = {
     user: normalizedUser,
     roles,
     dictionaryRoles,
     dictionaries,
     permissionByDictionary: permissions
   };
+
+  userContextCache.set(normalizedUser, {
+    expiresAt: now + USER_CONTEXT_CACHE_TTL_MS,
+    value: context
+  });
+
+  return context;
 }
 
 function resolveDictionaryPermission(context, dictionaryName) {
@@ -278,6 +431,10 @@ function resolveDictionaryPermission(context, dictionaryName) {
   const permission = context.permissionByDictionary.get(key);
   if (!permission || !permission.canRead) {
     throw createAppError("Dictionary is not allowed for this user.", 403, "DICTIONARY_FORBIDDEN");
+  }
+
+  if (!permission.tableIdentifier) {
+    throw createAppError("Dictionary table identifier is missing.", 400, "DICTIONARY_TABLE_IDENTIFIER_MISSING");
   }
 
   return permission;
@@ -293,7 +450,7 @@ async function getDictionaryRowsPageForUser(
   const context = await getUserDictionaryContext(userLogin);
   const permission = resolveDictionaryPermission(context, dictionaryName);
 
-  if (!isSafeDictionaryIdentifier(permission.id)) {
+  if (!isSafeDictionaryIdentifier(permission.tableIdentifier)) {
     throw createAppError("Dictionary identifier is invalid.", 400, "DICTIONARY_IDENTIFIER_INVALID");
   }
 
@@ -305,7 +462,10 @@ async function getDictionaryRowsPageForUser(
     throw createAppError("Dictionary version key is required.", 400, "DICTIONARY_VERSION_KEY_REQUIRED");
   }
 
-  const countSql = `SELECT COUNT(*) AS TOTAL_COUNT FROM ${permission.id} WHERE DICTIONARY_INSTANCE_KEY = ?`;
+  const versionRows = await getDictionaryInstanceDetailsRowsForPermission(permission);
+  const sortOrderPhrase = getDictionarySortOrderFromVersionRows(versionRows, normalizedInstanceKey);
+
+  const countSql = `SELECT COUNT(*) AS TOTAL_COUNT FROM ${permission.tableIdentifier} WHERE DICTIONARY_INSTANCE_KEY = ?`;
   const countRows = await runQuery(countSql, [normalizedInstanceKey]);
   const totalRows = extractCountValue(countRows[0]);
 
@@ -315,9 +475,9 @@ async function getDictionaryRowsPageForUser(
 
   const dataSql = `
     SELECT *
-    FROM ${permission.id}
+    FROM ${permission.tableIdentifier}
     WHERE DICTIONARY_INSTANCE_KEY = ?
-    ORDER BY 1, 2, 3, 4
+    ORDER BY ${sortOrderPhrase}
     LIMIT ${safePageSize} OFFSET ${offset}
   `;
   const rows = await runQuery(dataSql, [normalizedInstanceKey]);
@@ -341,19 +501,8 @@ async function getDictionaryVersionsForUser(userLogin, dictionaryName) {
   const context = await getUserDictionaryContext(userLogin);
   const permission = resolveDictionaryPermission(context, dictionaryName);
 
-  const sqlText = `
-    SELECT *
-    FROM ${dictionaryInstanceDetailsView}
-    WHERE UPPER(TRIM(DICTIONARY_LOCATION)) = ?
-       OR UPPER(TRIM(DICTIONARY_NAME)) = ?
-    ORDER BY DICTIONARY_INSTANCE_VERSION_CODE DESC
-  `;
-
   // Keep all columns from the source view in backend memory for future operations.
-  const rawRows = await runQuery(sqlText, [
-    normalizeDictionaryName(permission.id),
-    normalizeDictionaryName(permission.label)
-  ]);
+  const rawRows = await getDictionaryInstanceDetailsRowsForPermission(permission);
 
   const seenVersionIds = new Set();
   const versions = [];
@@ -377,6 +526,18 @@ async function getDictionaryVersionsForUser(userLogin, dictionaryName) {
   };
 }
 
+async function getDictionaryVersionHistoryForUser(userLogin, dictionaryName) {
+  const context = await getUserDictionaryContext(userLogin);
+  const permission = resolveDictionaryPermission(context, dictionaryName);
+
+  const rows = await getDictionaryInstanceDetailsRowsForPermission(permission);
+
+  return {
+    rows,
+    canUpdate: permission.canUpdate
+  };
+}
+
 module.exports = {
   accessConfigTable,
   dictionaryInstanceDetailsView,
@@ -384,5 +545,6 @@ module.exports = {
   ROLE_UPDATER,
   getUserDictionaryContext,
   getDictionaryRowsPageForUser,
-  getDictionaryVersionsForUser
+  getDictionaryVersionsForUser,
+  getDictionaryVersionHistoryForUser
 };

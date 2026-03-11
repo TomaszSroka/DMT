@@ -42,10 +42,12 @@
             <select id="dictionaryVersionSelect" disabled></select>
           </label>
 
+          <button id="showVersionDetailsButton" type="button" class="btn btn-discard" disabled></button>
+
           <div class="actions">
             <button id="saveButton" class="btn btn-save" disabled></button>
-            <button id="discardButton" class="btn btn-discard" disabled></button>
             <button id="publishButton" class="btn btn-publish" disabled></button>
+            <button id="discardButton" class="btn btn-discard" disabled></button>
           </div>
         </div>
       </header>
@@ -101,8 +103,8 @@
         <div class="edit-header">
           <h3 id="saveDialogTitle"></h3>
           <div class="edit-actions">
-            <button id="saveStayButton" type="button" class="btn btn-discard"></button>
             <button id="saveConfirmButton" type="button" class="btn btn-save"></button>
+            <button id="saveStayButton" type="button" class="btn btn-discard"></button>
           </div>
         </div>
         <div class="confirm-body">
@@ -124,6 +126,34 @@
         <div class="confirm-body">
           <p id="discardAllDialogIntro"></p>
           <ul id="discardAllChangesList" class="confirm-changes"></ul>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="versionDetailsDialog" class="version-details-dialog">
+      <form id="versionDetailsForm" class="version-details-form" method="dialog">
+        <div class="edit-header">
+          <h3 id="versionDetailsTitle"></h3>
+          <div class="edit-actions">
+            <button id="versionDetailsCloseButton" type="button" class="btn btn-discard"></button>
+          </div>
+        </div>
+        <div id="versionDetailsContent" class="version-details-content"></div>
+      </form>
+    </dialog>
+
+    <dialog id="errorDetailsDialog" class="error-details-dialog">
+      <form id="errorDetailsForm" class="error-details-form" method="dialog">
+        <div class="edit-header">
+          <h3 id="errorDetailsTitle"></h3>
+          <div class="edit-actions">
+            <button id="errorDetailsCopyButton" type="button" class="btn btn-save"></button>
+            <button id="errorDetailsCloseButton" type="button" class="btn btn-discard"></button>
+          </div>
+        </div>
+        <div class="error-details-content">
+          <p id="errorDetailsMessage" class="error-details-message"></p>
+          <pre id="errorDetailsText" class="error-details-text"></pre>
         </div>
       </form>
     </dialog>

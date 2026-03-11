@@ -21,6 +21,7 @@ const rolesList = document.getElementById("rolesList");
 const dictionaryLabel = document.getElementById("dictionaryLabel");
 const dictionaryVersionLabel = document.getElementById("dictionaryVersionLabel");
 const dictionaryVersionSelect = document.getElementById("dictionaryVersionSelect");
+const showVersionDetailsButton = document.getElementById("showVersionDetailsButton");
 const appTitle = document.getElementById("appTitle");
 const editDialog = document.getElementById("editDialog");
 const editFields = document.getElementById("editFields");
@@ -45,6 +46,16 @@ const discardAllDialogIntro = document.getElementById("discardAllDialogIntro");
 const discardAllChangesList = document.getElementById("discardAllChangesList");
 const discardAllStayButton = document.getElementById("discardAllStayButton");
 const discardAllConfirmButton = document.getElementById("discardAllConfirmButton");
+const versionDetailsDialog = document.getElementById("versionDetailsDialog");
+const versionDetailsTitle = document.getElementById("versionDetailsTitle");
+const versionDetailsCloseButton = document.getElementById("versionDetailsCloseButton");
+const versionDetailsContent = document.getElementById("versionDetailsContent");
+const errorDetailsDialog = document.getElementById("errorDetailsDialog");
+const errorDetailsTitle = document.getElementById("errorDetailsTitle");
+const errorDetailsCopyButton = document.getElementById("errorDetailsCopyButton");
+const errorDetailsCloseButton = document.getElementById("errorDetailsCloseButton");
+const errorDetailsMessage = document.getElementById("errorDetailsMessage");
+const errorDetailsText = document.getElementById("errorDetailsText");
 
 const MAX_CELL_CHARS = UI_DEFAULTS.maxCellChars;
 const PAGE_SIZE = UI_DEFAULTS.pageSize;
@@ -68,6 +79,18 @@ let currentDictionaryCanUpdate = false;
 let dictionaryVersions = [];
 let selectedDictionaryVersionKey = "";
 let currentSnapshotToken = "";
+let lastErrorMessage = "";
+let lastErrorDetails = "";
+
+const VERSION_DETAILS_HIDDEN_COLUMNS = new Set(["DICTIONARY_LOCATION", "DICTIONARY_INSTANCE_VERSION_CODE"]);
+
+class ApiRequestError extends Error {
+  constructor(message, details = "") {
+    super(message);
+    this.name = "ApiRequestError";
+    this.details = String(details || "").trim();
+  }
+}
 
 function textValue(key) {
   return UI_TEXT[key] || `[${key}]`;
@@ -110,6 +133,13 @@ function applyStaticConfig() {
   rolesLabel.textContent = textValue("rolesLabel");
   dictionaryLabel.textContent = textValue("dictionaryLabel");
   dictionaryVersionLabel.textContent = textValue("dictionaryVersionLabel");
+  showVersionDetailsButton.textContent = textValue("showVersionDetails");
+  showVersionDetailsButton.disabled = true;
+  versionDetailsTitle.textContent = textValue("versionDetailsTitle");
+  versionDetailsCloseButton.textContent = textValue("versionDetailsClose");
+  errorDetailsTitle.textContent = textValue("errorDetailsTitle");
+  errorDetailsCopyButton.textContent = textValue("errorDetailsCopy");
+  errorDetailsCloseButton.textContent = textValue("errorDetailsClose");
   dictionarySelect.setAttribute("aria-label", textValue("dictionarySelectorAriaLabel"));
   dictionaryVersionSelect.setAttribute("aria-label", textValue("dictionaryVersionSelectorAriaLabel"));
   saveButton.textContent = textValue("save");
@@ -157,7 +187,55 @@ function setLoading(message = textValue("loadingData")) {
 }
 
 function setError(message) {
-  tableContainer.innerHTML = `<div class="error-state">${message}</div>`;
+  setErrorWithDetails(message, "");
+}
+
+function setErrorWithDetails(message, details) {
+  lastErrorMessage = String(message || "");
+  lastErrorDetails = String(details || "").trim();
+  const actions = lastErrorDetails
+    ? `<div class="error-state-actions"><button id="showErrorDetailsButton" type="button" class="btn btn-discard">${escapeHtml(
+        textValue("errorDetailsShow")
+      )}</button></div>`
+    : "";
+
+  tableContainer.innerHTML = `<div class="error-state">${escapeHtml(lastErrorMessage)}${actions}</div>`;
+}
+
+function extractErrorDetails(error) {
+  if (!error) {
+    return "";
+  }
+
+  if (typeof error.details === "string" && error.details.trim()) {
+    return error.details.trim();
+  }
+
+  return "";
+}
+
+function openErrorDetailsDialog() {
+  if (!lastErrorDetails) {
+    return;
+  }
+
+  errorDetailsMessage.textContent = lastErrorMessage;
+  errorDetailsText.textContent = lastErrorDetails;
+  errorDetailsCopyButton.textContent = textValue("errorDetailsCopy");
+  errorDetailsDialog.showModal();
+}
+
+async function copyErrorDetails() {
+  if (!lastErrorDetails) {
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(lastErrorDetails);
+    errorDetailsCopyButton.textContent = textValue("errorDetailsCopied");
+  } catch (error) {
+    errorDetailsCopyButton.textContent = textValue("errorDetailsCopyFailed");
+  }
 }
 
 function resetDictionaryVersionSelect() {
@@ -166,6 +244,7 @@ function resetDictionaryVersionSelect() {
   currentSnapshotToken = "";
   dictionaryVersionSelect.innerHTML = `<option value="">${escapeHtml(textValue("dictionaryVersionDisabledOption"))}</option>`;
   dictionaryVersionSelect.disabled = true;
+  showVersionDetailsButton.disabled = true;
 }
 
 function setDictionaryVersionLoading() {
@@ -173,6 +252,7 @@ function setDictionaryVersionLoading() {
   currentSnapshotToken = "";
   dictionaryVersionSelect.innerHTML = `<option value="">${escapeHtml(textValue("dictionaryVersionLoadingOption"))}</option>`;
   dictionaryVersionSelect.disabled = true;
+  showVersionDetailsButton.disabled = true;
 }
 
 function populateDictionaryVersions(versions) {
@@ -181,6 +261,7 @@ function populateDictionaryVersions(versions) {
   if (dictionaryVersions.length === 0) {
     dictionaryVersionSelect.innerHTML = `<option value="">${escapeHtml(textValue("dictionaryVersionEmptyOption"))}</option>`;
     dictionaryVersionSelect.disabled = true;
+    showVersionDetailsButton.disabled = true;
     return;
   }
 
@@ -197,6 +278,68 @@ function populateDictionaryVersions(versions) {
 
   dictionaryVersionSelect.innerHTML = `${baseOption}${options}`;
   dictionaryVersionSelect.disabled = false;
+  showVersionDetailsButton.disabled = false;
+}
+
+function renderVersionDetailsRows(rows) {
+  const safeRows = Array.isArray(rows)
+    ? [...rows].sort((a, b) => {
+        const left = Number.parseFloat(a && a.DICTIONARY_INSTANCE_VERSION_CODE);
+        const right = Number.parseFloat(b && b.DICTIONARY_INSTANCE_VERSION_CODE);
+
+        if (Number.isFinite(left) && Number.isFinite(right)) {
+          return right - left;
+        }
+
+        const leftText = String((a && a.DICTIONARY_INSTANCE_VERSION_CODE) || "");
+        const rightText = String((b && b.DICTIONARY_INSTANCE_VERSION_CODE) || "");
+        return rightText.localeCompare(leftText, undefined, { numeric: true, sensitivity: "base" });
+      })
+    : [];
+
+  if (safeRows.length === 0) {
+    versionDetailsContent.innerHTML = `<div class="empty-state">${escapeHtml(textValue("versionDetailsEmpty"))}</div>`;
+    return;
+  }
+
+  const columns = Object.keys(safeRows[0]).filter((column) => !VERSION_DETAILS_HIDDEN_COLUMNS.has(column));
+
+  if (columns.length === 0) {
+    versionDetailsContent.innerHTML = `<div class="empty-state">${escapeHtml(textValue("versionDetailsEmpty"))}</div>`;
+    return;
+  }
+  const head = columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("");
+  const body = safeRows
+    .map((row) => {
+      const cells = columns
+        .map((column) => {
+          const fullValue = row[column] == null ? "" : String(row[column]);
+          const shortValue = truncateValue(fullValue);
+          return `<td title="${escapeHtml(fullValue)}">${escapeHtml(shortValue)}</td>`;
+        })
+        .join("");
+      return `<tr>${cells}</tr>`;
+    })
+    .join("");
+
+  versionDetailsContent.innerHTML = `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+async function openVersionDetailsDialog() {
+  if (!activeDictionary || showVersionDetailsButton.disabled) {
+    return;
+  }
+
+  versionDetailsTitle.textContent = textValue("versionDetailsTitle");
+  versionDetailsContent.innerHTML = `<div class="empty-state">${escapeHtml(textValue("versionDetailsLoading"))}</div>`;
+  versionDetailsDialog.showModal();
+
+  try {
+    const data = await fetchJson(`/api/dictionaries/${encodeURIComponent(activeDictionary)}/version-history`);
+    renderVersionDetailsRows(data.rows || []);
+  } catch (error) {
+    versionDetailsContent.innerHTML = `<div class="error-state">${escapeHtml(error.message)}</div>`;
+  }
 }
 
 function updatePaginationControls() {
@@ -291,7 +434,9 @@ async function fetchJson(url) {
   }
 
   if (!response.ok) {
-    throw new Error(payload.error || textValue("unknownApiError"));
+    const baseMessage = payload.error || textValue("unknownApiError");
+    const details = typeof payload.details === "string" ? payload.details.trim() : "";
+    throw new ApiRequestError(baseMessage, details);
   }
 
   return payload;
@@ -375,7 +520,7 @@ async function loadRows(dictionaryName, requestedPage = 1, dictionaryInstanceKey
     totalPages = 1;
     currentPage = 1;
     updatePaginationControls();
-    setError(error.message);
+    setErrorWithDetails(error.message, extractErrorDetails(error));
   }
 }
 
@@ -402,6 +547,7 @@ async function loadDictionaryVersions(dictionaryName) {
   } catch (error) {
     dictionaryVersionSelect.innerHTML = `<option value="">${escapeHtml(error.message)}</option>`;
     dictionaryVersionSelect.disabled = true;
+    setErrorWithDetails(error.message, extractErrorDetails(error));
   }
 }
 
@@ -734,6 +880,12 @@ function publishChanges() {
 }
 
 function handleTableClick(event) {
+  const detailsButton = event.target.closest("#showErrorDetailsButton");
+  if (detailsButton) {
+    openErrorDetailsDialog();
+    return;
+  }
+
   const button = event.target.closest(".row-edit-btn");
   if (!button) {
     return;
@@ -761,7 +913,7 @@ async function initialize() {
     applyMeta(meta);
     await loadUserContext();
   } catch (error) {
-    setError(error.message);
+    setErrorWithDetails(error.message, extractErrorDetails(error));
   }
 }
 
@@ -833,6 +985,14 @@ nextPageButton.addEventListener("click", () => {
 saveButton.addEventListener("click", saveAllChanges);
 discardButton.addEventListener("click", discardAllChanges);
 publishButton.addEventListener("click", publishChanges);
+showVersionDetailsButton.addEventListener("click", openVersionDetailsDialog);
+versionDetailsCloseButton.addEventListener("click", () => {
+  versionDetailsDialog.close();
+});
+errorDetailsCloseButton.addEventListener("click", () => {
+  errorDetailsDialog.close();
+});
+errorDetailsCopyButton.addEventListener("click", copyErrorDetails);
 accountToggle.addEventListener("click", handleAccountToggle);
 tableContainer.addEventListener("click", handleTableClick);
 rowSaveButton.addEventListener("click", saveModalChanges);

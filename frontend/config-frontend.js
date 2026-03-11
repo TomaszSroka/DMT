@@ -1,10 +1,10 @@
 window.FRONTEND_CONFIG = {
   typography: {
     primaryFont: '"Space Grotesk", sans-serif',
-    monoFont: '"IBM Plex Mono", monospace',
+    monoFont: '"Space Grotesk", sans-serif',
     preconnectUrls: ["https://fonts.googleapis.com", "https://fonts.gstatic.com"],
     stylesheetUrl:
-      "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
   },
   defaults: {
     maxCellChars: 120,
@@ -22,6 +22,11 @@ window.FRONTEND_CONFIG = {
     rolesSelectAriaLabel: "Dictionary role list",
     dictionaryLabel: "Dictionary name:",
     dictionaryVersionLabel: "Dictionary version:",
+    showVersionDetails: "Show version details",
+    versionDetailsTitle: "Dictionary version details",
+    versionDetailsClose: "Close",
+    versionDetailsLoading: "Loading Dictionary version details...",
+    versionDetailsEmpty: "No Dictionary version details found.",
     dictionarySelectorAriaLabel: "Dictionary selector",
     dictionaryVersionSelectorAriaLabel: "Dictionary version selector",
     selectDictionaryOption: "Select Dictionary",
@@ -63,10 +68,16 @@ window.FRONTEND_CONFIG = {
     discardAllDialogConfirm: "Discard all",
     saveDialogTitle: "Review changes before save",
     saveDialogIntro: "You are about to save the following changes:",
-    saveDialogBack: "Back",
+    saveDialogBack: "Cancel",
     saveDialogConfirm: "Save changes",
     emptyValue: "(empty)",
     publishNotReady: "Publish flow will be enabled in next iteration.",
-    optimisticLockConflict: "Data changed on server. Reload Dictionary version and review changes before saving."
+    optimisticLockConflict: "Data changed on server. Reload Dictionary version and review changes before saving.",
+    errorDetailsTitle: "Technical error details",
+    errorDetailsShow: "Show technical details",
+    errorDetailsCopy: "Copy",
+    errorDetailsClose: "Close",
+    errorDetailsCopied: "Copied",
+    errorDetailsCopyFailed: "Copy failed"
   }
 };
