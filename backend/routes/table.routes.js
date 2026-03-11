@@ -5,17 +5,12 @@ const {
   getDictionaryVersionsForUser,
   getUserDictionaryContext
 } = require("../services/table.service");
+const { getErrorPayload } = require("../errors/app-error");
 
 const router = express.Router();
 
-function getErrorMessage(error, fallbackMessage) {
-  return error.message || error.code || fallbackMessage;
-}
-
 function sendApiError(res, error, fallbackMessage, fallbackCode) {
-  const status = Number.isInteger(error && error.status) ? error.status : 500;
-  const message = status >= 500 ? fallbackMessage : getErrorMessage(error, fallbackMessage);
-  const errorCode = (error && error.code) || fallbackCode;
+  const { status, message, errorCode } = getErrorPayload(error, fallbackMessage, fallbackCode);
   res.status(status).json({ error: message, errorCode });
 }
 

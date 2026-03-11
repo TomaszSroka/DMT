@@ -1,48 +1,10 @@
-﻿const FRONTEND_CONFIG = window.FRONTEND_CONFIG || {};
-const UI_TEXT = FRONTEND_CONFIG.text || {};
-const UI_DEFAULTS = FRONTEND_CONFIG.defaults || {};
-const UI_TYPOGRAPHY = FRONTEND_CONFIG.typography || {};
-
-const FALLBACK_UI_DEFAULTS = {
-  maxCellChars: 120,
-  pageSize: 100,
-  longTextThreshold: 90,
-  userDetailsDropdownThreshold: 15,
-  hiddenColumns: ["DICTIONARY_INSTANCE_KEY"]
-};
-
-function normalizePositiveInteger(value, fallbackValue) {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed < 1) {
-    return fallbackValue;
-  }
-  return parsed;
-}
-
-function normalizeHiddenColumns(columns, fallbackColumns) {
-  if (!Array.isArray(columns) || columns.length === 0) {
-    return fallbackColumns;
-  }
-
-  return columns
-    .map((column) => String(column || "").trim().toUpperCase())
-    .filter((column) => column.length > 0);
-}
-
-const NORMALIZED_UI_DEFAULTS = {
-  maxCellChars: normalizePositiveInteger(UI_DEFAULTS.maxCellChars, FALLBACK_UI_DEFAULTS.maxCellChars),
-  pageSize: normalizePositiveInteger(UI_DEFAULTS.pageSize, FALLBACK_UI_DEFAULTS.pageSize),
-  longTextThreshold: normalizePositiveInteger(UI_DEFAULTS.longTextThreshold, FALLBACK_UI_DEFAULTS.longTextThreshold),
-  userDetailsDropdownThreshold: normalizePositiveInteger(
-    UI_DEFAULTS.userDetailsDropdownThreshold,
-    FALLBACK_UI_DEFAULTS.userDetailsDropdownThreshold
-  ),
-  hiddenColumns: normalizeHiddenColumns(UI_DEFAULTS.hiddenColumns, FALLBACK_UI_DEFAULTS.hiddenColumns)
-};
+﻿const FRONTEND_RUNTIME_CONFIG = window.FRONTEND_RUNTIME_CONFIG || {};
+const UI_TEXT = FRONTEND_RUNTIME_CONFIG.text || {};
+const UI_DEFAULTS = FRONTEND_RUNTIME_CONFIG.defaults || {};
+const UI_TYPOGRAPHY = FRONTEND_RUNTIME_CONFIG.typography || {};
 
 const dictionarySelect = document.getElementById("dictionarySelect");
 const tableContainer = document.getElementById("tableContainer");
-const tableTitle = document.getElementById("tableTitle");
 const tableMeta = document.getElementById("tableMeta");
 const prevPageButton = document.getElementById("prevPageButton");
 const nextPageButton = document.getElementById("nextPageButton");
@@ -84,11 +46,11 @@ const discardAllChangesList = document.getElementById("discardAllChangesList");
 const discardAllStayButton = document.getElementById("discardAllStayButton");
 const discardAllConfirmButton = document.getElementById("discardAllConfirmButton");
 
-const MAX_CELL_CHARS = NORMALIZED_UI_DEFAULTS.maxCellChars;
-const PAGE_SIZE = NORMALIZED_UI_DEFAULTS.pageSize;
-const LONG_TEXT_THRESHOLD = NORMALIZED_UI_DEFAULTS.longTextThreshold;
-const USER_DETAILS_DROPDOWN_THRESHOLD = NORMALIZED_UI_DEFAULTS.userDetailsDropdownThreshold;
-const HIDDEN_COLUMNS = new Set(NORMALIZED_UI_DEFAULTS.hiddenColumns);
+const MAX_CELL_CHARS = UI_DEFAULTS.maxCellChars;
+const PAGE_SIZE = UI_DEFAULTS.pageSize;
+const LONG_TEXT_THRESHOLD = UI_DEFAULTS.longTextThreshold;
+const USER_DETAILS_DROPDOWN_THRESHOLD = UI_DEFAULTS.userDetailsDropdownThreshold;
+const HIDDEN_COLUMNS = new Set(UI_DEFAULTS.hiddenColumns || []);
 
 let activeDictionary = "";
 let dictionaries = [];
@@ -105,6 +67,7 @@ let totalRows = 0;
 let currentDictionaryCanUpdate = false;
 let dictionaryVersions = [];
 let selectedDictionaryVersionKey = "";
+let currentSnapshotToken = "";
 
 function textValue(key) {
   return UI_TEXT[key] || `[${key}]`;
@@ -169,7 +132,6 @@ function applyStaticConfig() {
   discardAllStayButton.textContent = textValue("discardAllDialogBack");
   discardAllConfirmButton.textContent = textValue("discardAllDialogConfirm");
   editDialogTitle.textContent = textValue("editRecordTitle");
-  tableTitle.textContent = "";
   tableMeta.textContent = textValue("rowsInitial");
   pageInfo.textContent = textValue("pageInfoInitial");
   resetDictionaryVersionSelect();
@@ -201,12 +163,14 @@ function setError(message) {
 function resetDictionaryVersionSelect() {
   dictionaryVersions = [];
   selectedDictionaryVersionKey = "";
+  currentSnapshotToken = "";
   dictionaryVersionSelect.innerHTML = `<option value="">${escapeHtml(textValue("dictionaryVersionDisabledOption"))}</option>`;
   dictionaryVersionSelect.disabled = true;
 }
 
 function setDictionaryVersionLoading() {
   selectedDictionaryVersionKey = "";
+  currentSnapshotToken = "";
   dictionaryVersionSelect.innerHTML = `<option value="">${escapeHtml(textValue("dictionaryVersionLoadingOption"))}</option>`;
   dictionaryVersionSelect.disabled = true;
 }
@@ -374,13 +338,13 @@ async function loadRows(dictionaryName, requestedPage = 1, dictionaryInstanceKey
   activeDictionary = dictionaryName;
   const selected = dictionaries.find((item) => item.id === dictionaryName);
   currentDictionaryCanUpdate = Boolean(selected && selected.canUpdate);
-  tableTitle.textContent = "";
 
   const normalizedVersionKey = String(dictionaryInstanceKey || "").trim();
   if (!normalizedVersionKey) {
     totalRows = 0;
     totalPages = 1;
     currentPage = 1;
+    currentSnapshotToken = "";
     updatePaginationControls();
     setLoading(textValue("selectDictionaryVersionPrompt"));
     return;
@@ -401,9 +365,11 @@ async function loadRows(dictionaryName, requestedPage = 1, dictionaryInstanceKey
     totalPages = data.totalPages || 1;
     totalRows = data.totalRows || 0;
     currentDictionaryCanUpdate = Boolean(data.canUpdate);
+    currentSnapshotToken = typeof data.snapshotToken === "string" ? data.snapshotToken : "";
     renderTable(workingRows);
   } catch (error) {
     selectedDictionaryVersionKey = "";
+    currentSnapshotToken = "";
     currentDictionaryCanUpdate = false;
     totalRows = 0;
     totalPages = 1;
@@ -411,6 +377,14 @@ async function loadRows(dictionaryName, requestedPage = 1, dictionaryInstanceKey
     updatePaginationControls();
     setError(error.message);
   }
+}
+
+async function fetchSnapshotToken(dictionaryName, requestedPage, dictionaryInstanceKey) {
+  const data = await fetchJson(
+    `/api/dictionaries/${encodeURIComponent(dictionaryName)}/rows?page=${requestedPage}&pageSize=${PAGE_SIZE}&dictionaryInstanceKey=${encodeURIComponent(dictionaryInstanceKey)}`
+  );
+
+  return typeof data.snapshotToken === "string" ? data.snapshotToken : "";
 }
 
 async function loadDictionaryVersions(dictionaryName) {
@@ -445,7 +419,6 @@ function applyMeta(meta) {
     )}</option>`
   );
 
-  tableTitle.textContent = "";
   tableMeta.textContent = textValue("rowsInitial");
   currentDictionaryCanUpdate = false;
   currentPage = 1;
@@ -729,6 +702,17 @@ async function saveAllChanges() {
     return;
   }
 
+  try {
+    const latestSnapshotToken = await fetchSnapshotToken(activeDictionary, currentPage, selectedDictionaryVersionKey);
+    if (currentSnapshotToken && latestSnapshotToken && latestSnapshotToken !== currentSnapshotToken) {
+      window.alert(textValue("optimisticLockConflict"));
+      return;
+    }
+  } catch (error) {
+    window.alert(error.message || textValue("unknownApiError"));
+    return;
+  }
+
   const changes = getPendingChanges();
   const shouldSave = await askSaveWithChanges(changes);
   if (!shouldSave) {
@@ -787,7 +771,6 @@ dictionarySelect.addEventListener("change", (event) => {
     currentDictionaryCanUpdate = false;
     pendingRowChanges = new Map();
     hasSavedChanges = false;
-    tableTitle.textContent = "";
     tableMeta.textContent = textValue("rowsInitial");
     currentPage = 1;
     totalPages = 1;

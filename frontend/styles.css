@@ -224,17 +224,12 @@ body {
 
 .card-header {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
+  justify-content: flex-end;
+  align-items: center;
   gap: 8px;
   padding: 16px;
   border-bottom: 1px solid var(--border);
   background: #fff7ec;
-}
-
-.card-header h2 {
-  margin: 0;
-  font-size: 1.06rem;
 }
 
 .table-header-actions {

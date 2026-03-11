@@ -30,6 +30,8 @@ module.exports = {
     schema: process.env.SNOWFLAKE_SCHEMA,
     privateKeyPath: process.env.SNOWFLAKE_PRIVATE_KEY_PATH,
     privateKeyPassphrase: process.env.SNOWFLAKE_PRIVATE_KEY_PASSPHRASE,
+    poolSize: Number.parseInt(process.env.SNOWFLAKE_POOL_SIZE || "2", 10),
+    poolDebug: String(process.env.SNOWFLAKE_POOL_DEBUG || "false").toLowerCase() === "true",
     clientSessionKeepAlive: String(process.env.SNOWFLAKE_CLIENT_SESSION_KEEP_ALIVE || "false").toLowerCase() === "true",
     queryTag: process.env.SNOWFLAKE_QUERY_TAG || ""
   },

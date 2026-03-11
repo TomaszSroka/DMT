@@ -66,6 +66,7 @@ window.FRONTEND_CONFIG = {
     saveDialogBack: "Back",
     saveDialogConfirm: "Save changes",
     emptyValue: "(empty)",
-    publishNotReady: "Publish flow will be enabled in next iteration."
+    publishNotReady: "Publish flow will be enabled in next iteration.",
+    optimisticLockConflict: "Data changed on server. Reload Dictionary version and review changes before saving."
   }
 };

@@ -1,4 +1,6 @@
 const { runQuery } = require("../config/snowflake");
+const crypto = require("crypto");
+const { createAppError } = require("../errors/app-error");
 
 const accessConfigTable = "DMT.MET_USER_DICTIONARY_ROLE_DETAILS";
 const dictionaryInstanceDetailsView = "DMT.MET_DICTIONARY_INSTANCE_DETAILS";
@@ -7,13 +9,6 @@ const ROLE_UPDATER = "DICTIONARY_UPDATER";
 const DEFAULT_PAGE_SIZE = 100;
 const MAX_PAGE_SIZE = 1000;
 const allowedRoles = new Set([ROLE_READER, ROLE_UPDATER]);
-
-function createAppError(message, status, code) {
-  const error = new Error(message);
-  error.status = status;
-  error.code = code;
-  return error;
-}
 
 function normalizeDictionaryName(name) {
   return String(name || "").trim().toUpperCase();
@@ -109,6 +104,32 @@ function extractDictionaryVersionLabel(row) {
 
 function isSafeDictionaryIdentifier(identifier) {
   return /^[A-Za-z0-9_.$"]+$/.test(identifier);
+}
+
+function buildSnapshotToken(rows, totalRows, dictionaryInstanceKey) {
+  const sampleRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : {};
+  const lockColumns = Object.keys(sampleRow).slice(0, 4);
+  const lockRows = Array.isArray(rows)
+    ? rows.map((row) => {
+        const reduced = {};
+        lockColumns.forEach((column) => {
+          reduced[column] = row[column];
+        });
+        return reduced;
+      })
+    : [];
+
+  const raw = JSON.stringify({
+    dictionaryInstanceKey,
+    totalRows,
+    lockColumns,
+    lockRows
+  });
+
+  return {
+    token: crypto.createHash("sha256").update(raw).digest("hex").slice(0, 24),
+    lockColumns
+  };
 }
 
 function cloneRow(row) {
@@ -300,6 +321,7 @@ async function getDictionaryRowsPageForUser(
     LIMIT ${safePageSize} OFFSET ${offset}
   `;
   const rows = await runQuery(dataSql, [normalizedInstanceKey]);
+  const snapshot = buildSnapshotToken(rows, totalRows, normalizedInstanceKey);
 
   return {
     rows,
@@ -309,7 +331,9 @@ async function getDictionaryRowsPageForUser(
     totalPages,
     canUpdate: permission.canUpdate,
     roles: Array.from(permission.roles).sort((a, b) => a.localeCompare(b)),
-    dictionaryInstanceKey: normalizedInstanceKey
+    dictionaryInstanceKey: normalizedInstanceKey,
+    snapshotToken: snapshot.token,
+    lockColumns: snapshot.lockColumns
   };
 }
 
