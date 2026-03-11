@@ -12,7 +12,7 @@ app.use("/api", tableRoutes);
 
 app.use((error, req, res, next) => {
   console.error(error);
-  res.status(500).json({ error: "Internal server error" });
+  res.status(500).json({ error: "Internal server error", errorCode: "INTERNAL_SERVER_ERROR" });
 });
 
 app.listen(port, () => {

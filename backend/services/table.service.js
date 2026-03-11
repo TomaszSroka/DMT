@@ -4,7 +4,16 @@ const accessConfigTable = "DMT.MET_USER_DICTIONARY_ROLE_DETAILS";
 const dictionaryInstanceDetailsView = "DMT.MET_DICTIONARY_INSTANCE_DETAILS";
 const ROLE_READER = "DICTIONARY_READER";
 const ROLE_UPDATER = "DICTIONARY_UPDATER";
+const DEFAULT_PAGE_SIZE = 100;
+const MAX_PAGE_SIZE = 1000;
 const allowedRoles = new Set([ROLE_READER, ROLE_UPDATER]);
+
+function createAppError(message, status, code) {
+  const error = new Error(message);
+  error.status = status;
+  error.code = code;
+  return error;
+}
 
 function normalizeDictionaryName(name) {
   return String(name || "").trim().toUpperCase();
@@ -16,6 +25,14 @@ function normalizeUserLogin(userLogin) {
 
 function normalizeRole(roleName) {
   return String(roleName || "").trim().toUpperCase();
+}
+
+function normalizePositiveInteger(value, defaultValue) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return defaultValue;
+  }
+  return parsed;
 }
 
 function extractCountValue(row) {
@@ -239,26 +256,32 @@ function resolveDictionaryPermission(context, dictionaryName) {
   const key = normalizeDictionaryName(dictionaryName);
   const permission = context.permissionByDictionary.get(key);
   if (!permission || !permission.canRead) {
-    throw new Error("Dictionary is not allowed for this user.");
+    throw createAppError("Dictionary is not allowed for this user.", 403, "DICTIONARY_FORBIDDEN");
   }
 
   return permission;
 }
 
-async function getDictionaryRowsPageForUser(userLogin, dictionaryName, page = 1, pageSize = 100, dictionaryInstanceKey = "") {
+async function getDictionaryRowsPageForUser(
+  userLogin,
+  dictionaryName,
+  page = 1,
+  pageSize = DEFAULT_PAGE_SIZE,
+  dictionaryInstanceKey = ""
+) {
   const context = await getUserDictionaryContext(userLogin);
   const permission = resolveDictionaryPermission(context, dictionaryName);
 
   if (!isSafeDictionaryIdentifier(permission.id)) {
-    throw new Error("Dictionary identifier is invalid.");
+    throw createAppError("Dictionary identifier is invalid.", 400, "DICTIONARY_IDENTIFIER_INVALID");
   }
 
-  const safePageSize = Number.isFinite(pageSize) ? Math.min(Math.max(pageSize, 1), 1000) : 100;
-  const requestedPage = Number.isFinite(page) ? Math.max(page, 1) : 1;
+  const safePageSize = Math.min(normalizePositiveInteger(pageSize, DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE);
+  const requestedPage = normalizePositiveInteger(page, 1);
 
   const normalizedInstanceKey = String(dictionaryInstanceKey || "").trim();
   if (!normalizedInstanceKey) {
-    throw new Error("Dictionary version key is required.");
+    throw createAppError("Dictionary version key is required.", 400, "DICTIONARY_VERSION_KEY_REQUIRED");
   }
 
   const countSql = `SELECT COUNT(*) AS TOTAL_COUNT FROM ${permission.id} WHERE DICTIONARY_INSTANCE_KEY = ?`;
@@ -273,6 +296,7 @@ async function getDictionaryRowsPageForUser(userLogin, dictionaryName, page = 1,
     SELECT *
     FROM ${permission.id}
     WHERE DICTIONARY_INSTANCE_KEY = ?
+    ORDER BY 1, 2, 3, 4
     LIMIT ${safePageSize} OFFSET ${offset}
   `;
   const rows = await runQuery(dataSql, [normalizedInstanceKey]);
@@ -307,10 +331,21 @@ async function getDictionaryVersionsForUser(userLogin, dictionaryName) {
     normalizeDictionaryName(permission.label)
   ]);
 
-  const versions = rawRows.map((row, index) => ({
-    id: extractDictionaryVersionId(row, index),
-    label: extractDictionaryVersionLabel(row)
-  }));
+  const seenVersionIds = new Set();
+  const versions = [];
+
+  rawRows.forEach((row, index) => {
+    const id = extractDictionaryVersionId(row, index);
+    if (seenVersionIds.has(id)) {
+      return;
+    }
+
+    seenVersionIds.add(id);
+    versions.push({
+      id,
+      label: extractDictionaryVersionLabel(row)
+    });
+  });
 
   return {
     versions,

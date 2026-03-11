@@ -139,13 +139,6 @@ body {
   background: #fff;
 }
 
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-}
-
 .dictionary-select-wrap {
   display: flex;
   align-items: center;
@@ -173,8 +166,7 @@ body {
   margin-left: auto;
 }
 
-.btn,
-.chip {
+.btn {
   border-radius: 9px;
   padding: 9px 13px;
   border: 1px solid transparent;
@@ -183,15 +175,9 @@ body {
   cursor: pointer;
 }
 
-.btn:disabled,
-.chip:disabled {
+.btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
-}
-
-.btn.primary {
-  background: var(--primary);
-  color: #fff;
 }
 
 .btn.btn-save {

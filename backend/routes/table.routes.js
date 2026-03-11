@@ -8,6 +8,17 @@ const {
 
 const router = express.Router();
 
+function getErrorMessage(error, fallbackMessage) {
+  return error.message || error.code || fallbackMessage;
+}
+
+function sendApiError(res, error, fallbackMessage, fallbackCode) {
+  const status = Number.isInteger(error && error.status) ? error.status : 500;
+  const message = status >= 500 ? fallbackMessage : getErrorMessage(error, fallbackMessage);
+  const errorCode = (error && error.code) || fallbackCode;
+  res.status(status).json({ error: message, errorCode });
+}
+
 router.get("/meta", async (req, res) => {
   try {
     const context = await getUserDictionaryContext(staticUser);
@@ -20,8 +31,7 @@ router.get("/meta", async (req, res) => {
       }))
     });
   } catch (error) {
-    const message = error.message || error.code || "Could not load dictionaries for user.";
-    res.status(400).json({ error: message });
+    sendApiError(res, error, "Could not load dictionaries for user.", "META_LOAD_FAILED");
   }
 });
 
@@ -34,8 +44,7 @@ router.get("/user-context", async (req, res) => {
       dictionaryRoles: context.dictionaryRoles
     });
   } catch (error) {
-    const message = error.message || error.code || "Could not load user roles.";
-    res.status(400).json({ error: message });
+    sendApiError(res, error, "Could not load user roles.", "USER_CONTEXT_LOAD_FAILED");
   }
 });
 
@@ -53,8 +62,7 @@ router.get("/dictionaries/:name/rows", async (req, res) => {
     );
     res.json(payload);
   } catch (error) {
-    const message = error.message || error.code || "Snowflake query failed.";
-    res.status(400).json({ error: message });
+    sendApiError(res, error, "Snowflake query failed.", "ROWS_QUERY_FAILED");
   }
 });
 
@@ -63,8 +71,7 @@ router.get("/dictionaries/:name/versions", async (req, res) => {
     const payload = await getDictionaryVersionsForUser(staticUser, req.params.name);
     res.json(payload);
   } catch (error) {
-    const message = error.message || error.code || "Could not load dictionary versions.";
-    res.status(400).json({ error: message });
+    sendApiError(res, error, "Could not load dictionary versions.", "VERSIONS_LOAD_FAILED");
   }
 });
 

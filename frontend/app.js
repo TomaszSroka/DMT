@@ -3,6 +3,43 @@ const UI_TEXT = FRONTEND_CONFIG.text || {};
 const UI_DEFAULTS = FRONTEND_CONFIG.defaults || {};
 const UI_TYPOGRAPHY = FRONTEND_CONFIG.typography || {};
 
+const FALLBACK_UI_DEFAULTS = {
+  maxCellChars: 120,
+  pageSize: 100,
+  longTextThreshold: 90,
+  userDetailsDropdownThreshold: 15,
+  hiddenColumns: ["DICTIONARY_INSTANCE_KEY"]
+};
+
+function normalizePositiveInteger(value, fallbackValue) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return fallbackValue;
+  }
+  return parsed;
+}
+
+function normalizeHiddenColumns(columns, fallbackColumns) {
+  if (!Array.isArray(columns) || columns.length === 0) {
+    return fallbackColumns;
+  }
+
+  return columns
+    .map((column) => String(column || "").trim().toUpperCase())
+    .filter((column) => column.length > 0);
+}
+
+const NORMALIZED_UI_DEFAULTS = {
+  maxCellChars: normalizePositiveInteger(UI_DEFAULTS.maxCellChars, FALLBACK_UI_DEFAULTS.maxCellChars),
+  pageSize: normalizePositiveInteger(UI_DEFAULTS.pageSize, FALLBACK_UI_DEFAULTS.pageSize),
+  longTextThreshold: normalizePositiveInteger(UI_DEFAULTS.longTextThreshold, FALLBACK_UI_DEFAULTS.longTextThreshold),
+  userDetailsDropdownThreshold: normalizePositiveInteger(
+    UI_DEFAULTS.userDetailsDropdownThreshold,
+    FALLBACK_UI_DEFAULTS.userDetailsDropdownThreshold
+  ),
+  hiddenColumns: normalizeHiddenColumns(UI_DEFAULTS.hiddenColumns, FALLBACK_UI_DEFAULTS.hiddenColumns)
+};
+
 const dictionarySelect = document.getElementById("dictionarySelect");
 const tableContainer = document.getElementById("tableContainer");
 const tableTitle = document.getElementById("tableTitle");
@@ -47,15 +84,11 @@ const discardAllChangesList = document.getElementById("discardAllChangesList");
 const discardAllStayButton = document.getElementById("discardAllStayButton");
 const discardAllConfirmButton = document.getElementById("discardAllConfirmButton");
 
-const MAX_CELL_CHARS = Number(UI_DEFAULTS.maxCellChars) || 120;
-const PAGE_SIZE = Number(UI_DEFAULTS.pageSize) || 100;
-const LONG_TEXT_THRESHOLD = Number(UI_DEFAULTS.longTextThreshold) || 90;
-const USER_DETAILS_DROPDOWN_THRESHOLD = Number(UI_DEFAULTS.userDetailsDropdownThreshold) || 15;
-const HIDDEN_COLUMNS = new Set(
-  Array.isArray(UI_DEFAULTS.hiddenColumns)
-    ? UI_DEFAULTS.hiddenColumns.map((column) => String(column || "").trim().toUpperCase())
-    : ["DICTIONARY_INSTANCE_KEY"]
-);
+const MAX_CELL_CHARS = NORMALIZED_UI_DEFAULTS.maxCellChars;
+const PAGE_SIZE = NORMALIZED_UI_DEFAULTS.pageSize;
+const LONG_TEXT_THRESHOLD = NORMALIZED_UI_DEFAULTS.longTextThreshold;
+const USER_DETAILS_DROPDOWN_THRESHOLD = NORMALIZED_UI_DEFAULTS.userDetailsDropdownThreshold;
+const HIDDEN_COLUMNS = new Set(NORMALIZED_UI_DEFAULTS.hiddenColumns);
 
 let activeDictionary = "";
 let dictionaries = [];
@@ -187,7 +220,9 @@ function populateDictionaryVersions(versions) {
     return;
   }
 
-  const baseOption = `<option value="">${escapeHtml(textValue("selectDictionaryVersionOption"))}</option>`;
+  const baseOption = `<option value="" data-placeholder="true">${escapeHtml(
+    textValue("selectDictionaryVersionOption")
+  )}</option>`;
   const options = dictionaryVersions
     .map((item) => {
       const id = item && item.id != null ? String(item.id) : "";
@@ -288,12 +323,7 @@ async function fetchJson(url) {
   try {
     payload = raw ? JSON.parse(raw) : {};
   } catch (error) {
-    throw new Error(
-      textValue(
-        "nonJsonApiError",
-        "API returned non-JSON response. Open app via http://localhost:3000 and ensure backend is running."
-      )
-    );
+    throw new Error(textValue("nonJsonApiError"));
   }
 
   if (!response.ok) {
@@ -757,7 +787,7 @@ dictionarySelect.addEventListener("change", (event) => {
     currentDictionaryCanUpdate = false;
     pendingRowChanges = new Map();
     hasSavedChanges = false;
-    tableTitle.textContent = textValue("selectDictionaryTitle");
+    tableTitle.textContent = "";
     tableMeta.textContent = textValue("rowsInitial");
     currentPage = 1;
     totalPages = 1;
@@ -780,6 +810,13 @@ dictionarySelect.addEventListener("change", (event) => {
 dictionaryVersionSelect.addEventListener("change", (event) => {
   const versionKey = String(event.target.value || "").trim();
   selectedDictionaryVersionKey = versionKey;
+
+  if (versionKey) {
+    const placeholder = dictionaryVersionSelect.querySelector('option[data-placeholder="true"]');
+    if (placeholder) {
+      placeholder.remove();
+    }
+  }
 
   if (!activeDictionary || !versionKey) {
     totalRows = 0;
