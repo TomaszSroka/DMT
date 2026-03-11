@@ -78,6 +78,20 @@ window.FRONTEND_CONFIG = {
     errorDetailsCopy: "Copy",
     errorDetailsClose: "Close",
     errorDetailsCopied: "Copied",
-    errorDetailsCopyFailed: "Copy failed"
+    errorDetailsCopyFailed: "Copy failed",
+    filtersOpen: "Filters",
+    filtersSummaryNone: "Filters: 0",
+    filtersSummaryActive: "Filters: {count}",
+    filtersDialogTitle: "Filter rules",
+    filtersDialogIntro: "Use * as wildcard (SQL LIKE). Example: *project*",
+    filtersAddRule: "Add rule",
+    filtersApply: "Apply",
+    filtersClear: "Clear",
+    filtersClose: "Close",
+    filtersColumnPlaceholder: "Column (e.g. PROJECT_ID)",
+    filtersValuePlaceholder: "Pattern (e.g. *100*)",
+    filtersRemoveRule: "Remove",
+    filtersEmpty: "No filter rules.",
+    filtersNoColumns: "Load Dictionary rows first to choose columns."
   }
 };

@@ -169,6 +169,74 @@ function isSafeDictionaryIdentifier(identifier) {
   return /^[A-Za-z0-9_.$"]+$/.test(identifier);
 }
 
+function isSafeColumnIdentifier(identifier) {
+  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(String(identifier || "").trim());
+}
+
+function parseFilterRulesInput(filtersInput) {
+  if (!filtersInput) {
+    return [];
+  }
+
+  if (Array.isArray(filtersInput)) {
+    return filtersInput;
+  }
+
+  if (typeof filtersInput === "string") {
+    const trimmed = filtersInput.trim();
+    if (!trimmed) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      throw createAppError("Filters payload is invalid.", 400, "FILTERS_INVALID");
+    }
+  }
+
+  return [];
+}
+
+function toSqlLikePattern(value) {
+  const text = String(value || "").trim();
+  return text
+    .replaceAll("\\", "\\\\")
+    .replaceAll("%", "\\%")
+    .replaceAll("_", "\\_")
+    .replaceAll("*", "%");
+}
+
+function normalizeFilterRules(filtersInput) {
+  const rawRules = parseFilterRulesInput(filtersInput);
+  const normalized = [];
+
+  rawRules.forEach((rule) => {
+    const column = String(rule && rule.column != null ? rule.column : "").trim().toUpperCase();
+    const value = String(rule && rule.value != null ? rule.value : "").trim();
+    if (!column || !value) {
+      return;
+    }
+
+    if (!isSafeColumnIdentifier(column)) {
+      throw createAppError("Filter column is invalid.", 400, "FILTER_COLUMN_INVALID");
+    }
+
+    normalized.push({
+      column,
+      pattern: toSqlLikePattern(value)
+    });
+  });
+
+  return normalized;
+}
+
+function normalizeSortDirection(direction) {
+  const value = String(direction || "").trim().toUpperCase();
+  return value === "DESC" ? "DESC" : "ASC";
+}
+
 function extractSortOrderPhrase(row) {
   return String((row && row.DICTIONARY_SORT_ORDER) || "").trim();
 }
@@ -445,7 +513,10 @@ async function getDictionaryRowsPageForUser(
   dictionaryName,
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
-  dictionaryInstanceKey = ""
+  dictionaryInstanceKey = "",
+  filtersInput = [],
+  sortColumnInput = "",
+  sortDirectionInput = "ASC"
 ) {
   const context = await getUserDictionaryContext(userLogin);
   const permission = resolveDictionaryPermission(context, dictionaryName);
@@ -462,11 +533,27 @@ async function getDictionaryRowsPageForUser(
     throw createAppError("Dictionary version key is required.", 400, "DICTIONARY_VERSION_KEY_REQUIRED");
   }
 
+  const filterRules = normalizeFilterRules(filtersInput);
+  const filterSql = filterRules
+    .map((rule) => ` AND UPPER(TO_VARCHAR("${rule.column}")) LIKE UPPER(?) ESCAPE '\\'`)
+    .join("");
+  const filterBindings = filterRules.map((rule) => rule.pattern);
+
   const versionRows = await getDictionaryInstanceDetailsRowsForPermission(permission);
   const sortOrderPhrase = getDictionarySortOrderFromVersionRows(versionRows, normalizedInstanceKey);
+  const selectedSortColumn = String(sortColumnInput || "").trim().toUpperCase();
+  const selectedSortDirection = normalizeSortDirection(sortDirectionInput);
 
-  const countSql = `SELECT COUNT(*) AS TOTAL_COUNT FROM ${permission.tableIdentifier} WHERE DICTIONARY_INSTANCE_KEY = ?`;
-  const countRows = await runQuery(countSql, [normalizedInstanceKey]);
+  if (selectedSortColumn && !isSafeColumnIdentifier(selectedSortColumn)) {
+    throw createAppError("Sort column is invalid.", 400, "SORT_COLUMN_INVALID");
+  }
+
+  const orderByClause = selectedSortColumn
+    ? `"${selectedSortColumn}" ${selectedSortDirection}`
+    : sortOrderPhrase;
+
+  const countSql = `SELECT COUNT(*) AS TOTAL_COUNT FROM ${permission.tableIdentifier} WHERE DICTIONARY_INSTANCE_KEY = ?${filterSql}`;
+  const countRows = await runQuery(countSql, [normalizedInstanceKey, ...filterBindings]);
   const totalRows = extractCountValue(countRows[0]);
 
   const totalPages = Math.max(1, Math.ceil(totalRows / safePageSize));
@@ -477,10 +564,11 @@ async function getDictionaryRowsPageForUser(
     SELECT *
     FROM ${permission.tableIdentifier}
     WHERE DICTIONARY_INSTANCE_KEY = ?
-    ORDER BY ${sortOrderPhrase}
+    ${filterSql}
+    ORDER BY ${orderByClause}
     LIMIT ${safePageSize} OFFSET ${offset}
   `;
-  const rows = await runQuery(dataSql, [normalizedInstanceKey]);
+  const rows = await runQuery(dataSql, [normalizedInstanceKey, ...filterBindings]);
   const snapshot = buildSnapshotToken(rows, totalRows, normalizedInstanceKey);
 
   return {

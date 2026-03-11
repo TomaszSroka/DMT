@@ -53,12 +53,18 @@ router.get("/dictionaries/:name/rows", async (req, res) => {
     const page = Number.parseInt(req.query.page, 10);
     const pageSize = Number.parseInt(req.query.pageSize, 10);
     const dictionaryInstanceKey = String(req.query.dictionaryInstanceKey || "").trim();
+    const filters = req.query.filters;
+    const sortColumn = String(req.query.sortColumn || "").trim();
+    const sortDirection = String(req.query.sortDirection || "").trim();
     const payload = await getDictionaryRowsPageForUser(
       staticUser,
       req.params.name,
       page,
       pageSize,
-      dictionaryInstanceKey
+      dictionaryInstanceKey,
+      filters,
+      sortColumn,
+      sortDirection
     );
     res.json(payload);
   } catch (error) {

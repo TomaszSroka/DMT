@@ -279,6 +279,15 @@ body {
   font-size: var(--font-size-ui);
 }
 
+#activeFiltersInfo {
+  color: var(--muted);
+  font-size: var(--font-size-ui);
+}
+
+#openFiltersButton {
+  margin-right: auto;
+}
+
 .table-wrap {
   overflow: auto;
   max-height: 70vh;
@@ -318,6 +327,17 @@ th {
   font-size: var(--font-size-ui);
   text-transform: uppercase;
   letter-spacing: 0.03em;
+}
+
+.th-sort-btn {
+  all: unset;
+  cursor: pointer;
+  display: inline-block;
+  width: 100%;
+}
+
+.th-sort-btn:hover {
+  color: #5b432b;
 }
 
 tbody tr:hover {
@@ -384,6 +404,61 @@ tbody tr:hover {
   font-size: var(--font-size-ui);
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.filters-dialog {
+  width: min(980px, 94vw);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0;
+}
+
+.filters-form {
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.filters-content {
+  padding: 14px 16px 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.filters-intro {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--font-size-ui);
+}
+
+.filters-rules-list {
+  display: grid;
+  gap: 8px;
+}
+
+.filters-rule-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.filters-rule-row input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-ui);
+}
+
+.filters-rule-row select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-ui);
+  background: #fff;
 }
 
 .edit-dialog {

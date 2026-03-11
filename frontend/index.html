@@ -56,6 +56,8 @@
         <section class="card">
           <div class="card-header">
             <div class="table-header-actions">
+              <button id="openFiltersButton" type="button" class="btn btn-discard"></button>
+              <span id="activeFiltersInfo"></span>
               <span id="tableMeta"></span>
               <span id="pageInfo"></span>
               <div class="pager-controls">
@@ -154,6 +156,24 @@
         <div class="error-details-content">
           <p id="errorDetailsMessage" class="error-details-message"></p>
           <pre id="errorDetailsText" class="error-details-text"></pre>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="filtersDialog" class="filters-dialog">
+      <form id="filtersForm" class="filters-form" method="dialog">
+        <div class="edit-header">
+          <h3 id="filtersDialogTitle"></h3>
+          <div class="edit-actions">
+            <button id="filtersAddRuleButton" type="button" class="btn btn-discard"></button>
+            <button id="filtersApplyButton" type="button" class="btn btn-save"></button>
+            <button id="filtersClearButton" type="button" class="btn btn-discard"></button>
+            <button id="filtersCloseButton" type="button" class="btn btn-discard"></button>
+          </div>
+        </div>
+        <div class="filters-content">
+          <p id="filtersDialogIntro" class="filters-intro"></p>
+          <div id="filtersRulesList" class="filters-rules-list"></div>
         </div>
       </form>
     </dialog>
