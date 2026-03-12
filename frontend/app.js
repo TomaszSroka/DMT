@@ -65,6 +65,7 @@ const filtersDialogIntro = document.getElementById("filtersDialogIntro");
 const filtersRulesList = document.getElementById("filtersRulesList");
 const filtersAddRuleButton = document.getElementById("filtersAddRuleButton");
 const filtersApplyButton = document.getElementById("filtersApplyButton");
+const filtersApplyCloseButton = document.getElementById("filtersApplyCloseButton");
 const filtersClearButton = document.getElementById("filtersClearButton");
 const filtersCloseButton = document.getElementById("filtersCloseButton");
 
@@ -161,6 +162,7 @@ function applyStaticConfig() {
   filtersDialogIntro.textContent = textValue("filtersDialogIntro");
   filtersAddRuleButton.textContent = textValue("filtersAddRule");
   filtersApplyButton.textContent = textValue("filtersApply");
+  filtersApplyCloseButton.textContent = textValue("filtersApplyClose");
   filtersClearButton.textContent = textValue("filtersClear");
   filtersCloseButton.textContent = textValue("filtersClose");
   dictionarySelect.setAttribute("aria-label", textValue("dictionarySelectorAriaLabel"));
@@ -169,8 +171,7 @@ function applyStaticConfig() {
   discardButton.textContent = textValue("discard");
   publishButton.textContent = textValue("publish");
   openFiltersButton.textContent = textValue("filtersOpen");
-  hasLoadedTableData = false;
-  updateFiltersButtonState();
+  setTableDataLoadedState(false);
   prevPageButton.textContent = textValue("previous");
   nextPageButton.textContent = textValue("next");
   rowSaveButton.textContent = textValue("save");
@@ -254,6 +255,12 @@ function updateCurrentDictionaryInfo() {
 
 function updateFiltersButtonState() {
   openFiltersButton.disabled = !hasLoadedTableData;
+}
+
+function setTableDataLoadedState(isLoaded) {
+  hasLoadedTableData = Boolean(isLoaded);
+  updateFiltersButtonState();
+  updateCurrentDictionaryInfo();
 }
 
 function createEmptyFilterRule() {
@@ -353,6 +360,25 @@ function collectFiltersFromDraft() {
     .filter((item) => item.column.length > 0 && item.value.length > 0);
 }
 
+function collectFiltersDraftRaw() {
+  const rows = Array.from(filtersRulesList.querySelectorAll(".filters-rule-row"));
+  return rows.map((row) => {
+    const columnInput = row.querySelector('[data-filter-field="column"]');
+    const valueInput = row.querySelector('[data-filter-field="value"]');
+    const column = columnInput ? String(columnInput.value || "") : "";
+    const value = valueInput ? String(valueInput.value || "") : "";
+    return { column, value };
+  });
+}
+
+function syncFiltersDraftFromUi() {
+  if (!filtersDialog.open) {
+    return;
+  }
+
+  filtersDraft = collectFiltersDraftRaw();
+}
+
 function normalizeFilterRowsForComparison(rows) {
   if (!Array.isArray(rows)) {
     return [];
@@ -372,39 +398,26 @@ function isFiltersDraftDirty() {
   return JSON.stringify(normalizedActive) !== JSON.stringify(normalizedDraft);
 }
 
-function getFiltersDraftChanges() {
-  const before = normalizeFilterRowsForComparison(activeFilters);
-  const after = normalizeFilterRowsForComparison(collectFiltersFromDraft());
-  const maxLength = Math.max(before.length, after.length);
-  const changes = [];
+function getFiltersDraftSummaryLines() {
+  const rows = collectFiltersDraftRaw()
+    .map((item) => ({
+      column: String(item && item.column != null ? item.column : "").trim(),
+      value: String(item && item.value != null ? item.value : "").trim()
+    }))
+    .filter((item) => item.column.length > 0 || item.value.length > 0);
 
-  for (let index = 0; index < maxLength; index += 1) {
-    const previous = before[index] || { column: "", value: "" };
-    const current = after[index] || { column: "", value: "" };
-
-    if (previous.column !== current.column) {
-      changes.push({
-        field: `Filter rule ${index + 1} / Column`,
-        oldValue: previous.column,
-        newValue: current.column,
-        changed: true
-      });
-    }
-
-    if (previous.value !== current.value) {
-      changes.push({
-        field: `Filter rule ${index + 1} / Value`,
-        oldValue: previous.value,
-        newValue: current.value,
-        changed: true
-      });
-    }
+  if (rows.length === 0) {
+    return ["Filter rule: Column - Value: (empty) - (empty)"];
   }
 
-  return changes;
+  return rows.map((item) => {
+    const column = item.column.length > 0 ? item.column : "(empty)";
+    const value = item.value.length > 0 ? item.value : "(empty)";
+    return `Filter rule: Column - Value: ${column} - ${value}`;
+  });
 }
 
-async function askDiscardFiltersWithChanges(changes) {
+async function askDiscardFiltersWithChanges(summaryLines) {
   const previousTitle = discardDialogTitle.textContent;
   const previousIntro = discardDialogIntro.textContent;
   const previousStay = discardStayButton.textContent;
@@ -415,13 +428,50 @@ async function askDiscardFiltersWithChanges(changes) {
   discardStayButton.textContent = textValue("filtersDiscardDialogKeepEditing");
   discardConfirmButton.textContent = textValue("filtersDiscardDialogConfirm");
 
+  discardChangesList.innerHTML = summaryLines
+    .map((line) => `<li>${escapeHtml(line)}</li>`)
+    .join("");
+  discardChangesList.hidden = false;
+
+  const shouldDiscard = await new Promise((resolve) => {
+    const onStay = () => {
+      cleanup();
+      discardDialog.close();
+      resolve(false);
+    };
+
+    const onConfirm = () => {
+      cleanup();
+      discardDialog.close();
+      resolve(true);
+    };
+
+    const onCancel = (event) => {
+      event.preventDefault();
+      cleanup();
+      resolve(false);
+    };
+
+    const cleanup = () => {
+      discardStayButton.removeEventListener("click", onStay);
+      discardConfirmButton.removeEventListener("click", onConfirm);
+      discardDialog.removeEventListener("cancel", onCancel);
+    };
+
+    discardStayButton.addEventListener("click", onStay);
+    discardConfirmButton.addEventListener("click", onConfirm);
+    discardDialog.addEventListener("cancel", onCancel);
+    discardDialog.showModal();
+  });
+
   try {
-    return await askDiscardWithChanges(changes);
+    return shouldDiscard;
   } finally {
     discardDialogTitle.textContent = previousTitle;
     discardDialogIntro.textContent = previousIntro;
     discardStayButton.textContent = previousStay;
     discardConfirmButton.textContent = previousConfirm;
+    discardChangesList.hidden = false;
   }
 }
 
@@ -431,8 +481,21 @@ async function closeFiltersDialog() {
     return;
   }
 
-  const shouldDiscard = await askDiscardFiltersWithChanges(getFiltersDraftChanges());
+  const shouldDiscard = await askDiscardFiltersWithChanges(getFiltersDraftSummaryLines());
   if (shouldDiscard) {
+    filtersDialog.close();
+  }
+}
+
+function applyFilters(closeAfterApply = false) {
+  activeFilters = collectFiltersFromDraft();
+  updateFiltersSummary();
+
+  if (activeDictionary && selectedDictionaryVersionKey) {
+    loadRows(activeDictionary, 1, selectedDictionaryVersionKey);
+  }
+
+  if (closeAfterApply) {
     filtersDialog.close();
   }
 }
@@ -780,8 +843,7 @@ async function loadRows(dictionaryName, requestedPage = 1, dictionaryInstanceKey
 
   const normalizedVersionKey = String(dictionaryInstanceKey || "").trim();
   if (!normalizedVersionKey) {
-    hasLoadedTableData = false;
-    updateFiltersButtonState();
+    setTableDataLoadedState(false);
     currentTableColumns = [];
     totalRows = 0;
     totalPages = 1;
@@ -793,8 +855,7 @@ async function loadRows(dictionaryName, requestedPage = 1, dictionaryInstanceKey
   }
 
   selectedDictionaryVersionKey = normalizedVersionKey;
-  hasLoadedTableData = false;
-  updateFiltersButtonState();
+  setTableDataLoadedState(false);
   setLoading();
 
   try {
@@ -808,12 +869,10 @@ async function loadRows(dictionaryName, requestedPage = 1, dictionaryInstanceKey
     totalRows = data.totalRows || 0;
     currentDictionaryCanUpdate = Boolean(data.canUpdate);
     currentSnapshotToken = typeof data.snapshotToken === "string" ? data.snapshotToken : "";
-    hasLoadedTableData = true;
-    updateFiltersButtonState();
+    setTableDataLoadedState(true);
     renderTable(workingRows);
   } catch (error) {
-    hasLoadedTableData = false;
-    updateFiltersButtonState();
+    setTableDataLoadedState(false);
     selectedDictionaryVersionKey = "";
     currentSnapshotToken = "";
     currentDictionaryCanUpdate = false;
@@ -832,8 +891,7 @@ async function fetchSnapshotToken(dictionaryName, requestedPage, dictionaryInsta
 }
 
 async function loadDictionaryVersions(dictionaryName) {
-  hasLoadedTableData = false;
-  updateFiltersButtonState();
+  setTableDataLoadedState(false);
   currentTableColumns = [];
   setDictionaryVersionLoading();
   totalRows = 0;
@@ -872,8 +930,7 @@ function applyMeta(meta) {
   currentPage = 1;
   totalPages = 1;
   totalRows = 0;
-  hasLoadedTableData = false;
-  updateFiltersButtonState();
+  setTableDataLoadedState(false);
   updatePaginationControls();
   setLoading(textValue("selectDictionaryPrompt"));
   updateActionButtons();
@@ -1255,8 +1312,7 @@ dictionarySelect.addEventListener("change", (event) => {
     currentPage = 1;
     totalPages = 1;
     totalRows = 0;
-    hasLoadedTableData = false;
-    updateFiltersButtonState();
+    setTableDataLoadedState(false);
     updatePaginationControls();
     setLoading(textValue("selectDictionaryPrompt"));
     resetDictionaryVersionSelect();
@@ -1291,8 +1347,7 @@ dictionaryVersionSelect.addEventListener("change", (event) => {
   }
 
   if (!activeDictionary || !versionKey) {
-    hasLoadedTableData = false;
-    updateFiltersButtonState();
+    setTableDataLoadedState(false);
     totalRows = 0;
     totalPages = 1;
     currentPage = 1;
@@ -1324,6 +1379,7 @@ nextPageButton.addEventListener("click", () => {
 openFiltersButton.addEventListener("click", openFiltersDialog);
 
 filtersAddRuleButton.addEventListener("click", () => {
+  syncFiltersDraftFromUi();
   const lastRule = Array.isArray(filtersDraft) && filtersDraft.length > 0 ? filtersDraft[filtersDraft.length - 1] : null;
   const nextColumn = getNextFilterColumn(lastRule && lastRule.column);
   filtersDraft.push({ column: nextColumn, value: "" });
@@ -1336,6 +1392,8 @@ filtersRulesList.addEventListener("click", (event) => {
     return;
   }
 
+  syncFiltersDraftFromUi();
+
   const index = Number.parseInt(removeButton.getAttribute("data-filter-remove"), 10);
   if (!Number.isInteger(index) || index < 0 || index >= filtersDraft.length) {
     return;
@@ -1346,13 +1404,11 @@ filtersRulesList.addEventListener("click", (event) => {
 });
 
 filtersApplyButton.addEventListener("click", () => {
-  activeFilters = collectFiltersFromDraft();
-  updateFiltersSummary();
-  filtersDialog.close();
+  applyFilters(false);
+});
 
-  if (activeDictionary && selectedDictionaryVersionKey) {
-    loadRows(activeDictionary, 1, selectedDictionaryVersionKey);
-  }
+filtersApplyCloseButton.addEventListener("click", () => {
+  applyFilters(true);
 });
 
 filtersClearButton.addEventListener("click", () => {
