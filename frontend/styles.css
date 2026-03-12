@@ -80,18 +80,25 @@ body {
   letter-spacing: 0.01em;
 }
 
+.brand-wrap {
+  display: grid;
+  gap: 2px;
+}
+
 .account-wrap {
   position: relative;
 }
 
 .account-toggle {
-  background: #f3e6d8;
-  border-color: #d7bda0;
-  color: #63492f;
+  padding: 7px 11px;
+  background: #f8f1e7;
+  border-color: #cdb89f;
+  color: #745a3f;
+  box-shadow: none;
 }
 
 .account-toggle:not(:disabled):hover {
-  background: #ead8c3;
+  background: #f1e7da;
 }
 
 .account-panel {
@@ -111,19 +118,29 @@ body {
   display: none;
 }
 
-.account-panel label {
+.account-field-label {
   display: block;
+  margin: 0;
   margin-bottom: 4px;
   font-size: var(--font-size-ui);
   color: var(--muted);
 }
 
-.account-panel input {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+.account-user-value {
+  margin: 0;
   margin-bottom: 10px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-ui);
+  font-weight: 400;
+  color: var(--text);
+  line-height: normal;
+  word-break: break-word;
+}
+
+.roles-block {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(191, 174, 150, 0.7);
 }
 
 .roles-block p {

@@ -146,6 +146,7 @@ function applyStaticConfig() {
   applyTypographyAssets();
   document.title = textValue("documentTitle");
   appTitle.textContent = textValue("appTitle");
+  appTitle.title = textValue("appTitle");
   accountToggle.textContent = textValue("accountButton");
   userNameLabel.textContent = textValue("userLabel");
   rolesLabel.textContent = textValue("rolesLabel");
@@ -847,10 +848,10 @@ function renderRoles(dictionaryRoles) {
 async function loadUserContext() {
   try {
     const data = await fetchJson("/api/user-context");
-    userNameField.value = data.user || "";
+    userNameField.textContent = data.user || "";
     renderRoles(data.dictionaryRoles || []);
   } catch (error) {
-    userNameField.value = "";
+    userNameField.textContent = "";
     rolesList.innerHTML = `<li>${escapeHtml(error.message)}</li>`;
   }
 }

@@ -15,7 +15,7 @@ window.FRONTEND_CONFIG = {
   },
   text: {
     documentTitle: "DMT",
-    appTitle: "Dictionary Management Tool (DMT)",
+    appTitle: "DMT - Dictionary Management Tool",
     accountButton: "User account",
     userLabel: "User:",
     rolesLabel: "Dictionary - Role:",
