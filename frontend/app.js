@@ -8,6 +8,7 @@ const tableContainer = document.getElementById("tableContainer");
 const tableMeta = document.getElementById("tableMeta");
 const openFiltersButton = document.getElementById("openFiltersButton");
 const activeFiltersInfo = document.getElementById("activeFiltersInfo");
+const currentDictionaryInfo = document.getElementById("currentDictionaryInfo");
 const prevPageButton = document.getElementById("prevPageButton");
 const nextPageButton = document.getElementById("nextPageButton");
 const pageInfo = document.getElementById("pageInfo");
@@ -96,6 +97,7 @@ let filtersDraft = [];
 let currentTableColumns = [];
 let currentSortColumn = "";
 let currentSortDirection = "ASC";
+let hasLoadedTableData = false;
 
 const VERSION_DETAILS_HIDDEN_COLUMNS = new Set(["DICTIONARY_LOCATION", "DICTIONARY_INSTANCE_VERSION_CODE"]);
 
@@ -167,6 +169,8 @@ function applyStaticConfig() {
   discardButton.textContent = textValue("discard");
   publishButton.textContent = textValue("publish");
   openFiltersButton.textContent = textValue("filtersOpen");
+  hasLoadedTableData = false;
+  updateFiltersButtonState();
   prevPageButton.textContent = textValue("previous");
   nextPageButton.textContent = textValue("next");
   rowSaveButton.textContent = textValue("save");
@@ -186,14 +190,12 @@ function applyStaticConfig() {
   editDialogTitle.textContent = textValue("editRecordTitle");
   tableMeta.textContent = textValue("rowsInitial");
   pageInfo.textContent = textValue("pageInfoInitial");
+  updateCurrentDictionaryInfo();
   resetDictionaryVersionSelect();
   updateFiltersSummary();
 
   if (UI_TYPOGRAPHY.primaryFont) {
     document.documentElement.style.setProperty("--font-primary", UI_TYPOGRAPHY.primaryFont);
-  }
-  if (UI_TYPOGRAPHY.monoFont) {
-    document.documentElement.style.setProperty("--font-mono", UI_TYPOGRAPHY.monoFont);
   }
 }
 
@@ -210,8 +212,71 @@ function updateFiltersSummary() {
   activeFiltersInfo.textContent = formatFiltersSummary();
 }
 
+function getCurrentDictionaryLabel() {
+  const match = Array.isArray(dictionaries)
+    ? dictionaries.find((item) => item && item.id === activeDictionary)
+    : null;
+  return match && match.label ? String(match.label) : "";
+}
+
+function getCurrentDictionaryVersionLabel() {
+  const selectedKey = String(selectedDictionaryVersionKey || "").trim();
+  if (!selectedKey || !Array.isArray(dictionaryVersions)) {
+    return "";
+  }
+
+  const selectedVersion = dictionaryVersions.find((item) => item && String(item.id) === selectedKey);
+  return selectedVersion && selectedVersion.label ? String(selectedVersion.label) : "";
+}
+
+function updateCurrentDictionaryInfo() {
+  if (!hasLoadedTableData) {
+    currentDictionaryInfo.textContent = textValue("currentDictionaryNone");
+    return;
+  }
+
+  const label = getCurrentDictionaryLabel();
+  if (!label) {
+    currentDictionaryInfo.textContent = textValue("currentDictionaryNone");
+    return;
+  }
+
+  const versionLabel = getCurrentDictionaryVersionLabel();
+  if (!versionLabel) {
+    currentDictionaryInfo.textContent = `${textValue("currentDictionaryPrefix")} ${label}`;
+    return;
+  }
+
+  currentDictionaryInfo.textContent = `${textValue("currentDictionaryPrefix")} ${label} ${textValue(
+    "currentDictionaryVersionShort"
+  )} ${versionLabel}`;
+}
+
+function updateFiltersButtonState() {
+  openFiltersButton.disabled = !hasLoadedTableData;
+}
+
 function createEmptyFilterRule() {
   return { column: "", value: "" };
+}
+
+function getNextFilterColumn(previousColumn = "") {
+  if (!Array.isArray(currentTableColumns) || currentTableColumns.length === 0) {
+    return "";
+  }
+
+  const normalizedPrevious = String(previousColumn || "").trim();
+  if (!normalizedPrevious) {
+    return currentTableColumns[0];
+  }
+
+  const currentIndex = currentTableColumns.findIndex((column) => column === normalizedPrevious);
+  if (currentIndex < 0) {
+    return currentTableColumns[0];
+  }
+
+  const nextIndex = (currentIndex + 1) % currentTableColumns.length;
+  return currentTableColumns[nextIndex];
 }
 
 function renderFiltersDraft() {
@@ -225,14 +290,29 @@ function renderFiltersDraft() {
     return;
   }
 
-  const options = currentTableColumns
-    .map((column) => `<option value="${escapeHtml(column)}">${escapeHtml(column)}</option>`)
-    .join("");
+  const baseColumns = Array.isArray(currentTableColumns) ? [...currentTableColumns] : [];
+  const header = `<div class="filters-rule-header">
+    <span>${escapeHtml(textValue("filtersColumnLabel"))}</span>
+    <span>${escapeHtml(textValue("filtersValueLabel"))}</span>
+    <span></span>
+  </div>`;
 
-  filtersRulesList.innerHTML = filtersDraft
+  const rows = filtersDraft
     .map((rule, index) => {
       const column = rule && rule.column != null ? String(rule.column) : "";
       const value = rule && rule.value != null ? String(rule.value) : "";
+      const rowColumns = [...baseColumns];
+      if (column && !rowColumns.includes(column)) {
+        rowColumns.unshift(column);
+      }
+
+      const options = rowColumns
+        .map((item) => {
+          const selectedAttr = item === column ? " selected" : "";
+          return `<option value="${escapeHtml(item)}"${selectedAttr}>${escapeHtml(item)}</option>`;
+        })
+        .join("");
+
       return `<div class="filters-rule-row" data-filter-index="${index}">
         <select data-filter-field="column">${options}</select>
         <input data-filter-field="value" value="${escapeHtml(value)}" placeholder="${escapeHtml(
@@ -245,13 +325,7 @@ function renderFiltersDraft() {
     })
     .join("");
 
-  Array.from(filtersRulesList.querySelectorAll('.filters-rule-row')).forEach((row, index) => {
-    const select = row.querySelector('[data-filter-field="column"]');
-    const selectedColumn = filtersDraft[index] && filtersDraft[index].column ? String(filtersDraft[index].column) : "";
-    if (select && selectedColumn) {
-      select.value = selectedColumn;
-    }
-  });
+  filtersRulesList.innerHTML = `${header}${rows}`;
 }
 
 function openFiltersDialog() {
@@ -260,7 +334,7 @@ function openFiltersDialog() {
         column: item && item.column != null ? String(item.column) : "",
         value: item && item.value != null ? String(item.value) : ""
       }))
-    : [createEmptyFilterRule()];
+    : [];
 
   renderFiltersDraft();
   filtersDialog.showModal();
@@ -277,6 +351,90 @@ function collectFiltersFromDraft() {
       return { column, value };
     })
     .filter((item) => item.column.length > 0 && item.value.length > 0);
+}
+
+function normalizeFilterRowsForComparison(rows) {
+  if (!Array.isArray(rows)) {
+    return [];
+  }
+
+  return rows
+    .map((item) => ({
+      column: String(item && item.column != null ? item.column : "").trim(),
+      value: String(item && item.value != null ? item.value : "").trim()
+    }))
+    .filter((item) => item.column.length > 0 || item.value.length > 0);
+}
+
+function isFiltersDraftDirty() {
+  const normalizedActive = normalizeFilterRowsForComparison(activeFilters);
+  const normalizedDraft = normalizeFilterRowsForComparison(collectFiltersFromDraft());
+  return JSON.stringify(normalizedActive) !== JSON.stringify(normalizedDraft);
+}
+
+function getFiltersDraftChanges() {
+  const before = normalizeFilterRowsForComparison(activeFilters);
+  const after = normalizeFilterRowsForComparison(collectFiltersFromDraft());
+  const maxLength = Math.max(before.length, after.length);
+  const changes = [];
+
+  for (let index = 0; index < maxLength; index += 1) {
+    const previous = before[index] || { column: "", value: "" };
+    const current = after[index] || { column: "", value: "" };
+
+    if (previous.column !== current.column) {
+      changes.push({
+        field: `Filter rule ${index + 1} / Column`,
+        oldValue: previous.column,
+        newValue: current.column,
+        changed: true
+      });
+    }
+
+    if (previous.value !== current.value) {
+      changes.push({
+        field: `Filter rule ${index + 1} / Value`,
+        oldValue: previous.value,
+        newValue: current.value,
+        changed: true
+      });
+    }
+  }
+
+  return changes;
+}
+
+async function askDiscardFiltersWithChanges(changes) {
+  const previousTitle = discardDialogTitle.textContent;
+  const previousIntro = discardDialogIntro.textContent;
+  const previousStay = discardStayButton.textContent;
+  const previousConfirm = discardConfirmButton.textContent;
+
+  discardDialogTitle.textContent = textValue("filtersDiscardDialogTitle");
+  discardDialogIntro.textContent = textValue("filtersDiscardDialogIntro");
+  discardStayButton.textContent = textValue("filtersDiscardDialogKeepEditing");
+  discardConfirmButton.textContent = textValue("filtersDiscardDialogConfirm");
+
+  try {
+    return await askDiscardWithChanges(changes);
+  } finally {
+    discardDialogTitle.textContent = previousTitle;
+    discardDialogIntro.textContent = previousIntro;
+    discardStayButton.textContent = previousStay;
+    discardConfirmButton.textContent = previousConfirm;
+  }
+}
+
+async function closeFiltersDialog() {
+  if (!isFiltersDraftDirty()) {
+    filtersDialog.close();
+    return;
+  }
+
+  const shouldDiscard = await askDiscardFiltersWithChanges(getFiltersDraftChanges());
+  if (shouldDiscard) {
+    filtersDialog.close();
+  }
 }
 
 function buildRowsUrl(dictionaryName, requestedPage, dictionaryInstanceKey) {
@@ -369,6 +527,7 @@ function resetDictionaryVersionSelect() {
   dictionaryVersionSelect.innerHTML = `<option value="">${escapeHtml(textValue("dictionaryVersionDisabledOption"))}</option>`;
   dictionaryVersionSelect.disabled = true;
   showVersionDetailsButton.disabled = true;
+  updateCurrentDictionaryInfo();
 }
 
 function setDictionaryVersionLoading() {
@@ -377,6 +536,7 @@ function setDictionaryVersionLoading() {
   dictionaryVersionSelect.innerHTML = `<option value="">${escapeHtml(textValue("dictionaryVersionLoadingOption"))}</option>`;
   dictionaryVersionSelect.disabled = true;
   showVersionDetailsButton.disabled = true;
+  updateCurrentDictionaryInfo();
 }
 
 function populateDictionaryVersions(versions) {
@@ -386,6 +546,7 @@ function populateDictionaryVersions(versions) {
     dictionaryVersionSelect.innerHTML = `<option value="">${escapeHtml(textValue("dictionaryVersionEmptyOption"))}</option>`;
     dictionaryVersionSelect.disabled = true;
     showVersionDetailsButton.disabled = true;
+    updateCurrentDictionaryInfo();
     return;
   }
 
@@ -403,6 +564,7 @@ function populateDictionaryVersions(versions) {
   dictionaryVersionSelect.innerHTML = `${baseOption}${options}`;
   dictionaryVersionSelect.disabled = false;
   showVersionDetailsButton.disabled = false;
+  updateCurrentDictionaryInfo();
 }
 
 function renderVersionDetailsRows(rows) {
@@ -508,7 +670,6 @@ function updateActionButtons() {
 
 function renderTable(rows) {
   if (!Array.isArray(rows) || rows.length === 0) {
-    currentTableColumns = [];
     tableContainer.innerHTML = `<div class="empty-state">${textValue("noRowsReturned")}</div>`;
     tableMeta.textContent = formatRowsMeta(0, totalRows);
     updateActionButtons();
@@ -613,11 +774,15 @@ async function loadUserContext() {
 
 async function loadRows(dictionaryName, requestedPage = 1, dictionaryInstanceKey = "") {
   activeDictionary = dictionaryName;
+  updateCurrentDictionaryInfo();
   const selected = dictionaries.find((item) => item.id === dictionaryName);
   currentDictionaryCanUpdate = Boolean(selected && selected.canUpdate);
 
   const normalizedVersionKey = String(dictionaryInstanceKey || "").trim();
   if (!normalizedVersionKey) {
+    hasLoadedTableData = false;
+    updateFiltersButtonState();
+    currentTableColumns = [];
     totalRows = 0;
     totalPages = 1;
     currentPage = 1;
@@ -628,6 +793,8 @@ async function loadRows(dictionaryName, requestedPage = 1, dictionaryInstanceKey
   }
 
   selectedDictionaryVersionKey = normalizedVersionKey;
+  hasLoadedTableData = false;
+  updateFiltersButtonState();
   setLoading();
 
   try {
@@ -641,8 +808,12 @@ async function loadRows(dictionaryName, requestedPage = 1, dictionaryInstanceKey
     totalRows = data.totalRows || 0;
     currentDictionaryCanUpdate = Boolean(data.canUpdate);
     currentSnapshotToken = typeof data.snapshotToken === "string" ? data.snapshotToken : "";
+    hasLoadedTableData = true;
+    updateFiltersButtonState();
     renderTable(workingRows);
   } catch (error) {
+    hasLoadedTableData = false;
+    updateFiltersButtonState();
     selectedDictionaryVersionKey = "";
     currentSnapshotToken = "";
     currentDictionaryCanUpdate = false;
@@ -661,6 +832,9 @@ async function fetchSnapshotToken(dictionaryName, requestedPage, dictionaryInsta
 }
 
 async function loadDictionaryVersions(dictionaryName) {
+  hasLoadedTableData = false;
+  updateFiltersButtonState();
+  currentTableColumns = [];
   setDictionaryVersionLoading();
   totalRows = 0;
   totalPages = 1;
@@ -698,11 +872,14 @@ function applyMeta(meta) {
   currentPage = 1;
   totalPages = 1;
   totalRows = 0;
+  hasLoadedTableData = false;
+  updateFiltersButtonState();
   updatePaginationControls();
   setLoading(textValue("selectDictionaryPrompt"));
   updateActionButtons();
   resetDictionaryVersionSelect();
   updateFiltersSummary();
+  updateCurrentDictionaryInfo();
 }
 
 function normalizeRowForModal(row) {
@@ -1067,6 +1244,7 @@ async function initialize() {
 dictionarySelect.addEventListener("change", (event) => {
   if (!event.target.value) {
     activeDictionary = "";
+    updateCurrentDictionaryInfo();
     currentDictionaryCanUpdate = false;
     activeFilters = [];
     currentSortColumn = "";
@@ -1077,6 +1255,8 @@ dictionarySelect.addEventListener("change", (event) => {
     currentPage = 1;
     totalPages = 1;
     totalRows = 0;
+    hasLoadedTableData = false;
+    updateFiltersButtonState();
     updatePaginationControls();
     setLoading(textValue("selectDictionaryPrompt"));
     resetDictionaryVersionSelect();
@@ -1090,6 +1270,7 @@ dictionarySelect.addEventListener("change", (event) => {
   }
 
   activeDictionary = event.target.value;
+  updateCurrentDictionaryInfo();
   activeFilters = [];
   currentSortColumn = "";
   currentSortDirection = "ASC";
@@ -1100,6 +1281,7 @@ dictionarySelect.addEventListener("change", (event) => {
 dictionaryVersionSelect.addEventListener("change", (event) => {
   const versionKey = String(event.target.value || "").trim();
   selectedDictionaryVersionKey = versionKey;
+  updateCurrentDictionaryInfo();
 
   if (versionKey) {
     const placeholder = dictionaryVersionSelect.querySelector('option[data-placeholder="true"]');
@@ -1109,6 +1291,8 @@ dictionaryVersionSelect.addEventListener("change", (event) => {
   }
 
   if (!activeDictionary || !versionKey) {
+    hasLoadedTableData = false;
+    updateFiltersButtonState();
     totalRows = 0;
     totalPages = 1;
     currentPage = 1;
@@ -1140,7 +1324,9 @@ nextPageButton.addEventListener("click", () => {
 openFiltersButton.addEventListener("click", openFiltersDialog);
 
 filtersAddRuleButton.addEventListener("click", () => {
-  filtersDraft.push(createEmptyFilterRule());
+  const lastRule = Array.isArray(filtersDraft) && filtersDraft.length > 0 ? filtersDraft[filtersDraft.length - 1] : null;
+  const nextColumn = getNextFilterColumn(lastRule && lastRule.column);
+  filtersDraft.push({ column: nextColumn, value: "" });
   renderFiltersDraft();
 });
 
@@ -1171,7 +1357,7 @@ filtersApplyButton.addEventListener("click", () => {
 
 filtersClearButton.addEventListener("click", () => {
   activeFilters = [];
-  filtersDraft = [createEmptyFilterRule()];
+  filtersDraft = [];
   updateFiltersSummary();
   renderFiltersDraft();
 
@@ -1181,7 +1367,12 @@ filtersClearButton.addEventListener("click", () => {
 });
 
 filtersCloseButton.addEventListener("click", () => {
-  filtersDialog.close();
+  closeFiltersDialog();
+});
+
+filtersDialog.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeFiltersDialog();
 });
 
 saveButton.addEventListener("click", saveAllChanges);

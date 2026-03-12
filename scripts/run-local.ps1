@@ -1,5 +1,6 @@
 param(
   [switch]$Restart,
+  [bool]$AutoFreePort = $true,
   [int]$Port = 3000,
   [string]$Url = "http://localhost:3000",
   [int]$WindowScalePercent = 70
@@ -19,18 +20,36 @@ if ($npm) {
   throw "npm is not available. Install Node.js LTS first."
 }
 
-if ($Restart) {
-  $listeners = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
-  if ($listeners) {
-    $pids = $listeners | Select-Object -ExpandProperty OwningProcess -Unique
-    foreach ($pidItem in $pids) {
-      try {
-        Stop-Process -Id $pidItem -Force -ErrorAction Stop
-      } catch {
-        Write-Host "Could not stop process ${pidItem}: $($_.Exception.Message)"
-      }
+function Stop-ListeningProcessesOnPort {
+  param(
+    [int]$TargetPort
+  )
+
+  $listeners = Get-NetTCPConnection -LocalPort $TargetPort -State Listen -ErrorAction SilentlyContinue
+  if (-not $listeners) {
+    return $true
+  }
+
+  $processIds = $listeners | Select-Object -ExpandProperty OwningProcess -Unique
+  foreach ($processId in $processIds) {
+    try {
+      $process = Get-Process -Id $processId -ErrorAction Stop
+      Write-Host "Stopping process on port ${TargetPort}: PID=$processId Name=$($process.ProcessName)"
+      Stop-Process -Id $processId -Force -ErrorAction Stop
+    } catch {
+      Write-Host "Could not stop process ${processId}: $($_.Exception.Message)"
     }
-    Start-Sleep -Seconds 1
+  }
+
+  Start-Sleep -Seconds 1
+  $remaining = Get-NetTCPConnection -LocalPort $TargetPort -State Listen -ErrorAction SilentlyContinue
+  return -not $remaining
+}
+
+if ($Restart -or $AutoFreePort) {
+  $stopped = Stop-ListeningProcessesOnPort -TargetPort $Port
+  if (-not $stopped) {
+    throw "Port $Port is still in use after stop attempt. Close the process manually and try again."
   }
 }
 
@@ -116,4 +135,5 @@ if ($firefoxCmd) {
 }
 
 Write-Host "App start command sent. Browser opened at $Url"
-Write-Host "Tip: use -Restart to stop current app on port $Port before starting again."
+Write-Host "Port cleanup: AutoFreePort=$AutoFreePort, Restart=$Restart"
+Write-Host "Tip: use -AutoFreePort `$false to skip auto cleanup, or -Restart for explicit restart mode."

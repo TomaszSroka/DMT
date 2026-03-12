@@ -201,11 +201,17 @@ function parseFilterRulesInput(filtersInput) {
 
 function toSqlLikePattern(value) {
   const text = String(value || "").trim();
-  return text
+  const escaped = text
     .replaceAll("\\", "\\\\")
     .replaceAll("%", "\\%")
     .replaceAll("_", "\\_")
     .replaceAll("*", "%");
+
+  if (!text.includes("*")) {
+    return `%${escaped}%`;
+  }
+
+  return escaped;
 }
 
 function normalizeFilterRules(filtersInput) {
@@ -535,7 +541,7 @@ async function getDictionaryRowsPageForUser(
 
   const filterRules = normalizeFilterRules(filtersInput);
   const filterSql = filterRules
-    .map((rule) => ` AND UPPER(TO_VARCHAR("${rule.column}")) LIKE UPPER(?) ESCAPE '\\'`)
+    .map((rule) => ` AND UPPER(TRIM(TO_VARCHAR("${rule.column}"))) LIKE UPPER(?) ESCAPE '\\\\'`)
     .join("");
   const filterBindings = filterRules.map((rule) => rule.pattern);
 
