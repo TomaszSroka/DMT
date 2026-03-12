@@ -201,12 +201,23 @@ function applyStaticConfig() {
 }
 
 function formatFiltersSummary() {
-  const count = Array.isArray(activeFilters) ? activeFilters.length : 0;
-  if (count === 0) {
+  if (!Array.isArray(activeFilters) || activeFilters.length === 0) {
     return textValue("filtersSummaryNone");
   }
 
-  return textValue("filtersSummaryActive").replace("{count}", String(count));
+  const parts = activeFilters
+    .map((item) => ({
+      column: String(item && item.column != null ? item.column : "").trim(),
+      value: String(item && item.value != null ? item.value : "").trim()
+    }))
+    .filter((item) => item.column.length > 0 && item.value.length > 0)
+    .map((item) => `${item.column} IN "${item.value}"`);
+
+  if (parts.length === 0) {
+    return textValue("filtersSummaryNone");
+  }
+
+  return parts.join(" AND ");
 }
 
 function updateFiltersSummary() {
@@ -520,11 +531,11 @@ function buildRowsUrl(dictionaryName, requestedPage, dictionaryInstanceKey) {
 }
 
 function formatRowsMeta(visibleRowsCount, allRowsCount) {
-  return `${textValue("rowsLabel")}: ${visibleRowsCount} / ${allRowsCount}`;
+  return `${textValue("rowsLabel")}: ${visibleRowsCount}/${allRowsCount}`;
 }
 
 function formatPagesMeta(page, pages) {
-  return `${textValue("pageLabel")}: ${page} / ${pages}`;
+  return `${textValue("pageLabel")}: ${page}/${pages}`;
 }
 
 function setLoading(message = textValue("loadingData")) {
@@ -693,7 +704,11 @@ async function openVersionDetailsDialog() {
 
 function updatePaginationControls() {
   const hasVersionSelection = Boolean(selectedDictionaryVersionKey);
-  pageInfo.textContent = formatPagesMeta(currentPage, totalPages);
+  if (!activeDictionary || !hasVersionSelection) {
+    pageInfo.textContent = formatPagesMeta(0, 0);
+  } else {
+    pageInfo.textContent = formatPagesMeta(currentPage, totalPages);
+  }
   prevPageButton.disabled = !activeDictionary || !hasVersionSelection || currentPage <= 1;
   nextPageButton.disabled = !activeDictionary || !hasVersionSelection || currentPage >= totalPages;
 }
@@ -742,11 +757,15 @@ function renderTable(rows) {
 
   const columns = getVisibleColumnsFromRow(rows[0]);
   currentTableColumns = [...columns];
+
+  const isCenteredColumn = (columnName) => String(columnName || "").toUpperCase() === "MET_DICTIONARY_INSTANCE";
+
   const head = `<th>${escapeHtml(textValue("tableActionHeader"))}</th>${columns
     .map((col) => {
       const isActiveSort = currentSortColumn === String(col).toUpperCase();
       const directionMark = isActiveSort ? (currentSortDirection === "DESC" ? " ▼" : " ▲") : "";
-      return `<th><button type="button" class="th-sort-btn" data-sort-column="${escapeHtml(col)}">${escapeHtml(
+      const headerClass = isCenteredColumn(col) ? " class=\"col-center\"" : "";
+      return `<th${headerClass}><button type="button" class="th-sort-btn" data-sort-column="${escapeHtml(col)}">${escapeHtml(
         col
       )}${directionMark}</button></th>`;
     })
@@ -765,7 +784,8 @@ function renderTable(rows) {
         .map((col) => {
           const fullValue = row[col] == null ? "" : String(row[col]);
           const shortValue = truncateValue(fullValue);
-          return `<td title="${escapeHtml(fullValue)}">${escapeHtml(shortValue)}</td>`;
+          const cellClass = isCenteredColumn(col) ? " class=\"col-center\"" : "";
+          return `<td${cellClass} title="${escapeHtml(fullValue)}">${escapeHtml(shortValue)}</td>`;
         })
         .join("");
       return `<tr>${actionCell}${tds}</tr>`;
