@@ -1,5 +1,7 @@
 param(
-  [switch]$SkipNpmInstall
+  [switch]$SkipNpmInstall,
+  [switch]$UseNpmCi,
+  [bool]$IncludeUnitTests = $true
 )
 
 $ErrorActionPreference = "Stop"
@@ -19,10 +21,28 @@ if ($npm) {
 Set-Location -Path $repoRoot
 
 if (-not $SkipNpmInstall) {
-  Write-Host "Installing npm dependencies (npm install)..."
-  & $npmCmd install
+  $nodeModulesPath = Join-Path $repoRoot "node_modules"
+
+  if ($UseNpmCi) {
+    Write-Host "Installing npm dependencies (npm ci)..."
+    & $npmCmd ci
+  } elseif (-not (Test-Path $nodeModulesPath)) {
+    Write-Host "node_modules not found, installing npm dependencies (npm install)..."
+    & $npmCmd install
+  } else {
+    Write-Host "node_modules already present; skipping npm install."
+  }
+
   if ($LASTEXITCODE -ne 0) {
-    throw "npm install failed with exit code $LASTEXITCODE."
+    throw "Dependency installation failed with exit code $LASTEXITCODE."
+  }
+}
+
+if ($IncludeUnitTests) {
+  Write-Host "Running unit tests..."
+  & $npmCmd run test:unit
+  if ($LASTEXITCODE -ne 0) {
+    throw "Unit tests failed with exit code $LASTEXITCODE."
   }
 }
 
@@ -32,4 +52,4 @@ if ($LASTEXITCODE -ne 0) {
   throw "Contract tests failed with exit code $LASTEXITCODE."
 }
 
-Write-Host "Contract tests finished successfully."
+Write-Host "Tests finished successfully."

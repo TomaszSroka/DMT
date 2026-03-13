@@ -13,6 +13,15 @@ window.FRONTEND_CONFIG = {
     userDetailsDropdownThreshold: 15,
     hiddenColumns: ["DICTIONARY_INSTANCE_KEY"]
   },
+  uiBehavior: {
+    defaultSortDirection: "ASC",
+    versionDetailsHiddenColumns: ["DICTIONARY_LOCATION", "DICTIONARY_INSTANCE_VERSION_CODE"],
+    filtersSummaryTemplate: '{column} IN "{value}"',
+    filtersSummaryJoiner: " AND ",
+    rolePairSeparator: " - ",
+    changeArrow: " -> ",
+    filterDraftRowTemplate: "Filter rule: Column - Value: {column} - {value}"
+  },
   text: {
     documentTitle: "DMT",
     appTitle: "DMT - Dictionary Management Tool",

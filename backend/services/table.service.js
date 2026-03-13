@@ -1,6 +1,11 @@
 const { runQuery } = require("../config/snowflake");
 const crypto = require("crypto");
 const { createAppError } = require("../errors/app-error");
+const {
+  normalizeFilterRules,
+  normalizeSortDirection,
+  isSafeOrderByPhrase
+} = require("./table.validation");
 
 const accessConfigTable = "DMT.MET_USER_DICTIONARY_ROLE_DETAILS";
 const dictionaryInstanceDetailsView = "DMT.MET_DICTIONARY_INSTANCE_DETAILS";
@@ -14,11 +19,7 @@ const allowedRoleKeys = new Set([ROLE_READER_KEY, ROLE_UPDATER_KEY]);
 const ACCESS_CACHE_TTL_MS = 60 * 1000;
 const USER_CONTEXT_CACHE_TTL_MS = 60 * 1000;
 
-const accessCache = {
-  rows: null,
-  expiresAt: 0,
-  userKeyByLogin: new Map()
-};
+const accessCacheByUser = new Map();
 
 const userContextCache = new Map();
 
@@ -35,35 +36,8 @@ function normalizeUserKey(userKey) {
   return value.length > 0 ? value.toUpperCase() : "";
 }
 
-async function getAllAccessRows() {
-  const now = Date.now();
-  if (Array.isArray(accessCache.rows) && accessCache.expiresAt > now) {
-    return accessCache.rows;
-  }
-
-  const sqlText = `
-    SELECT *
-    FROM ${accessConfigTable}
-  `;
-
-  const rows = await runQuery(sqlText);
-  accessCache.rows = rows;
-  accessCache.expiresAt = now + ACCESS_CACHE_TTL_MS;
-  accessCache.userKeyByLogin.clear();
-
-  rows.forEach((row) => {
-    const login = normalizeUserLogin(row && row.USER_LOGIN);
-    const key = normalizeUserKey(row && row.USER_KEY);
-    if (login && key && !accessCache.userKeyByLogin.has(login)) {
-      accessCache.userKeyByLogin.set(login, key);
-    }
-  });
-
-  return rows;
-}
-
-function normalizeRole(roleName) {
-  return String(roleName || "").trim().toUpperCase();
+function cloneRows(rows) {
+  return JSON.parse(JSON.stringify(Array.isArray(rows) ? rows : []));
 }
 
 function normalizePositiveInteger(value, defaultValue) {
@@ -86,6 +60,17 @@ function extractCountValue(row) {
 
   const value = Number.parseInt(row[countKey], 10);
   return Number.isFinite(value) ? value : 0;
+}
+
+function extractWindowTotalCount(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return 0;
+  }
+
+  const firstRow = rows[0] || {};
+  const rawValue = firstRow.__TOTAL_COUNT;
+  const parsed = Number.parseInt(rawValue, 10);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function extractDictionaryId(row) {
@@ -173,93 +158,16 @@ function isSafeColumnIdentifier(identifier) {
   return /^[A-Za-z_][A-Za-z0-9_]*$/.test(String(identifier || "").trim());
 }
 
-function parseFilterRulesInput(filtersInput) {
-  if (!filtersInput) {
-    return [];
-  }
-
-  if (Array.isArray(filtersInput)) {
-    return filtersInput;
-  }
-
-  if (typeof filtersInput === "string") {
-    const trimmed = filtersInput.trim();
-    if (!trimmed) {
-      return [];
-    }
-
-    try {
-      const parsed = JSON.parse(trimmed);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (error) {
-      throw createAppError("Filters payload is invalid.", 400, "FILTERS_INVALID");
-    }
-  }
-
-  return [];
-}
-
-function toSqlLikePattern(value) {
-  const text = String(value || "").trim();
-  const escaped = text
-    .replaceAll("\\", "\\\\")
-    .replaceAll("%", "\\%")
-    .replaceAll("_", "\\_")
-    .replaceAll("*", "%");
-
-  if (!text.includes("*")) {
-    return `%${escaped}%`;
-  }
-
-  return escaped;
-}
-
-function normalizeFilterRules(filtersInput) {
-  const rawRules = parseFilterRulesInput(filtersInput);
-  const normalized = [];
-
-  rawRules.forEach((rule) => {
-    const column = String(rule && rule.column != null ? rule.column : "").trim().toUpperCase();
-    const value = String(rule && rule.value != null ? rule.value : "").trim();
-    if (!column || !value) {
-      return;
-    }
-
-    if (!isSafeColumnIdentifier(column)) {
-      throw createAppError("Filter column is invalid.", 400, "FILTER_COLUMN_INVALID");
-    }
-
-    normalized.push({
-      column,
-      pattern: toSqlLikePattern(value)
-    });
+function stripWindowColumns(rows) {
+  return (Array.isArray(rows) ? rows : []).map((row) => {
+    const cloned = cloneRow(row);
+    delete cloned.__TOTAL_COUNT;
+    return cloned;
   });
-
-  return normalized;
-}
-
-function normalizeSortDirection(direction) {
-  const value = String(direction || "").trim().toUpperCase();
-  return value === "DESC" ? "DESC" : "ASC";
 }
 
 function extractSortOrderPhrase(row) {
   return String((row && row.DICTIONARY_SORT_ORDER) || "").trim();
-}
-
-function isSafeOrderByPhrase(orderByPhrase) {
-  const phrase = String(orderByPhrase || "").trim();
-  if (!phrase) {
-    return false;
-  }
-
-  const parts = phrase.split(",").map((item) => item.trim()).filter((item) => item.length > 0);
-  if (parts.length === 0) {
-    return false;
-  }
-
-  const pattern = /^([A-Za-z0-9_$"]+\.)*[A-Za-z0-9_$"]+(\s+(ASC|DESC))?(\s+NULLS\s+(FIRST|LAST))?$/i;
-  return parts.every((part) => pattern.test(part));
 }
 
 async function getDictionaryInstanceDetailsRowsForPermission(permission) {
@@ -345,25 +253,51 @@ function mergeRowColumns(target, row) {
 }
 
 async function getUserAccessRows(userLogin) {
-  const normalizedUserRef = normalizeUserLogin(userLogin);
-  const rows = await getAllAccessRows();
-  const userKeyFromInput = normalizeUserKey(userLogin);
-  const matchedByKey = rows.find((row) => normalizeUserKey(row && row.USER_KEY) === userKeyFromInput);
-  const resolvedFromLogin = accessCache.userKeyByLogin.get(normalizedUserRef) || "";
-  const matchedByLogin = rows.find((row) => normalizeUserLogin(row && row.USER_LOGIN) === normalizedUserRef);
-  const resolvedUserKey = normalizeUserKey(
-    (matchedByKey && matchedByKey.USER_KEY) || resolvedFromLogin || (matchedByLogin && matchedByLogin.USER_KEY)
-  );
-
-  if (!resolvedUserKey) {
+  const normalizedUser = normalizeUserLogin(userLogin);
+  if (!normalizedUser) {
     return [];
   }
 
-  return rows.filter((row) => {
-    const rowUserKey = normalizeUserKey(row && row.USER_KEY);
-    const rowRoleKey = normalizeUserKey(row && row.ROLE_KEY);
-    return rowUserKey === resolvedUserKey && allowedRoleKeys.has(rowRoleKey);
+  const now = Date.now();
+  const cached = accessCacheByUser.get(normalizedUser);
+  if (cached && cached.expiresAt > now && Array.isArray(cached.rows)) {
+    return cached.rows;
+  }
+
+  const normalizedUserKey = normalizeUserKey(userLogin);
+  const sqlText = `
+    SELECT *
+    FROM ${accessConfigTable}
+    WHERE UPPER(TRIM(ROLE_KEY)) IN (?, ?)
+      AND (
+        UPPER(TRIM(USER_LOGIN)) = ?
+        OR UPPER(TRIM(USER_KEY)) = ?
+      )
+  `;
+
+  const rows = await runQuery(sqlText, [ROLE_READER_KEY, ROLE_UPDATER_KEY, normalizedUser, normalizedUserKey]);
+  const dedupedRows = [];
+  const seen = new Set();
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const userKey = normalizeUserKey(row && row.USER_KEY);
+    const roleKey = normalizeUserKey(row && row.ROLE_KEY);
+    const dictionaryKey = normalizeDictionaryName(row && row.DICTIONARY_KEY);
+    const dedupeKey = `${userKey}::${roleKey}::${dictionaryKey}`;
+
+    if (seen.has(dedupeKey)) {
+      return;
+    }
+
+    seen.add(dedupeKey);
+    dedupedRows.push(row);
   });
+
+  accessCacheByUser.set(normalizedUser, {
+    rows: dedupedRows,
+    expiresAt: now + ACCESS_CACHE_TTL_MS
+  });
+
+  return dedupedRows;
 }
 
 function buildDictionaryPermissions(accessRows) {
@@ -558,27 +492,42 @@ async function getDictionaryRowsPageForUser(
     ? `"${selectedSortColumn}" ${selectedSortDirection}`
     : sortOrderPhrase;
 
-  const countSql = `SELECT COUNT(*) AS TOTAL_COUNT FROM ${permission.tableIdentifier} WHERE DICTIONARY_INSTANCE_KEY = ?${filterSql}`;
-  const countRows = await runQuery(countSql, [normalizedInstanceKey, ...filterBindings]);
-  const totalRows = extractCountValue(countRows[0]);
+  let safePage = requestedPage;
+  let offset = (safePage - 1) * safePageSize;
+
+  function buildDataWithCountSql(targetOffset) {
+    return `
+      SELECT *, COUNT(*) OVER() AS __TOTAL_COUNT
+      FROM ${permission.tableIdentifier}
+      WHERE DICTIONARY_INSTANCE_KEY = ?
+      ${filterSql}
+      ORDER BY ${orderByClause}
+      LIMIT ${safePageSize} OFFSET ${targetOffset}
+    `;
+  }
+
+  let rowsWithCount = await runQuery(buildDataWithCountSql(offset), [normalizedInstanceKey, ...filterBindings]);
+  let totalRows = extractWindowTotalCount(rowsWithCount);
+
+  // Out-of-range page returns 0 rows, so window COUNT cannot be read from result rows.
+  if (rowsWithCount.length === 0 && requestedPage > 1) {
+    const countSql = `SELECT COUNT(*) AS TOTAL_COUNT FROM ${permission.tableIdentifier} WHERE DICTIONARY_INSTANCE_KEY = ?${filterSql}`;
+    const countRows = await runQuery(countSql, [normalizedInstanceKey, ...filterBindings]);
+    totalRows = extractCountValue(countRows[0]);
+    const totalPages = Math.max(1, Math.ceil(totalRows / safePageSize));
+    safePage = Math.min(requestedPage, totalPages);
+    offset = (safePage - 1) * safePageSize;
+
+    rowsWithCount = await runQuery(buildDataWithCountSql(offset), [normalizedInstanceKey, ...filterBindings]);
+  }
 
   const totalPages = Math.max(1, Math.ceil(totalRows / safePageSize));
-  const safePage = Math.min(requestedPage, totalPages);
-  const offset = (safePage - 1) * safePageSize;
-
-  const dataSql = `
-    SELECT *
-    FROM ${permission.tableIdentifier}
-    WHERE DICTIONARY_INSTANCE_KEY = ?
-    ${filterSql}
-    ORDER BY ${orderByClause}
-    LIMIT ${safePageSize} OFFSET ${offset}
-  `;
-  const rows = await runQuery(dataSql, [normalizedInstanceKey, ...filterBindings]);
+  safePage = Math.min(safePage, totalPages);
+  const rows = stripWindowColumns(rowsWithCount);
   const snapshot = buildSnapshotToken(rows, totalRows, normalizedInstanceKey);
 
   return {
-    rows,
+    rows: cloneRows(rows),
     page: safePage,
     pageSize: safePageSize,
     totalRows,
@@ -640,5 +589,10 @@ module.exports = {
   getUserDictionaryContext,
   getDictionaryRowsPageForUser,
   getDictionaryVersionsForUser,
-  getDictionaryVersionHistoryForUser
+  getDictionaryVersionHistoryForUser,
+  __test: {
+    normalizeFilterRules,
+    normalizeSortDirection,
+    isSafeOrderByPhrase
+  }
 };

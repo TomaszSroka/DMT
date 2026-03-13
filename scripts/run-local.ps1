@@ -1,9 +1,12 @@
 param(
   [switch]$Restart,
   [bool]$AutoFreePort = $true,
+  [switch]$ForceKillAnyProcessOnPort,
+  [switch]$UseDevServer,
   [int]$Port = 3000,
   [string]$Url = "http://localhost:3000",
-  [int]$WindowScalePercent = 70
+  [int]$WindowScalePercent = 70,
+  [switch]$NoWindowTweaks
 )
 
 $ErrorActionPreference = "Stop"
@@ -20,22 +23,51 @@ if ($npm) {
   throw "npm is not available. Install Node.js LTS first."
 }
 
+function Get-ProcessCommandLine {
+  param(
+    [int]$ProcessId
+  )
+
+  try {
+    $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$ProcessId" -ErrorAction Stop
+    return [string]$proc.CommandLine
+  } catch {
+    return ""
+  }
+}
+
 function Stop-ListeningProcessesOnPort {
   param(
-    [int]$TargetPort
+    [int]$TargetPort,
+    [string]$RepoPath,
+    [bool]$AllowForceKillAnyProcess
   )
 
   $listeners = Get-NetTCPConnection -LocalPort $TargetPort -State Listen -ErrorAction SilentlyContinue
   if (-not $listeners) {
-    return $true
+    return @{ Success = $true; Blocked = @() }
   }
 
+  $blocked = @()
   $processIds = $listeners | Select-Object -ExpandProperty OwningProcess -Unique
   foreach ($processId in $processIds) {
     try {
       $process = Get-Process -Id $processId -ErrorAction Stop
-      Write-Host "Stopping process on port ${TargetPort}: PID=$processId Name=$($process.ProcessName)"
-      Stop-Process -Id $processId -Force -ErrorAction Stop
+      $commandLine = Get-ProcessCommandLine -ProcessId $processId
+      $name = [string]$process.ProcessName
+      $isNodeProcess = $name -match "^(node|npm|npx)$"
+      $isRepoProcess = -not [string]::IsNullOrWhiteSpace($commandLine) -and $commandLine.Contains([string]$RepoPath)
+
+      if ($AllowForceKillAnyProcess -or ($isNodeProcess -and $isRepoProcess)) {
+        Write-Host "Stopping process on port ${TargetPort}: PID=$processId Name=$name"
+        Stop-Process -Id $processId -Force -ErrorAction Stop
+      } else {
+        $blocked += [PSCustomObject]@{
+          ProcessId = $processId
+          Name = $name
+          CommandLine = $commandLine
+        }
+      }
     } catch {
       Write-Host "Could not stop process ${processId}: $($_.Exception.Message)"
     }
@@ -43,31 +75,47 @@ function Stop-ListeningProcessesOnPort {
 
   Start-Sleep -Seconds 1
   $remaining = Get-NetTCPConnection -LocalPort $TargetPort -State Listen -ErrorAction SilentlyContinue
-  return -not $remaining
+  if (-not $remaining) {
+    return @{ Success = $true; Blocked = @() }
+  }
+
+  return @{ Success = $false; Blocked = $blocked }
 }
 
 if ($Restart -or $AutoFreePort) {
-  $stopped = Stop-ListeningProcessesOnPort -TargetPort $Port
-  if (-not $stopped) {
+  $stopResult = Stop-ListeningProcessesOnPort -TargetPort $Port -RepoPath $repoRoot -AllowForceKillAnyProcess $ForceKillAnyProcessOnPort
+  if (-not $stopResult.Success) {
+    if ($stopResult.Blocked.Count -gt 0 -and -not $ForceKillAnyProcessOnPort) {
+      Write-Host "Processes on port $Port were not stopped because they are not recognized as this repo's Node processes:"
+      $stopResult.Blocked | ForEach-Object {
+        Write-Host "  PID=$($_.ProcessId) Name=$($_.Name)"
+      }
+      throw "Port $Port remains in use. Use -ForceKillAnyProcessOnPort to force kill any listener."
+    }
+
     throw "Port $Port is still in use after stop attempt. Close the process manually and try again."
   }
 }
 
 $scale = [Math]::Min([Math]::Max($WindowScalePercent, 40), 100)
+$npmScript = if ($UseDevServer) { "dev" } else { "start" }
+$noWindowTweaksLiteral = if ($NoWindowTweaks) { '$true' } else { '$false' }
 $startCommand = @"
 
-`$raw = `$Host.UI.RawUI
-`$current = `$raw.WindowSize
-`$newWidth = [Math]::Max(60, [int]([Math]::Floor(`$current.Width * ($scale / 100.0))))
-`$newHeight = [Math]::Max(16, [int]([Math]::Floor(`$current.Height * ($scale / 100.0))))
-`$buffer = `$raw.BufferSize
-if (`$buffer.Width -lt `$newWidth) { `$buffer.Width = `$newWidth }
-if (`$buffer.Height -lt `$newHeight) { `$buffer.Height = `$newHeight }
-`$raw.BufferSize = `$buffer
-`$raw.WindowSize = New-Object Management.Automation.Host.Size(`$newWidth, `$newHeight)
+if (-not $noWindowTweaksLiteral) {
+  `$raw = `$Host.UI.RawUI
+  `$current = `$raw.WindowSize
+  `$newWidth = [Math]::Max(60, [int]([Math]::Floor(`$current.Width * ($scale / 100.0))))
+  `$newHeight = [Math]::Max(16, [int]([Math]::Floor(`$current.Height * ($scale / 100.0))))
+  `$buffer = `$raw.BufferSize
+  if (`$buffer.Width -lt `$newWidth) { `$buffer.Width = `$newWidth }
+  if (`$buffer.Height -lt `$newHeight) { `$buffer.Height = `$newHeight }
+  `$raw.BufferSize = `$buffer
+  `$raw.WindowSize = New-Object Management.Automation.Host.Size(`$newWidth, `$newHeight)
+}
 
 Set-Location -Path '$repoRoot'
-& '$npmCmd' start
+& '$npmCmd' run $npmScript
 "@
 
 if (-not ("ConsoleWinApi" -as [type])) {
@@ -102,7 +150,7 @@ for ($i = 0; $i -lt 25 -and $psProcess.MainWindowHandle -eq 0; $i++) {
   $psProcess.Refresh()
 }
 
-if ($psProcess.MainWindowHandle -ne 0) {
+if ($psProcess.MainWindowHandle -ne 0 -and -not $NoWindowTweaks) {
   $rect = New-Object ConsoleWinApi+RECT
   if ([ConsoleWinApi]::GetWindowRect($psProcess.MainWindowHandle, [ref]$rect)) {
     $width = $rect.Right - $rect.Left
@@ -135,5 +183,6 @@ if ($firefoxCmd) {
 }
 
 Write-Host "App start command sent. Browser opened at $Url"
-Write-Host "Port cleanup: AutoFreePort=$AutoFreePort, Restart=$Restart"
-Write-Host "Tip: use -AutoFreePort `$false to skip auto cleanup, or -Restart for explicit restart mode."
+Write-Host "Run mode: npm run $npmScript"
+Write-Host "Port cleanup: AutoFreePort=$AutoFreePort, Restart=$Restart, ForceKillAnyProcessOnPort=$ForceKillAnyProcessOnPort"
+Write-Host "Tip: use -UseDevServer for watch mode, -NoWindowTweaks for simpler startup, and -ForceKillAnyProcessOnPort only when needed."

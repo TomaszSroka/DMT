@@ -2,6 +2,53 @@
 const UI_TEXT = FRONTEND_RUNTIME_CONFIG.text || {};
 const UI_DEFAULTS = FRONTEND_RUNTIME_CONFIG.defaults || {};
 const UI_TYPOGRAPHY = FRONTEND_RUNTIME_CONFIG.typography || {};
+const UI_BEHAVIOR = FRONTEND_RUNTIME_CONFIG.uiBehavior || {};
+const SHARED_UI = (window.DMT && window.DMT.sharedUi) || {};
+const API_CLIENT = (window.DMT && window.DMT.apiClient) || {};
+
+const textValue =
+  typeof SHARED_UI.textValue === "function"
+    ? SHARED_UI.textValue
+    : (key) => UI_TEXT[key] || `[${key}]`;
+const escapeHtml =
+  typeof SHARED_UI.escapeHtml === "function"
+    ? SHARED_UI.escapeHtml
+    : (value) =>
+        String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+const truncateValue =
+  typeof SHARED_UI.truncateValue === "function"
+    ? SHARED_UI.truncateValue
+    : (value, maxLength = UI_DEFAULTS.maxCellChars || 120) => {
+        const text = value == null ? "" : String(value);
+        if (text.length <= maxLength) {
+          return text;
+        }
+        return `${text.slice(0, maxLength - 1)}...`;
+      };
+const formatRowsMeta =
+  typeof SHARED_UI.formatRowsMeta === "function"
+    ? SHARED_UI.formatRowsMeta
+    : (visibleRowsCount, allRowsCount) => `${textValue("rowsLabel")}: ${visibleRowsCount}/${allRowsCount}`;
+const formatPagesMeta =
+  typeof SHARED_UI.formatPagesMeta === "function"
+    ? SHARED_UI.formatPagesMeta
+    : (page, pages) => `${textValue("pageLabel")}: ${page}/${pages}`;
+const fillTemplate =
+  typeof SHARED_UI.fillTemplate === "function"
+    ? SHARED_UI.fillTemplate
+    : (template, values) => String(template || "");
+const fetchJson =
+  typeof API_CLIENT.fetchJson === "function"
+    ? API_CLIENT.fetchJson
+    : async () => {
+        throw new Error(textValue("unknownApiError"));
+      };
+const UI_FORMATS = SHARED_UI.uiFormats || {};
 
 const dictionarySelect = document.getElementById("dictionarySelect");
 const tableContainer = document.getElementById("tableContainer");
@@ -74,6 +121,14 @@ const PAGE_SIZE = UI_DEFAULTS.pageSize;
 const LONG_TEXT_THRESHOLD = UI_DEFAULTS.longTextThreshold;
 const USER_DETAILS_DROPDOWN_THRESHOLD = UI_DEFAULTS.userDetailsDropdownThreshold;
 const HIDDEN_COLUMNS = new Set(UI_DEFAULTS.hiddenColumns || []);
+const DEFAULT_SORT_DIRECTION = UI_BEHAVIOR.defaultSortDirection === "DESC" ? "DESC" : "ASC";
+const FILTERS_SUMMARY_TEMPLATE = String(UI_FORMATS.filtersSummaryTemplate || '{column} IN "{value}"');
+const FILTERS_SUMMARY_JOINER = String(UI_FORMATS.filtersSummaryJoiner || " AND ");
+const ACCOUNT_ROLE_SEPARATOR = " - ";
+const CHANGE_ARROW = String(UI_FORMATS.changeArrow || " -> ");
+const FILTER_DRAFT_ROW_TEMPLATE = String(
+  UI_FORMATS.filterDraftRowTemplate || "Filter rule: Column - Value: {column} - {value}"
+);
 
 let activeDictionary = "";
 let dictionaries = [];
@@ -97,22 +152,10 @@ let activeFilters = [];
 let filtersDraft = [];
 let currentTableColumns = [];
 let currentSortColumn = "";
-let currentSortDirection = "ASC";
+let currentSortDirection = DEFAULT_SORT_DIRECTION;
 let hasLoadedTableData = false;
 
-const VERSION_DETAILS_HIDDEN_COLUMNS = new Set(["DICTIONARY_LOCATION", "DICTIONARY_INSTANCE_VERSION_CODE"]);
-
-class ApiRequestError extends Error {
-  constructor(message, details = "") {
-    super(message);
-    this.name = "ApiRequestError";
-    this.details = String(details || "").trim();
-  }
-}
-
-function textValue(key) {
-  return UI_TEXT[key] || `[${key}]`;
-}
+const VERSION_DETAILS_HIDDEN_COLUMNS = new Set(UI_BEHAVIOR.versionDetailsHiddenColumns || []);
 
 function applyTypographyAssets() {
   if (Array.isArray(UI_TYPOGRAPHY.preconnectUrls)) {
@@ -212,13 +255,18 @@ function formatFiltersSummary() {
       value: String(item && item.value != null ? item.value : "").trim()
     }))
     .filter((item) => item.column.length > 0 && item.value.length > 0)
-    .map((item) => `${item.column} IN "${item.value}"`);
+    .map((item) =>
+      fillTemplate(FILTERS_SUMMARY_TEMPLATE, {
+        column: item.column,
+        value: item.value
+      })
+    );
 
   if (parts.length === 0) {
     return textValue("filtersSummaryNone");
   }
 
-  return parts.join(" AND ");
+  return parts.join(FILTERS_SUMMARY_JOINER);
 }
 
 function updateFiltersSummary() {
@@ -267,6 +315,11 @@ function updateCurrentDictionaryInfo() {
 
 function updateFiltersButtonState() {
   openFiltersButton.disabled = !hasLoadedTableData;
+}
+
+function resetSorting() {
+  currentSortColumn = "";
+  currentSortDirection = DEFAULT_SORT_DIRECTION;
 }
 
 function setTableDataLoadedState(isLoaded) {
@@ -419,13 +472,20 @@ function getFiltersDraftSummaryLines() {
     .filter((item) => item.column.length > 0 || item.value.length > 0);
 
   if (rows.length === 0) {
-    return ["Filter rule: Column - Value: (empty) - (empty)"];
+    const emptyValue = textValue("emptyValue");
+    return [
+      fillTemplate(FILTER_DRAFT_ROW_TEMPLATE, {
+        column: emptyValue,
+        value: emptyValue
+      })
+    ];
   }
 
   return rows.map((item) => {
-    const column = item.column.length > 0 ? item.column : "(empty)";
-    const value = item.value.length > 0 ? item.value : "(empty)";
-    return `Filter rule: Column - Value: ${column} - ${value}`;
+    const emptyValue = textValue("emptyValue");
+    const column = item.column.length > 0 ? item.column : emptyValue;
+    const value = item.value.length > 0 ? item.value : emptyValue;
+    return fillTemplate(FILTER_DRAFT_ROW_TEMPLATE, { column, value });
   });
 }
 
@@ -529,14 +589,6 @@ function buildRowsUrl(dictionaryName, requestedPage, dictionaryInstanceKey) {
   }
 
   return `/api/dictionaries/${encodeURIComponent(dictionaryName)}/rows?${params.toString()}`;
-}
-
-function formatRowsMeta(visibleRowsCount, allRowsCount) {
-  return `${textValue("rowsLabel")}: ${visibleRowsCount}/${allRowsCount}`;
-}
-
-function formatPagesMeta(page, pages) {
-  return `${textValue("pageLabel")}: ${page}/${pages}`;
 }
 
 function setLoading(message = textValue("loadingData")) {
@@ -714,24 +766,6 @@ function updatePaginationControls() {
   nextPageButton.disabled = !activeDictionary || !hasVersionSelection || currentPage >= totalPages;
 }
 
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function truncateValue(value, maxLength = MAX_CELL_CHARS) {
-  const text = value == null ? "" : String(value);
-  if (text.length <= maxLength) {
-    return text;
-  }
-
-  return `${text.slice(0, maxLength - 1)}...`;
-}
-
 function isHiddenColumn(columnName) {
   return HIDDEN_COLUMNS.has(String(columnName || "").trim().toUpperCase());
 }
@@ -799,26 +833,6 @@ function renderTable(rows) {
   updatePaginationControls();
 }
 
-async function fetchJson(url) {
-  const response = await fetch(url);
-  const raw = await response.text();
-
-  let payload;
-  try {
-    payload = raw ? JSON.parse(raw) : {};
-  } catch (error) {
-    throw new Error(textValue("nonJsonApiError"));
-  }
-
-  if (!response.ok) {
-    const baseMessage = payload.error || textValue("unknownApiError");
-    const details = typeof payload.details === "string" ? payload.details.trim() : "";
-    throw new ApiRequestError(baseMessage, details);
-  }
-
-  return payload;
-}
-
 function renderRoles(dictionaryRoles) {
   if (!Array.isArray(dictionaryRoles) || dictionaryRoles.length === 0) {
     rolesList.innerHTML = `<li>${escapeHtml(textValue("noRolesLoaded"))}</li>`;
@@ -826,9 +840,9 @@ function renderRoles(dictionaryRoles) {
   }
 
   const labels = dictionaryRoles.map((item) => {
-    const dictionary = item && typeof item.dictionary === "string" ? item.dictionary : "";
-    const role = item && typeof item.role === "string" ? item.role : "";
-    return dictionary && role ? `${dictionary} - ${role}` : dictionary || role;
+    const dictionary = item && typeof item.dictionary === "string" ? item.dictionary.trim() : "";
+    const role = item && typeof item.role === "string" ? item.role.trim() : "";
+    return dictionary && role ? `${dictionary}${ACCOUNT_ROLE_SEPARATOR}${role}` : dictionary || role;
   });
 
   if (labels.length > USER_DETAILS_DROPDOWN_THRESHOLD) {
@@ -1084,7 +1098,9 @@ function renderChangesList(container, changes) {
     .map((item) => {
       const oldText = item.oldValue.length > 0 ? item.oldValue : emptyValue;
       const newText = item.newValue.length > 0 ? item.newValue : emptyValue;
-      return `<li><strong>${escapeHtml(item.field)}</strong>: ${escapeHtml(oldText)} -> ${escapeHtml(newText)}</li>`;
+      return `<li><strong>${escapeHtml(item.field)}</strong>: ${escapeHtml(oldText)}${escapeHtml(
+        CHANGE_ARROW
+      )}${escapeHtml(newText)}</li>`;
     })
     .join("");
 }
@@ -1281,7 +1297,7 @@ function handleTableClick(event) {
       currentSortDirection = currentSortDirection === "ASC" ? "DESC" : "ASC";
     } else {
       currentSortColumn = column;
-      currentSortDirection = "ASC";
+      currentSortDirection = DEFAULT_SORT_DIRECTION;
     }
 
     loadRows(activeDictionary, 1, selectedDictionaryVersionKey);
@@ -1325,8 +1341,7 @@ dictionarySelect.addEventListener("change", (event) => {
     updateCurrentDictionaryInfo();
     currentDictionaryCanUpdate = false;
     activeFilters = [];
-    currentSortColumn = "";
-    currentSortDirection = "ASC";
+    resetSorting();
     pendingRowChanges = new Map();
     hasSavedChanges = false;
     tableMeta.textContent = textValue("rowsInitial");
@@ -1349,8 +1364,7 @@ dictionarySelect.addEventListener("change", (event) => {
   activeDictionary = event.target.value;
   updateCurrentDictionaryInfo();
   activeFilters = [];
-  currentSortColumn = "";
-  currentSortDirection = "ASC";
+  resetSorting();
   updateFiltersSummary();
   loadDictionaryVersions(event.target.value);
 });
