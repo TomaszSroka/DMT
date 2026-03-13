@@ -11,11 +11,11 @@ window.FRONTEND_CONFIG = {
     pageSize: 100,
     longTextThreshold: 90,
     userDetailsDropdownThreshold: 15,
-    hiddenColumns: ["DICTIONARY_INSTANCE_KEY"]
+    hiddenColumns: ["DICTIONARY_VERSION_KEY"]
   },
   uiBehavior: {
     defaultSortDirection: "ASC",
-    versionDetailsHiddenColumns: ["DICTIONARY_LOCATION", "DICTIONARY_INSTANCE_VERSION_CODE"],
+    versionDetailsHiddenColumns: ["DICTIONARY_LOCATION", "DICTIONARY_VERSION_CODE", "DICTIONARY_VERSION_KEY"],
     filtersSummaryTemplate: '{column} IN "{value}"',
     filtersSummaryJoiner: " AND ",
     rolePairSeparator: " - ",
@@ -46,6 +46,7 @@ window.FRONTEND_CONFIG = {
     dictionaryVersionDisabledOption: "Select Dictionary version",
     dictionaryVersionLoadingOption: "Loading versions...",
     dictionaryVersionEmptyOption: "No versions found",
+    editDictionary: "Edit",
     save: "Save",
     discard: "Discard",
     publish: "Publish",
@@ -66,7 +67,9 @@ window.FRONTEND_CONFIG = {
     pageInfoInitial: "Pages: 0/0",
     rowsInitial: "Rows: 0/0",
     editRecordTitle: "Edit record",
+    showRecordTitle: "Show record",
     cancel: "Cancel",
+    close: "Close",
     noRolesLoaded: "No Dictionary-role pairs loaded.",
     unknownApiError: "Unknown api error",
     nonJsonApiError: "Api returned non-json response. Open app via http://localhost:3000 and ensure backend is running.",
@@ -111,6 +114,7 @@ window.FRONTEND_CONFIG = {
     filtersValuePlaceholder: "Pattern (e.g. *100*)",
     filtersRemoveRule: "Remove",
     filtersEmpty: "No filter rules.",
-    filtersNoColumns: "Load Dictionary rows first to choose columns."
+    filtersNoColumns: "Load Dictionary rows first to choose columns.",
+    notYetImplemented: "Not yet implemented."
   }
 };

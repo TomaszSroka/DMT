@@ -8,7 +8,7 @@
     pageSize: 100,
     longTextThreshold: 90,
     userDetailsDropdownThreshold: 15,
-    hiddenColumns: ["DICTIONARY_INSTANCE_KEY"]
+    hiddenColumns: ["DICTIONARY_VERSION_KEY"]
   };
 
   function normalizePositiveInteger(value, fallbackValue) {
@@ -60,7 +60,7 @@
     },
     uiBehavior: {
       defaultSortDirection: normalizeSortDirection(rawUiBehavior.defaultSortDirection, "ASC"),
-      versionDetailsHiddenColumns: normalizeHiddenColumns(rawUiBehavior.versionDetailsHiddenColumns, []),
+      versionDetailsHiddenColumns: normalizeHiddenColumns(rawUiBehavior.versionDetailsHiddenColumns, ["DICTIONARY_LOCATION", "DICTIONARY_VERSION_CODE", "DICTIONARY_VERSION_KEY"]),
       filtersSummaryTemplate: normalizeString(rawUiBehavior.filtersSummaryTemplate, '{column} IN "{value}"'),
       filtersSummaryJoiner: normalizeString(rawUiBehavior.filtersSummaryJoiner, " AND "),
       rolePairSeparator: normalizeString(rawUiBehavior.rolePairSeparator, " - "),

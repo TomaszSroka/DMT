@@ -61,6 +61,7 @@ const nextPageButton = document.getElementById("nextPageButton");
 const pageInfo = document.getElementById("pageInfo");
 const discardButton = document.getElementById("discardButton");
 const saveButton = document.getElementById("saveButton");
+const editButton = document.getElementById("editButton");
 const publishButton = document.getElementById("publishButton");
 const accountToggle = document.getElementById("accountToggle");
 const accountPanel = document.getElementById("accountPanel");
@@ -154,6 +155,7 @@ let currentTableColumns = [];
 let currentSortColumn = "";
 let currentSortDirection = DEFAULT_SORT_DIRECTION;
 let hasLoadedTableData = false;
+let isDictionaryEditMode = false;
 
 const VERSION_DETAILS_HIDDEN_COLUMNS = new Set(UI_BEHAVIOR.versionDetailsHiddenColumns || []);
 
@@ -211,6 +213,7 @@ function applyStaticConfig() {
   filtersCloseButton.textContent = textValue("filtersClose");
   dictionarySelect.setAttribute("aria-label", textValue("dictionarySelectorAriaLabel"));
   dictionaryVersionSelect.setAttribute("aria-label", textValue("dictionaryVersionSelectorAriaLabel"));
+  editButton.textContent = textValue("editDictionary");
   saveButton.textContent = textValue("save");
   discardButton.textContent = textValue("discard");
   publishButton.textContent = textValue("publish");
@@ -572,11 +575,11 @@ function applyFilters(closeAfterApply = false) {
   }
 }
 
-function buildRowsUrl(dictionaryName, requestedPage, dictionaryInstanceKey) {
+function buildRowsUrl(dictionaryName, requestedPage, dictionaryVersionKey) {
   const params = new URLSearchParams({
     page: String(requestedPage),
     pageSize: String(PAGE_SIZE),
-    dictionaryInstanceKey: String(dictionaryInstanceKey)
+    dictionaryVersionKey: String(dictionaryVersionKey)
   });
 
   if (Array.isArray(activeFilters) && activeFilters.length > 0) {
@@ -697,15 +700,15 @@ function populateDictionaryVersions(versions) {
 function renderVersionDetailsRows(rows) {
   const safeRows = Array.isArray(rows)
     ? [...rows].sort((a, b) => {
-        const left = Number.parseFloat(a && a.DICTIONARY_INSTANCE_VERSION_CODE);
-        const right = Number.parseFloat(b && b.DICTIONARY_INSTANCE_VERSION_CODE);
+        const left = Number.parseFloat(a && a.DICTIONARY_VERSION_CODE);
+        const right = Number.parseFloat(b && b.DICTIONARY_VERSION_CODE);
 
         if (Number.isFinite(left) && Number.isFinite(right)) {
           return right - left;
         }
 
-        const leftText = String((a && a.DICTIONARY_INSTANCE_VERSION_CODE) || "");
-        const rightText = String((b && b.DICTIONARY_INSTANCE_VERSION_CODE) || "");
+        const leftText = String((a && a.DICTIONARY_VERSION_CODE) || "");
+        const rightText = String((b && b.DICTIONARY_VERSION_CODE) || "");
         return rightText.localeCompare(leftText, undefined, { numeric: true, sensitivity: "base" });
       })
     : [];
@@ -775,10 +778,13 @@ function getVisibleColumnsFromRow(row) {
 }
 
 function updateActionButtons() {
+  const canStartEditing = Boolean(activeDictionary && selectedDictionaryVersionKey && hasLoadedTableData && currentDictionaryCanUpdate);
   const hasPending = pendingRowChanges.size > 0;
-  saveButton.disabled = !currentDictionaryCanUpdate || !hasPending;
-  discardButton.disabled = !currentDictionaryCanUpdate || !hasPending;
-  publishButton.disabled = !hasSavedChanges;
+
+  editButton.disabled = !canStartEditing || isDictionaryEditMode;
+  saveButton.disabled = !isDictionaryEditMode;
+  discardButton.disabled = !hasPending;
+  publishButton.disabled = true;
 }
 
 function renderTable(rows) {
@@ -793,7 +799,7 @@ function renderTable(rows) {
   const columns = getVisibleColumnsFromRow(rows[0]);
   currentTableColumns = [...columns];
 
-  const isCenteredColumn = (columnName) => String(columnName || "").toUpperCase() === "MET_DICTIONARY_INSTANCE";
+  const isCenteredColumn = (columnName) => String(columnName || "").toUpperCase() === "MET_DICTIONARY_VERSION";
 
   const head = `<th>${escapeHtml(textValue("tableActionHeader"))}</th>${columns
     .map((col) => {
@@ -808,10 +814,8 @@ function renderTable(rows) {
 
   const body = rows
     .map((row, rowIndex) => {
-      const rowActionLabel = currentDictionaryCanUpdate
-        ? textValue("editRowButton")
-        : textValue("showRowButton");
-      const disabledAttr = currentDictionaryCanUpdate ? "" : "disabled";
+      const rowActionLabel = isDictionaryEditMode ? textValue("editRowButton") : textValue("showRowButton");
+      const disabledAttr = "";
       const actionCell = `<td><button class="row-edit-btn" data-row-index="${rowIndex}" ${disabledAttr}>${escapeHtml(
         rowActionLabel
       )}</button></td>`;
@@ -870,13 +874,13 @@ async function loadUserContext() {
   }
 }
 
-async function loadRows(dictionaryName, requestedPage = 1, dictionaryInstanceKey = "") {
+async function loadRows(dictionaryName, requestedPage = 1, dictionaryVersionKey = "") {
   activeDictionary = dictionaryName;
   updateCurrentDictionaryInfo();
   const selected = dictionaries.find((item) => item.id === dictionaryName);
   currentDictionaryCanUpdate = Boolean(selected && selected.canUpdate);
 
-  const normalizedVersionKey = String(dictionaryInstanceKey || "").trim();
+  const normalizedVersionKey = String(dictionaryVersionKey || "").trim();
   if (!normalizedVersionKey) {
     setTableDataLoadedState(false);
     currentTableColumns = [];
@@ -919,8 +923,8 @@ async function loadRows(dictionaryName, requestedPage = 1, dictionaryInstanceKey
   }
 }
 
-async function fetchSnapshotToken(dictionaryName, requestedPage, dictionaryInstanceKey) {
-  const data = await fetchJson(buildRowsUrl(dictionaryName, requestedPage, dictionaryInstanceKey));
+async function fetchSnapshotToken(dictionaryName, requestedPage, dictionaryVersionKey) {
+  const data = await fetchJson(buildRowsUrl(dictionaryName, requestedPage, dictionaryVersionKey));
 
   return typeof data.snapshotToken === "string" ? data.snapshotToken : "";
 }
@@ -988,11 +992,7 @@ function normalizeRowForModal(row) {
   return normalized;
 }
 
-function openEditDialog(rowIndex) {
-  if (!currentDictionaryCanUpdate) {
-    return;
-  }
-
+function openRowDialog(rowIndex, editable) {
   if (!Number.isInteger(rowIndex) || rowIndex < 0 || rowIndex >= workingRows.length) {
     return;
   }
@@ -1000,21 +1000,33 @@ function openEditDialog(rowIndex) {
   editRowIndex = rowIndex;
   editedDraft = normalizeRowForModal(workingRows[rowIndex]);
   modalOriginalDraft = normalizeRowForModal(workingRows[rowIndex]);
+  const isEditable = Boolean(editable);
+  editDialogTitle.textContent = isEditable ? textValue("editRecordTitle") : textValue("showRecordTitle");
 
   const fields = Object.keys(editedDraft)
     .map((key) => {
       const value = editedDraft[key] == null ? "" : String(editedDraft[key]);
       const isLong = value.length > LONG_TEXT_THRESHOLD;
-      const control = isLong
-        ? `<textarea data-field="${escapeHtml(key)}">${escapeHtml(value)}</textarea>`
-        : `<input data-field="${escapeHtml(key)}" value="${escapeHtml(value)}" />`;
+      let control = "";
+
+      if (isEditable) {
+        control = isLong
+          ? `<textarea data-field="${escapeHtml(key)}">${escapeHtml(value)}</textarea>`
+          : `<input data-field="${escapeHtml(key)}" value="${escapeHtml(value)}" />`;
+      } else {
+        control = isLong
+          ? `<textarea readonly disabled>${escapeHtml(value)}</textarea>`
+          : `<input value="${escapeHtml(value)}" readonly disabled />`;
+      }
 
       return `<div class="edit-field"><label>${escapeHtml(key)}</label>${control}</div>`;
     })
     .join("");
 
   editFields.innerHTML = fields;
+  rowSaveButton.hidden = !isEditable;
   rowSaveButton.disabled = true;
+  rowCancelButton.textContent = isEditable ? textValue("cancel") : textValue("close");
   editDialog.showModal();
 }
 
@@ -1161,15 +1173,25 @@ function askDiscardAllWithChanges(changes) {
     discardAllStayButton,
     discardAllConfirmButton,
     changes,
-    false
+    true
   );
 }
 
 function updateModalSaveState() {
+  if (!isDictionaryEditMode) {
+    rowSaveButton.disabled = true;
+    return;
+  }
+
   rowSaveButton.disabled = !isModalDirty();
 }
 
 async function saveModalChanges() {
+  if (!isDictionaryEditMode) {
+    editDialog.close();
+    return;
+  }
+
   if (editRowIndex < 0 || !editedDraft) {
     editDialog.close();
     return;
@@ -1207,6 +1229,12 @@ async function saveModalChanges() {
 }
 
 async function handleModalCancel() {
+  if (!isDictionaryEditMode) {
+    modalOriginalDraft = null;
+    editDialog.close();
+    return;
+  }
+
   if (!isModalDirty()) {
     modalOriginalDraft = null;
     editDialog.close();
@@ -1222,15 +1250,24 @@ async function handleModalCancel() {
 }
 
 async function discardAllChanges() {
-  if (!currentDictionaryCanUpdate) {
+  if (pendingRowChanges.size === 0) {
     return;
   }
 
-  if (pendingRowChanges.size > 0) {
-    const shouldDiscardAll = await askDiscardAllWithChanges([]);
-    if (!shouldDiscardAll) {
-      return;
-    }
+  const allChanges = getPendingChanges();
+  const previewChanges = allChanges.slice(0, 10);
+  if (allChanges.length > 10) {
+    previewChanges.push({
+      field: "...",
+      oldValue: "",
+      newValue: "",
+      changed: true
+    });
+  }
+
+  const shouldDiscardAll = await askDiscardAllWithChanges(previewChanges);
+  if (!shouldDiscardAll) {
+    return;
   }
 
   workingRows = JSON.parse(JSON.stringify(originalRows));
@@ -1240,43 +1277,37 @@ async function discardAllChanges() {
 }
 
 async function saveAllChanges() {
-  if (!currentDictionaryCanUpdate) {
-    return;
-  }
+  const previousTitle = saveDialogTitle.textContent;
+  const previousIntro = saveDialogIntro.textContent;
+  const previousStayText = saveStayButton.textContent;
+  const previousConfirmText = saveConfirmButton.textContent;
+  const previousStayHidden = saveStayButton.hidden;
 
-  if (pendingRowChanges.size === 0) {
-    return;
-  }
+  saveDialogTitle.textContent = textValue("save");
+  saveDialogIntro.textContent = textValue("notYetImplemented");
+  saveStayButton.hidden = true;
+  saveConfirmButton.textContent = textValue("close");
 
-  try {
-    const latestSnapshotToken = await fetchSnapshotToken(activeDictionary, currentPage, selectedDictionaryVersionKey);
-    if (currentSnapshotToken && latestSnapshotToken && latestSnapshotToken !== currentSnapshotToken) {
-      window.alert(textValue("optimisticLockConflict"));
-      return;
-    }
-  } catch (error) {
-    window.alert(error.message || textValue("unknownApiError"));
-    return;
-  }
+  await askConfirmationWithChanges(saveDialog, saveChangesList, saveStayButton, saveConfirmButton, [], false);
 
-  const changes = getPendingChanges();
-  const shouldSave = await askSaveWithChanges(changes);
-  if (!shouldSave) {
-    return;
-  }
-
-  originalRows = JSON.parse(JSON.stringify(workingRows));
-  pendingRowChanges = new Map();
-  hasSavedChanges = true;
-  renderTable(workingRows);
+  saveDialogTitle.textContent = previousTitle;
+  saveDialogIntro.textContent = previousIntro;
+  saveStayButton.textContent = previousStayText;
+  saveConfirmButton.textContent = previousConfirmText;
+  saveStayButton.hidden = previousStayHidden;
 }
 
 function publishChanges() {
-  if (!hasSavedChanges) {
+  // Not yet implemented.
+}
+
+function startDictionaryEditMode() {
+  if (!activeDictionary || !selectedDictionaryVersionKey || !hasLoadedTableData || !currentDictionaryCanUpdate) {
     return;
   }
 
-  window.alert(textValue("publishNotReady"));
+  isDictionaryEditMode = true;
+  renderTable(workingRows);
 }
 
 function handleTableClick(event) {
@@ -1309,12 +1340,12 @@ function handleTableClick(event) {
     return;
   }
 
-  if (button.disabled || !currentDictionaryCanUpdate) {
+  if (button.disabled) {
     return;
   }
 
   const rowIndex = Number.parseInt(button.getAttribute("data-row-index"), 10);
-  openEditDialog(rowIndex);
+  openRowDialog(rowIndex, isDictionaryEditMode && currentDictionaryCanUpdate);
 }
 
 function handleAccountToggle() {
@@ -1340,6 +1371,7 @@ dictionarySelect.addEventListener("change", (event) => {
     activeDictionary = "";
     updateCurrentDictionaryInfo();
     currentDictionaryCanUpdate = false;
+    isDictionaryEditMode = false;
     activeFilters = [];
     resetSorting();
     pendingRowChanges = new Map();
@@ -1362,6 +1394,7 @@ dictionarySelect.addEventListener("change", (event) => {
   }
 
   activeDictionary = event.target.value;
+  isDictionaryEditMode = false;
   updateCurrentDictionaryInfo();
   activeFilters = [];
   resetSorting();
@@ -1372,6 +1405,7 @@ dictionarySelect.addEventListener("change", (event) => {
 dictionaryVersionSelect.addEventListener("change", (event) => {
   const versionKey = String(event.target.value || "").trim();
   selectedDictionaryVersionKey = versionKey;
+  isDictionaryEditMode = false;
   updateCurrentDictionaryInfo();
 
   if (versionKey) {
@@ -1466,9 +1500,10 @@ filtersDialog.addEventListener("cancel", (event) => {
   closeFiltersDialog();
 });
 
+editButton.addEventListener("click", startDictionaryEditMode);
 saveButton.addEventListener("click", saveAllChanges);
 discardButton.addEventListener("click", discardAllChanges);
-publishButton.addEventListener("click", publishChanges);
+publishButton.addEventListener("click", () => {});
 showVersionDetailsButton.addEventListener("click", openVersionDetailsDialog);
 versionDetailsCloseButton.addEventListener("click", () => {
   versionDetailsDialog.close();

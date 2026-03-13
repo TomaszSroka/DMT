@@ -8,7 +8,7 @@ const {
 } = require("./table.validation");
 
 const accessConfigTable = "DMT.MET_USER_DICTIONARY_ROLE_DETAILS";
-const dictionaryInstanceDetailsView = "DMT.MET_DICTIONARY_INSTANCE_DETAILS";
+const dictionaryVersionDetailsView = "DMT.MET_DICTIONARY_VERSION_DETAILS";
 const ROLE_READER = "DICTIONARY_READER";
 const ROLE_UPDATER = "DICTIONARY_UPDATER";
 const ROLE_READER_KEY = "1";
@@ -109,9 +109,9 @@ function extractDictionaryLabel(row, fallbackId) {
 
 function extractDictionaryVersionId(row, index) {
   const candidates = [
-    row.DICTIONARY_INSTANCE_KEY,
-    row.DICTIONARY_INSTANCE_VERSION_CODE,
-    row.DICTIONARY_INSTANCE_VERSION_NAME,
+    row.DICTIONARY_VERSION_KEY,
+    row.DICTIONARY_VERSION_CODE,
+    row.DICTIONARY_VERSION_NAME,
     index + 1
   ];
 
@@ -120,9 +120,9 @@ function extractDictionaryVersionId(row, index) {
 }
 
 function extractDictionaryVersionLabel(row) {
-  const name = row.DICTIONARY_INSTANCE_VERSION_NAME;
-  const code = row.DICTIONARY_INSTANCE_VERSION_CODE;
-  const status = row.DICTIONARY_INSTANCE_STATUS;
+  const name = row.DICTIONARY_VERSION_NAME;
+  const code = row.DICTIONARY_VERSION_CODE;
+  const status = row.DICTIONARY_VERSION_STATUS;
 
   if (name) {
     return String(name);
@@ -170,12 +170,12 @@ function extractSortOrderPhrase(row) {
   return String((row && row.DICTIONARY_SORT_ORDER) || "").trim();
 }
 
-async function getDictionaryInstanceDetailsRowsForPermission(permission) {
+async function getDictionaryVersionDetailsRowsForPermission(permission) {
   const sqlText = `
     SELECT *
-    FROM ${dictionaryInstanceDetailsView}
+    FROM ${dictionaryVersionDetailsView}
     WHERE UPPER(TRIM(DICTIONARY_KEY)) = ?
-    ORDER BY DICTIONARY_INSTANCE_VERSION_CODE DESC
+    ORDER BY DICTIONARY_VERSION_CODE DESC
   `;
 
   return runQuery(sqlText, [normalizeDictionaryName(permission.id)]);
@@ -184,7 +184,7 @@ async function getDictionaryInstanceDetailsRowsForPermission(permission) {
 function getDictionarySortOrderFromVersionRows(rows, dictionaryInstanceKey) {
   const normalizedKey = String(dictionaryInstanceKey || "").trim();
   const versionRow = (Array.isArray(rows) ? rows : []).find((row) => {
-    const rowKey = row && row.DICTIONARY_INSTANCE_KEY != null ? String(row.DICTIONARY_INSTANCE_KEY).trim() : "";
+    const rowKey = row && row.DICTIONARY_VERSION_KEY != null ? String(row.DICTIONARY_VERSION_KEY).trim() : "";
     return rowKey === normalizedKey;
   });
 
@@ -209,7 +209,7 @@ function getDictionarySortOrderFromVersionRows(rows, dictionaryInstanceKey) {
   return phrase;
 }
 
-function buildSnapshotToken(rows, totalRows, dictionaryInstanceKey) {
+function buildSnapshotToken(rows, totalRows, dictionaryVersionKey) {
   const sampleRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : {};
   const lockColumns = Object.keys(sampleRow).slice(0, 4);
   const lockRows = Array.isArray(rows)
@@ -223,7 +223,7 @@ function buildSnapshotToken(rows, totalRows, dictionaryInstanceKey) {
     : [];
 
   const raw = JSON.stringify({
-    dictionaryInstanceKey,
+    dictionaryVersionKey,
     totalRows,
     lockColumns,
     lockRows
@@ -453,7 +453,7 @@ async function getDictionaryRowsPageForUser(
   dictionaryName,
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
-  dictionaryInstanceKey = "",
+  dictionaryVersionKey = "",
   filtersInput = [],
   sortColumnInput = "",
   sortDirectionInput = "ASC"
@@ -468,8 +468,8 @@ async function getDictionaryRowsPageForUser(
   const safePageSize = Math.min(normalizePositiveInteger(pageSize, DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE);
   const requestedPage = normalizePositiveInteger(page, 1);
 
-  const normalizedInstanceKey = String(dictionaryInstanceKey || "").trim();
-  if (!normalizedInstanceKey) {
+  const normalizedVersionKey = String(dictionaryVersionKey || "").trim();
+  if (!normalizedVersionKey) {
     throw createAppError("Dictionary version key is required.", 400, "DICTIONARY_VERSION_KEY_REQUIRED");
   }
 
@@ -479,8 +479,8 @@ async function getDictionaryRowsPageForUser(
     .join("");
   const filterBindings = filterRules.map((rule) => rule.pattern);
 
-  const versionRows = await getDictionaryInstanceDetailsRowsForPermission(permission);
-  const sortOrderPhrase = getDictionarySortOrderFromVersionRows(versionRows, normalizedInstanceKey);
+  const versionRows = await getDictionaryVersionDetailsRowsForPermission(permission);
+  const sortOrderPhrase = getDictionarySortOrderFromVersionRows(versionRows, normalizedVersionKey);
   const selectedSortColumn = String(sortColumnInput || "").trim().toUpperCase();
   const selectedSortDirection = normalizeSortDirection(sortDirectionInput);
 
@@ -499,32 +499,32 @@ async function getDictionaryRowsPageForUser(
     return `
       SELECT *, COUNT(*) OVER() AS __TOTAL_COUNT
       FROM ${permission.tableIdentifier}
-      WHERE DICTIONARY_INSTANCE_KEY = ?
+      WHERE DICTIONARY_VERSION_KEY = ?
       ${filterSql}
       ORDER BY ${orderByClause}
       LIMIT ${safePageSize} OFFSET ${targetOffset}
     `;
   }
 
-  let rowsWithCount = await runQuery(buildDataWithCountSql(offset), [normalizedInstanceKey, ...filterBindings]);
+  let rowsWithCount = await runQuery(buildDataWithCountSql(offset), [normalizedVersionKey, ...filterBindings]);
   let totalRows = extractWindowTotalCount(rowsWithCount);
 
   // Out-of-range page returns 0 rows, so window COUNT cannot be read from result rows.
   if (rowsWithCount.length === 0 && requestedPage > 1) {
-    const countSql = `SELECT COUNT(*) AS TOTAL_COUNT FROM ${permission.tableIdentifier} WHERE DICTIONARY_INSTANCE_KEY = ?${filterSql}`;
-    const countRows = await runQuery(countSql, [normalizedInstanceKey, ...filterBindings]);
+    const countSql = `SELECT COUNT(*) AS TOTAL_COUNT FROM ${permission.tableIdentifier} WHERE DICTIONARY_VERSION_KEY = ?${filterSql}`;
+    const countRows = await runQuery(countSql, [normalizedVersionKey, ...filterBindings]);
     totalRows = extractCountValue(countRows[0]);
     const totalPages = Math.max(1, Math.ceil(totalRows / safePageSize));
     safePage = Math.min(requestedPage, totalPages);
     offset = (safePage - 1) * safePageSize;
 
-    rowsWithCount = await runQuery(buildDataWithCountSql(offset), [normalizedInstanceKey, ...filterBindings]);
+    rowsWithCount = await runQuery(buildDataWithCountSql(offset), [normalizedVersionKey, ...filterBindings]);
   }
 
   const totalPages = Math.max(1, Math.ceil(totalRows / safePageSize));
   safePage = Math.min(safePage, totalPages);
   const rows = stripWindowColumns(rowsWithCount);
-  const snapshot = buildSnapshotToken(rows, totalRows, normalizedInstanceKey);
+  const snapshot = buildSnapshotToken(rows, totalRows, normalizedVersionKey);
 
   return {
     rows: cloneRows(rows),
@@ -534,7 +534,7 @@ async function getDictionaryRowsPageForUser(
     totalPages,
     canUpdate: permission.canUpdate,
     roles: Array.from(permission.roles).sort((a, b) => a.localeCompare(b)),
-    dictionaryInstanceKey: normalizedInstanceKey,
+    dictionaryVersionKey: normalizedVersionKey,
     snapshotToken: snapshot.token,
     lockColumns: snapshot.lockColumns
   };
@@ -545,7 +545,7 @@ async function getDictionaryVersionsForUser(userLogin, dictionaryName) {
   const permission = resolveDictionaryPermission(context, dictionaryName);
 
   // Keep all columns from the source view in backend memory for future operations.
-  const rawRows = await getDictionaryInstanceDetailsRowsForPermission(permission);
+  const rawRows = await getDictionaryVersionDetailsRowsForPermission(permission);
 
   const seenVersionIds = new Set();
   const versions = [];
@@ -573,7 +573,7 @@ async function getDictionaryVersionHistoryForUser(userLogin, dictionaryName) {
   const context = await getUserDictionaryContext(userLogin);
   const permission = resolveDictionaryPermission(context, dictionaryName);
 
-  const rows = await getDictionaryInstanceDetailsRowsForPermission(permission);
+  const rows = await getDictionaryVersionDetailsRowsForPermission(permission);
 
   return {
     rows,
@@ -583,7 +583,7 @@ async function getDictionaryVersionHistoryForUser(userLogin, dictionaryName) {
 
 module.exports = {
   accessConfigTable,
-  dictionaryInstanceDetailsView,
+  dictionaryVersionDetailsView,
   ROLE_READER,
   ROLE_UPDATER,
   getUserDictionaryContext,

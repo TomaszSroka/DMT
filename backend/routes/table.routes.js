@@ -100,7 +100,7 @@ function validateRowsQuery(req) {
     "Query param 'pageSize' must be a positive integer.",
     "PAGE_SIZE_INVALID"
   );
-  const dictionaryInstanceKey = String(req.query.dictionaryInstanceKey || "").trim();
+  const dictionaryVersionKey = String(req.query.dictionaryVersionKey || "").trim();
   const filters = parseFiltersQuery(req.query.filters);
   const sortColumn = String(req.query.sortColumn || "").trim();
   const sortDirection = parseSortDirectionQuery(req.query.sortDirection);
@@ -108,7 +108,7 @@ function validateRowsQuery(req) {
   return {
     page,
     pageSize,
-    dictionaryInstanceKey,
+    dictionaryVersionKey,
     filters,
     sortColumn,
     sortDirection
@@ -138,13 +138,13 @@ router.get(
 router.get(
   "/dictionaries/:name/rows",
   withApiErrorHandling("Snowflake query failed.", "ROWS_QUERY_FAILED", async (req, res) => {
-    const { page, pageSize, dictionaryInstanceKey, filters, sortColumn, sortDirection } = validateRowsQuery(req);
+    const { page, pageSize, dictionaryVersionKey, filters, sortColumn, sortDirection } = validateRowsQuery(req);
     const payload = await getDictionaryRowsPageForUser(
       staticUser,
       req.params.name,
       page,
       pageSize,
-      dictionaryInstanceKey,
+      dictionaryVersionKey,
       filters,
       sortColumn,
       sortDirection

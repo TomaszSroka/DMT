@@ -118,11 +118,11 @@ test("rows filtering ignores leading and trailing source whitespace", async (t) 
     return;
   }
 
-  const dictionaryInstanceKey = String(versions[0].id);
+  const dictionaryVersionKey = String(versions[0].id);
   const rowsUrl = new URL(`${BASE_URL}/api/dictionaries/${encodeURIComponent(dictionaryId)}/rows`);
   rowsUrl.searchParams.set("page", "1");
   rowsUrl.searchParams.set("pageSize", "100");
-  rowsUrl.searchParams.set("dictionaryInstanceKey", dictionaryInstanceKey);
+  rowsUrl.searchParams.set("dictionaryVersionKey", dictionaryVersionKey);
 
   const rowsResponse = await fetch(rowsUrl);
   assert.equal(rowsResponse.status, 200);
@@ -166,7 +166,7 @@ test("rows filtering ignores leading and trailing source whitespace", async (t) 
   const filteredUrl = new URL(`${BASE_URL}/api/dictionaries/${encodeURIComponent(dictionaryId)}/rows`);
   filteredUrl.searchParams.set("page", "1");
   filteredUrl.searchParams.set("pageSize", "100");
-  filteredUrl.searchParams.set("dictionaryInstanceKey", dictionaryInstanceKey);
+  filteredUrl.searchParams.set("dictionaryVersionKey", dictionaryVersionKey);
   filteredUrl.searchParams.set("filters", JSON.stringify([{ column: candidate.column, value: candidate.filterValue }]));
 
   const filteredResponse = await fetch(filteredUrl);
@@ -247,7 +247,7 @@ test("user, dictionary and version query payload structure contract", async (t) 
   const rowsUrl = new URL(`${BASE_URL}/api/dictionaries/${encodeURIComponent(dictionary.id)}/rows`);
   rowsUrl.searchParams.set("page", "1");
   rowsUrl.searchParams.set("pageSize", "1");
-  rowsUrl.searchParams.set("dictionaryInstanceKey", version.id);
+  rowsUrl.searchParams.set("dictionaryVersionKey", version.id);
 
   const rowsResponse = await fetch(rowsUrl);
   assert.equal(rowsResponse.status, 200);
@@ -260,7 +260,7 @@ test("user, dictionary and version query payload structure contract", async (t) 
   assert.equal(typeof rowsPayload.totalPages, "number");
   assert.equal(typeof rowsPayload.canUpdate, "boolean");
   assert.ok(Array.isArray(rowsPayload.roles));
-  assert.equal(typeof rowsPayload.dictionaryInstanceKey, "string");
+  assert.equal(typeof rowsPayload.dictionaryVersionKey, "string");
   assert.equal(typeof rowsPayload.snapshotToken, "string");
   assert.ok(Array.isArray(rowsPayload.lockColumns));
 });
