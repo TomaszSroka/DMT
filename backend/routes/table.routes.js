@@ -1,6 +1,6 @@
 const express = require("express");
 const { staticUser } = require("../config/env");
-const { asyncHandler } = require("../api/async-handler");
+const { asyncHandler } = require("../utils/async-handler");
 const { createAppError } = require("../errors/app-error");
 const {
   getDictionaryRowsPageForUser,
