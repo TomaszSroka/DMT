@@ -32,13 +32,9 @@ function withApiErrorHandling(fallbackMessage, fallbackCode, handler) {
   });
 }
 
-function mapDictionarySummary(item) {
-  return {
-    id: item.id,
-    label: item.label,
-    canUpdate: Boolean(item.canUpdate)
-  };
-}
+
+
+// Zwracamy pełny obiekt (id, label, canUpdate, roles)
 
 async function getStaticUserContext() {
   return getUserDictionaryContext(staticUser);

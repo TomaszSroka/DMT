@@ -276,21 +276,26 @@ function updateFiltersSummary() {
   activeFiltersInfo.textContent = formatFiltersSummary();
 }
 
+
+// Zwracaj tylko techniczną nazwę słownika
+
 function getCurrentDictionaryLabel() {
   const match = Array.isArray(dictionaries)
     ? dictionaries.find((item) => item && item.id === activeDictionary)
     : null;
-  return match && match.label ? String(match.label) : "";
+  return match && match.label ? String(match.label) : String(activeDictionary || "");
 }
+
+
+// Zwracaj tylko techniczny klucz wersji
 
 function getCurrentDictionaryVersionLabel() {
   const selectedKey = String(selectedDictionaryVersionKey || "").trim();
   if (!selectedKey || !Array.isArray(dictionaryVersions)) {
     return "";
   }
-
   const selectedVersion = dictionaryVersions.find((item) => item && String(item.id) === selectedKey);
-  return selectedVersion && selectedVersion.label ? String(selectedVersion.label) : "";
+  return selectedVersion && selectedVersion.label ? String(selectedVersion.label) : selectedKey;
 }
 
 function updateCurrentDictionaryInfo() {
@@ -683,6 +688,8 @@ function populateDictionaryVersions(versions) {
   const baseOption = `<option value="" data-placeholder="true">${escapeHtml(
     textValue("selectDictionaryVersionOption")
   )}</option>`;
+
+
   const options = dictionaryVersions
     .map((item) => {
       const id = item && item.id != null ? String(item.id) : "";
@@ -964,11 +971,13 @@ async function loadDictionaryVersions(dictionaryName) {
   }
 }
 
+
 function applyMeta(meta) {
   dictionaries = meta.dictionaries || [];
 
+
   dictionarySelect.innerHTML = dictionaries
-    .map((dictionary) => `<option value="${dictionary.id}">${dictionary.label}</option>`)
+    .map((dictionary) => `<option value="${dictionary.id}">${escapeHtml(dictionary.label || dictionary.id)}</option>`)
     .join("");
 
   dictionarySelect.insertAdjacentHTML(

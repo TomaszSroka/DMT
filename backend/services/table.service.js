@@ -322,7 +322,7 @@ function buildDictionaryPermissions(accessRows) {
     const existing = permissions.get(key) || {
       id: dictionaryId,
       tableIdentifier,
-      label: extractDictionaryLabel(row, dictionaryId),
+      // Usuwamy label, zostaje tylko id
       roles: new Set(),
       canRead: false,
       canUpdate: false,
@@ -361,19 +361,18 @@ function buildDictionaryRolePairs(accessRows) {
     const role = mapRoleKeyToRoleName(roleKey);
 
     const dictionaryId = extractDictionaryId(row);
-    const dictionaryLabel = extractDictionaryLabel(row, dictionaryId || "");
-    if (!dictionaryLabel) {
+    if (!dictionaryId) {
       return;
     }
 
-    const key = `${dictionaryLabel}::${role}`;
+    const key = `${dictionaryId}::${role}`;
     if (seen.has(key)) {
       return;
     }
 
     seen.add(key);
     pairs.push({
-      dictionary: dictionaryLabel,
+      dictionary: dictionaryId,
       role
     });
   });
@@ -401,12 +400,18 @@ async function getUserDictionaryContext(userLogin) {
 
   const dictionaries = Array.from(permissions.values())
     .filter((item) => item.canRead)
-    .map((item) => ({
-      id: item.id,
-      label: item.label || item.id,
-      canUpdate: item.canUpdate,
-      roles: Array.from(item.roles).sort((a, b) => a.localeCompare(b))
-    }))
+    .map((item) => {
+      // label zawsze z DMT.MET_USER_DICTIONARY_ROLE_DETAILS.DICTIONARY_NAME
+      let label = item.metadata && item.metadata.DICTIONARY_NAME
+        ? String(item.metadata.DICTIONARY_NAME).trim()
+        : item.id;
+      return {
+        id: item.id, // DICTIONARY_KEY
+        label,
+        canUpdate: item.canUpdate,
+        roles: Array.from(item.roles).sort((a, b) => a.localeCompare(b))
+      };
+    })
     .sort((a, b) => a.label.localeCompare(b.label));
 
   const roles = Array.from(
@@ -528,10 +533,11 @@ async function getDictionaryRowsPageForUser(
   const snapshot = buildSnapshotToken(rows, totalRows, normalizedVersionKey);
 
   // Log used keys for debugging
+
+  // Używaj istniejących zmiennych, nie deklaruj ponownie dictionaryVersionKey
   const dictionaryKey = dictionaryName; // techniczna nazwa słownika
-  const dictionaryVersionKey = normalizedVersionKey; // techniczny klucz wersji
-  console.log('getDictionaryColumns', { DICTIONARY_KEY: dictionaryKey, DICTIONARY_VERSION_KEY: dictionaryVersionKey });
-  const columns = await getDictionaryColumns(dictionaryKey, dictionaryVersionKey);
+  console.log('getDictionaryColumns', { DICTIONARY_KEY: dictionaryKey, DICTIONARY_VERSION_KEY: normalizedVersionKey });
+  const columns = await getDictionaryColumns(dictionaryKey, normalizedVersionKey);
 
   return {
     rows: cloneRows(rows),
@@ -558,16 +564,16 @@ async function getDictionaryVersionsForUser(userLogin, dictionaryName) {
   const seenVersionIds = new Set();
   const versions = [];
 
+
   rawRows.forEach((row, index) => {
     const id = extractDictionaryVersionId(row, index);
     if (seenVersionIds.has(id)) {
       return;
     }
-
     seenVersionIds.add(id);
     versions.push({
       id,
-      label: extractDictionaryVersionLabel(row)
+      label: row.DICTIONARY_VERSION_NAME || row.DICTIONARY_VERSION_KEY || id
     });
   });
 
