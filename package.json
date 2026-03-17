@@ -9,6 +9,8 @@
     "dev": "node --watch backend/api/app.js",
     "local:start": "powershell -ExecutionPolicy Bypass -File scripts/local-run-app.ps1",
     "local:restart": "powershell -ExecutionPolicy Bypass -File scripts/local-run-app.ps1 -Restart",
+    "local:db": "powershell -ExecutionPolicy Bypass -File scripts/local-run-db.ps1 -Apply",
+    "local:db:plan": "powershell -ExecutionPolicy Bypass -File scripts/local-run-db.ps1",
     "local:test": "powershell -ExecutionPolicy Bypass -File scripts/local-run-tests.ps1",
     "test:api-contract": "node --test backend/api/api.contract.test.js",
     "test:unit": "node --test backend/services/table.validation.test.js"

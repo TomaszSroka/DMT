@@ -9,6 +9,7 @@ Web application for browsing Snowflake dictionaries. Runs as a Node.js/Express s
 - **Node.js** 20 LTS or newer
 - **npm** 10+
 - Access to a Snowflake account with JWT key-pair authentication
+- **SnowSQL CLI** (for local DB object scripts from `scripts/sql`)
 
 ---
 
@@ -93,6 +94,41 @@ npm run local:start
 npm run local:restart
 ```
 
+### Local DB object scripts (development only)
+
+# SQL scripts for local development
+
+Folder for Snowflake DDL/DML scripts executed przez `scripts/local-run-db.ps1`.
+
+## Konwencje
+
+- Skrypty powinny być idempotentne (`IF NOT EXISTS`, `CREATE OR REPLACE` gdzie bezpieczne).
+- Używaj numerowanych prefixów dla kolejności, np. `001_...sql`, `010_...sql`, `900_...sql`.
+- Folder SQL jest tylko do developmentu (nie wrzucaj tu migracji produkcyjnych).
+
+## Uruchamianie
+
+```powershell
+# Podgląd co zostanie wykonane
+.\scripts\local-run-db.ps1
+
+# Wykonanie wszystkich plików SQL
+.\scripts\local-run-db.ps1 -Apply
+
+# Wykonanie wybranych plików
+.\scripts\local-run-db.ps1 -Apply -Filter "001_*.sql"
+```
+
+Możesz też przez npm:
+```bash
+npm run local:db:plan
+npm run local:db
+```
+
+Wymagania:
+- SnowSQL CLI w PATH.
+- `DMT_CONFIG_JSON` w env albo w pliku `.env`.
+
 ---
 
 ## Testing
@@ -159,7 +195,11 @@ DMT/
 │   └── snowflake.log                 # Snowflake SDK log output (git-ignored)
 └── scripts/
     ├── local-run-app.ps1             # Start server + browser (Windows)
+    ├── local-run-db.ps1              # Run local SQL scripts against Snowflake (Windows)
     └── local-run-tests.ps1           # Install deps + run tests (Windows)
+    └── sql/
+        ├── 001_create_dev_objects.sql # Dev-only sample objects (idempotent)
+        └── README.md                  # SQL folder conventions
 ```
 
 ---
