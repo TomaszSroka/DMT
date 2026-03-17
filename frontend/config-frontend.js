@@ -11,11 +11,11 @@ window.FRONTEND_CONFIG = {
     pageSize: 100,
     longTextThreshold: 90,
     userDetailsDropdownThreshold: 15,
-    hiddenColumns: ["DICTIONARY_VERSION_KEY"]
+    hiddenColumns: ["DICTIONARY_VERSION_KEY", "DICTIONARY_KEY"]
   },
   uiBehavior: {
     defaultSortDirection: "ASC",
-    versionDetailsHiddenColumns: ["DICTIONARY_LOCATION", "DICTIONARY_VERSION_CODE", "DICTIONARY_VERSION_KEY"],
+    versionDetailsHiddenColumns: ["DICTIONARY_LOCATION", "DICTIONARY_VERSION_CODE", "DICTIONARY_VERSION_KEY", "DICTIONARY_KEY"],
     filtersSummaryTemplate: '{column} IN "{value}"',
     filtersSummaryJoiner: " AND ",
     rolePairSeparator: " - ",

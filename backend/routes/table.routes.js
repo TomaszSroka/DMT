@@ -116,7 +116,7 @@ router.get("/meta", withApiErrorHandling("Could not load Dictionaries for user."
   const context = await getStaticUserContext();
   res.json({
     user: context.user,
-    dictionaries: (context.dictionaries || []).map(mapDictionarySummary)
+    dictionaries: context.dictionaries || []
   });
 }));
 
