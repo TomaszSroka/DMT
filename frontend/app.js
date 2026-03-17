@@ -796,8 +796,14 @@ function renderTable(rows) {
     return;
   }
 
-  const columns = getVisibleColumnsFromRow(rows[0]);
-  currentTableColumns = [...columns];
+  // Render columns 1:1 with database names
+  const columns = Array.isArray(currentTableColumns)
+    ? currentTableColumns.map(colObj =>
+        typeof colObj === "object" && colObj !== null
+          ? colObj.DICTIONARY_COLUMN_TECHNICAL
+          : String(colObj)
+      )
+    : [];
 
   const isCenteredColumn = (columnName) => String(columnName || "").toUpperCase() === "MET_DICTIONARY_VERSION";
 
@@ -908,6 +914,14 @@ async function loadRows(dictionaryName, requestedPage = 1, dictionaryVersionKey 
     totalRows = data.totalRows || 0;
     currentDictionaryCanUpdate = Boolean(data.canUpdate);
     currentSnapshotToken = typeof data.snapshotToken === "string" ? data.snapshotToken : "";
+    // Use backend-provided business columns if available
+    if (Array.isArray(data.columns) && data.columns.length > 0) {
+      currentTableColumns = [...data.columns];
+    } else if (workingRows.length > 0) {
+      currentTableColumns = getVisibleColumnsFromRow(workingRows[0]);
+    } else {
+      currentTableColumns = [];
+    }
     setTableDataLoadedState(true);
     renderTable(workingRows);
   } catch (error) {

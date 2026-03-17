@@ -9,6 +9,7 @@ const {
   getUserDictionaryContext
 } = require("../services/table.service");
 const { getErrorPayload } = require("../errors/app-error");
+const { getDictionaryColumns } = require("../services/dictionary-columns.service");
 
 const router = express.Router();
 
@@ -166,6 +167,20 @@ router.get(
   withApiErrorHandling("Could not load Dictionary version details.", "VERSION_HISTORY_LOAD_FAILED", async (req, res) => {
     const payload = await getDictionaryVersionHistoryForUser(staticUser, req.params.name);
     res.json(payload);
+  })
+);
+
+// Nowy endpoint: pobierz kolumny słownika dla danej wersji
+router.get(
+  "/dictionaries/:name/columns",
+  withApiErrorHandling("Could not load Dictionary columns.", "COLUMNS_LOAD_FAILED", async (req, res) => {
+    const dictionaryKey = req.params.name;
+    const dictionaryVersionKey = String(req.query.dictionaryVersionKey || "").trim();
+    if (!dictionaryVersionKey) {
+      throw createAppError("Query param 'dictionaryVersionKey' is required.", 400, "DICTIONARY_VERSION_KEY_REQUIRED");
+    }
+    const columns = await getDictionaryColumns(dictionaryKey, dictionaryVersionKey);
+    res.json({ columns });
   })
 );
 

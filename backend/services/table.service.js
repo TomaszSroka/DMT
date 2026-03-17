@@ -6,6 +6,7 @@ const {
   normalizeSortDirection,
   isSafeOrderByPhrase
 } = require("./table.validation");
+const { getDictionaryColumns } = require("./dictionary-columns.service");
 
 const accessConfigTable = "DMT.MET_USER_DICTIONARY_ROLE_DETAILS";
 const dictionaryVersionDetailsView = "DMT.MET_DICTIONARY_VERSION_DETAILS";
@@ -526,15 +527,22 @@ async function getDictionaryRowsPageForUser(
   const rows = stripWindowColumns(rowsWithCount);
   const snapshot = buildSnapshotToken(rows, totalRows, normalizedVersionKey);
 
+  // Log used keys for debugging
+  const dictionaryKey = dictionaryName; // techniczna nazwa słownika
+  const dictionaryVersionKey = normalizedVersionKey; // techniczny klucz wersji
+  console.log('getDictionaryColumns', { DICTIONARY_KEY: dictionaryKey, DICTIONARY_VERSION_KEY: dictionaryVersionKey });
+  const columns = await getDictionaryColumns(dictionaryKey, dictionaryVersionKey);
+
   return {
     rows: cloneRows(rows),
+    columns, // <-- przekazujemy kolumny z bazy 1:1
     page: safePage,
     pageSize: safePageSize,
     totalRows,
     totalPages,
     canUpdate: permission.canUpdate,
     roles: Array.from(permission.roles).sort((a, b) => a.localeCompare(b)),
-    dictionaryVersionKey: normalizedVersionKey,
+    DICTIONARY_VERSION_KEY: dictionaryVersionKey,
     snapshotToken: snapshot.token,
     lockColumns: snapshot.lockColumns
   };
