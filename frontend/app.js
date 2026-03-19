@@ -252,11 +252,25 @@ function formatFiltersSummary() {
     return textValue("filtersSummaryNone");
   }
 
+  // Mapuj techniczne nazwy kolumn na aliasy
+  const businessMap = {};
+  if (Array.isArray(currentTableColumns)) {
+    currentTableColumns.forEach(colObj => {
+      if (typeof colObj === "object" && colObj !== null && typeof colObj.DICTIONARY_COLUMN_TECHNICAL === "string") {
+        businessMap[colObj.DICTIONARY_COLUMN_TECHNICAL] = colObj.DICTIONARY_COLUMN_BUSINESS;
+      }
+    });
+  }
+
   const parts = activeFilters
-    .map((item) => ({
-      column: String(item && item.column != null ? item.column : "").trim(),
-      value: String(item && item.value != null ? item.value : "").trim()
-    }))
+    .map((item) => {
+      const technical = String(item && item.column != null ? item.column : "").trim();
+      const business = businessMap[technical] || technical;
+      return {
+        column: business,
+        value: String(item && item.value != null ? item.value : "").trim()
+      };
+    })
     .filter((item) => item.column.length > 0 && item.value.length > 0)
     .map((item) =>
       fillTemplate(FILTERS_SUMMARY_TEMPLATE, {
@@ -269,7 +283,14 @@ function formatFiltersSummary() {
     return textValue("filtersSummaryNone");
   }
 
-  return parts.join(FILTERS_SUMMARY_JOINER);
+  // Dodaj odstęp po AND
+  // Dodaj spację przed każdą kolejną regułą
+  if (parts.length === 0) return textValue("filtersSummaryNone");
+  let summary = parts[0];
+  for (let i = 1; i < parts.length; i++) {
+    summary += ' ' + FILTERS_SUMMARY_JOINER + ' ' + parts[i];
+  }
+  return summary;
 }
 
 function updateFiltersSummary() {

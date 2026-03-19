@@ -531,7 +531,6 @@ async function getDictionaryRowsPageForUser(
 
   // Use existing variables, do not redeclare dictionaryVersionKey
   const dictionaryKey = dictionaryName; // technical dictionary name
-  console.log('getDictionaryColumns', { DICTIONARY_KEY: dictionaryKey, DICTIONARY_VERSION_KEY: normalizedVersionKey });
   const columns = await getDictionaryColumns(dictionaryKey, normalizedVersionKey);
 
   return {
