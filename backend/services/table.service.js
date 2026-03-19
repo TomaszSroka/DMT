@@ -543,7 +543,7 @@ async function getDictionaryRowsPageForUser(
     totalPages,
     canUpdate: permission.canUpdate,
     roles: Array.from(permission.roles).sort((a, b) => a.localeCompare(b)),
-    DICTIONARY_VERSION_KEY: dictionaryVersionKey,
+      dictionaryVersionKey,
     snapshotToken: snapshot.token,
     lockColumns: snapshot.lockColumns
   };
