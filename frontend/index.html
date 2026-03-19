@@ -61,7 +61,6 @@
               <div class="table-header-actions">
                 <div class="table-header-left">
                   <button id="openFiltersButton" type="button" class="btn btn-discard" disabled></button>
-                  <button id="showRecordButton" type="button" class="btn btn-discard" style="display:none;"></button>
                   <span id="activeFiltersInfo"></span>
                 </div>
                 <div class="table-header-right">
@@ -81,7 +80,21 @@
 
     </div>
 
-    <!-- Usunięto dialog edycji rekordu (Edit Record) -->
+
+    <!-- Nowe okno szczegółów rekordu -->
+    <dialog id="recordDetailsDialog" class="record-details-dialog">
+      <form method="dialog" class="record-details-form">
+        <div class="card-header" style="padding: 24px 32px 18px 32px; border-bottom: 1px solid var(--border); background: var(--panel-bg); justify-content: flex-start;">
+          <h1 id="recordDetailsTitle" class="brand-title" style="margin: 0; font-size: clamp(1rem, 1.3vw, 1.15rem); letter-spacing: 0.01em; font-family: var(--font-primary); font-weight: 600; color: var(--text); text-align: left;">Record details</h1>
+          <div class="edit-actions" style="margin-left: auto;">
+            <button id="recordDetailsCloseButton" type="button" class="btn btn-discard">Close</button>
+          </div>
+        </div>
+        <div id="recordDetailsFields" class="record-details-fields" style="padding: 32px 32px 32px 32px; min-width: 0;"></div>
+      </form>
+    </dialog>
+
+
 
     <dialog id="discardDialog" class="confirm-dialog">
       <form id="discardForm" class="confirm-form" method="dialog">

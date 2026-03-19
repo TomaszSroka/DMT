@@ -1,3 +1,93 @@
+/* --- Record Details Dialog --- */
+.record-details-dialog {
+  width: 80vw;
+  max-width: 1600px;
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow);
+  padding: 0;
+}
+
+.record-details-form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.record-details-fields {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 22px;
+  padding: 32px;
+}
+
+.record-details-section {
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 14px 12px 14px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  word-break: break-word;
+  box-shadow: 0 2px 8px rgba(52,37,18,0.04);
+}
+
+.record-details-label {
+  font-size: var(--font-size-ui);
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 7px;
+  letter-spacing: 0.01em;
+  font-family: var(--font-primary);
+}
+
+.record-details-value {
+  font-size: 1.13em;
+  color: #1a1a1a;
+  font-family: var(--font-primary);
+  font-weight: 500;
+  padding: 9px 12px;
+  margin-top: 2px;
+  border: 1.5px solid var(--primary);
+  border-radius: 8px;
+  background: #fff;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 38px;
+  transition: border-color 0.2s;
+}
+/* Record details dialog title */
+.record-view-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--primary);
+  font-family: var(--font-primary);
+  letter-spacing: 0.01em;
+}
+/* --- Record view dialog --- */
+.record-view-dialog {
+  max-width: 1600px;
+  width: 80vw;
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow);
+  padding: 0;
+}
+
+.record-view-form {
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.record-view-fields {
+  padding: 24px 24px 24px 24px;
+}
+
 
 :root {
   --bg: #f3eee4;

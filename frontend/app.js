@@ -1,42 +1,40 @@
-﻿let showRecordButton;
-function setShowRecordButtonVisible(visible) {
-  if (!showRecordButton) return;
-  showRecordButton.style.display = visible ? "inline-block" : "none";
-}
-
+﻿// --- Record Details Dialog ---
+let recordDetailsDialog, recordDetailsFields, recordDetailsCloseButton;
 document.addEventListener("DOMContentLoaded", () => {
-  showRecordButton = document.getElementById("showRecordButton");
-  if (showRecordButton) {
-    showRecordButton.textContent = textValue("showRowButton") || "Show";
-    showRecordButton.style.display = "none";
+  recordDetailsDialog = document.getElementById("recordDetailsDialog");
+  recordDetailsFields = document.getElementById("recordDetailsFields");
+  recordDetailsCloseButton = document.getElementById("recordDetailsCloseButton");
+  if (recordDetailsCloseButton && recordDetailsDialog) {
+    recordDetailsCloseButton.addEventListener("click", () => recordDetailsDialog.close());
   }
 });
-// Globalny handler błędów JS – pokaż w errorDetailsDialog
-window.addEventListener('error', function(event) {
-  lastErrorMessage = event.message || 'Unknown JS error';
-  lastErrorDetails = (event.filename ? (event.filename + ':' + event.lineno + ':' + event.colno + '\n') : '') + (event.error && event.error.stack ? event.error.stack : '');
-  openErrorDetailsDialog();
-});
 
-window.addEventListener('unhandledrejection', function(event) {
-  lastErrorMessage = (event.reason && event.reason.message) ? event.reason.message : 'Unhandled promise rejection';
-  lastErrorDetails = event.reason && event.reason.stack ? event.reason.stack : String(event.reason);
-  openErrorDetailsDialog();
-});
-
-
-function showRecordViewDialog(rowIndex) {
+function showRecordDetailsDialog(rowIndex) {
   const row = workingRows[rowIndex];
   if (!row || !Array.isArray(currentTableColumns)) return;
-  const fieldsHtml = currentTableColumns.map(colObj => {
-    const colKey = typeof colObj === "object" && colObj !== null ? colObj.DICTIONARY_COLUMN_TECHNICAL : String(colObj);
-    const colLabel = typeof colObj === "object" && colObj !== null && colObj.DICTIONARY_COLUMN_BUSINESS ? colObj.DICTIONARY_COLUMN_BUSINESS : colKey;
-    const value = row[colKey] == null ? "" : String(row[colKey]);
-    return `<div class="edit-field"><label>${escapeHtml(colLabel)}</label><input value="${escapeHtml(value)}" readonly disabled tabindex="-1" /></div>`;
-  }).join("");
-  recordViewFields.innerHTML = fieldsHtml;
-  recordViewDialog.showModal();
+  const columns = Array.isArray(currentTableColumns)
+    ? currentTableColumns.map(colObj =>
+        typeof colObj === "object" && colObj !== null
+          ? colObj.DICTIONARY_COLUMN_TECHNICAL
+          : String(colObj)
+      )
+    : [];
+  const businessHeaders = Array.isArray(currentTableColumns)
+    ? currentTableColumns.map(colObj =>
+        typeof colObj === "object" && colObj !== null && typeof colObj.DICTIONARY_COLUMN_BUSINESS === "string"
+          ? colObj.DICTIONARY_COLUMN_BUSINESS
+          : (typeof colObj === "object" && colObj !== null ? colObj.DICTIONARY_COLUMN_TECHNICAL : String(colObj))
+      )
+    : columns;
+  const fields = columns.map((col, idx) => {
+    const colLabel = businessHeaders[idx];
+    const value = row[col] == null ? "" : String(row[col]);
+    return `<div class="record-details-section"><div class="record-details-label">${escapeHtml(colLabel)}</div><div class="record-details-value">${escapeHtml(value)}</div></div>`;
+  });
+  recordDetailsFields.innerHTML = fields.join("");
+  recordDetailsDialog.showModal();
 }
+
 const FRONTEND_RUNTIME_CONFIG = window.FRONTEND_RUNTIME_CONFIG || {};
 const UI_TEXT = FRONTEND_RUNTIME_CONFIG.text || {};
 const UI_DEFAULTS = FRONTEND_RUNTIME_CONFIG.defaults || {};
@@ -870,12 +868,10 @@ function renderTable(rows) {
   if (!Array.isArray(rows) || rows.length === 0) {
     tableContainer.innerHTML = `<div class="empty-state">${textValue("noRowsReturned")}</div>`;
     tableMeta.textContent = formatRowsMeta(0, totalRows);
-    setShowRecordButtonVisible(false);
     updateActionButtons();
     updatePaginationControls();
     return;
   }
-  setShowRecordButtonVisible(true);
 
   // Render columns using DICTIONARY_COLUMN_BUSINESS
   const columns = Array.isArray(currentTableColumns)
@@ -1271,12 +1267,19 @@ function startDictionaryEditMode() {
 }
 
 function handleTableClick(event) {
+  const showBtn = event.target.closest(".show-row-btn");
+  if (showBtn && showBtn.hasAttribute("data-row-index")) {
+    const idx = parseInt(showBtn.getAttribute("data-row-index"), 10);
+    if (!isNaN(idx)) {
+      showRecordDetailsDialog(idx);
+    }
+    return;
+  }
   const detailsButton = event.target.closest("#showErrorDetailsButton");
   if (detailsButton) {
     openErrorDetailsDialog();
     return;
   }
-
   const sortButton = event.target.closest("[data-sort-column]");
   if (sortButton) {
     const column = String(sortButton.getAttribute("data-sort-column") || "").trim().toUpperCase();
