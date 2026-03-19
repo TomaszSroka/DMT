@@ -1,4 +1,17 @@
-﻿// Globalny handler błędów JS – pokaż w errorDetailsDialog
+﻿let showRecordButton;
+function setShowRecordButtonVisible(visible) {
+  if (!showRecordButton) return;
+  showRecordButton.style.display = visible ? "inline-block" : "none";
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  showRecordButton = document.getElementById("showRecordButton");
+  if (showRecordButton) {
+    showRecordButton.textContent = textValue("showRowButton") || "Show";
+    showRecordButton.style.display = "none";
+  }
+});
+// Globalny handler błędów JS – pokaż w errorDetailsDialog
 window.addEventListener('error', function(event) {
   lastErrorMessage = event.message || 'Unknown JS error';
   lastErrorDetails = (event.filename ? (event.filename + ':' + event.lineno + ':' + event.colno + '\n') : '') + (event.error && event.error.stack ? event.error.stack : '');
@@ -857,10 +870,12 @@ function renderTable(rows) {
   if (!Array.isArray(rows) || rows.length === 0) {
     tableContainer.innerHTML = `<div class="empty-state">${textValue("noRowsReturned")}</div>`;
     tableMeta.textContent = formatRowsMeta(0, totalRows);
+    setShowRecordButtonVisible(false);
     updateActionButtons();
     updatePaginationControls();
     return;
   }
+  setShowRecordButtonVisible(true);
 
   // Render columns using DICTIONARY_COLUMN_BUSINESS
   const columns = Array.isArray(currentTableColumns)
@@ -894,8 +909,7 @@ function renderTable(rows) {
 
   const body = rows
     .map((row, rowIndex) => {
-      // Show button removed
-      const actionCell = "<td></td>";
+      const actionCell = `<td><button type="button" class="btn btn-discard show-row-btn" data-row-index="${rowIndex}">${escapeHtml(textValue("showRowButton") || "Show")}</button></td>`;
       const tds = columns
         .map((col) => {
           const fullValue = row[col] == null ? "" : String(row[col]);
