@@ -265,18 +265,13 @@ async function getUserAccessRows(userLogin) {
     return cached.rows;
   }
 
-  const normalizedUserKey = normalizeUserKey(userLogin);
   const sqlText = `
     SELECT *
     FROM ${accessConfigTable}
-    WHERE UPPER(TRIM(ROLE_KEY)) IN (?, ?)
-      AND (
-        UPPER(TRIM(USER_LOGIN)) = ?
-        OR UPPER(TRIM(USER_KEY)) = ?
-      )
+    WHERE UPPER(TRIM(USER_LOGIN)) = ?
+      AND UPPER(TRIM(ROLE_NAME)) IN (?, ?)
   `;
-
-  const rows = await runQuery(sqlText, [ROLE_READER_KEY, ROLE_UPDATER_KEY, normalizedUser, normalizedUserKey]);
+  const rows = await runQuery(sqlText, [normalizedUser, ROLE_READER, ROLE_UPDATER]);
   const dedupedRows = [];
   const seen = new Set();
   (Array.isArray(rows) ? rows : []).forEach((row) => {
@@ -534,8 +529,8 @@ async function getDictionaryRowsPageForUser(
 
   // Log used keys for debugging
 
-  // Używaj istniejących zmiennych, nie deklaruj ponownie dictionaryVersionKey
-  const dictionaryKey = dictionaryName; // techniczna nazwa słownika
+  // Use existing variables, do not redeclare dictionaryVersionKey
+  const dictionaryKey = dictionaryName; // technical dictionary name
   console.log('getDictionaryColumns', { DICTIONARY_KEY: dictionaryKey, DICTIONARY_VERSION_KEY: normalizedVersionKey });
   const columns = await getDictionaryColumns(dictionaryKey, normalizedVersionKey);
 

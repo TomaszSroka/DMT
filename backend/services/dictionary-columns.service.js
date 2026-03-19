@@ -2,7 +2,7 @@
 const { runQuery } = require("../config/snowflake");
 
 /**
- * Pobiera techniczne definicje kolumn dla danej wersji słownika
+ * Fetches technical column definitions for a given dictionary version
  * @param {string} dictionaryKey
  * @param {string} dictionaryVersionKey
  * @returns {Promise<Array<{ DICTIONARY_COLUMN_TECHNICAL: string, DICTIONARY_COLUMN_POSITION: number }>>}
@@ -10,6 +10,7 @@ const { runQuery } = require("../config/snowflake");
 async function getDictionaryColumns(dictionaryKey, dictionaryVersionKey) {
   const sql = `
     SELECT DICTIONARY_COLUMN_TECHNICAL,
+           DICTIONARY_COLUMN_BUSINESS,
            DICTIONARY_COLUMN_POSITION
     FROM DMT.MET_DICTIONARY_COLUMN_DETAILS
     WHERE UPPER(TRIM(DICTIONARY_KEY)) = UPPER(?)

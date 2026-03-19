@@ -102,24 +102,24 @@ Folder for Snowflake DDL/DML scripts executed przez `scripts/local-run-db.ps1`.
 
 ## Konwencje
 
-- Skrypty powinny być idempotentne (`IF NOT EXISTS`, `CREATE OR REPLACE` gdzie bezpieczne).
-- Używaj numerowanych prefixów dla kolejności, np. `001_...sql`, `010_...sql`, `900_...sql`.
+- Scripts should be idempotent (`IF NOT EXISTS`, `CREATE OR REPLACE` where safe).
+- Use numbered prefixes for order, e.g. `001_...sql`, `010_...sql`, `900_...sql`.
 - Folder SQL jest tylko do developmentu (nie wrzucaj tu migracji produkcyjnych).
 
 ## Uruchamianie
 
 ```powershell
-# Podgląd co zostanie wykonane
+# Preview of what will be executed
 .\scripts\local-run-db.ps1
 
-# Wykonanie wszystkich plików SQL
+# Execute all SQL files
 .\scripts\local-run-db.ps1 -Apply
 
-# Wykonanie wybranych plików
+# Execute selected files
 .\scripts\local-run-db.ps1 -Apply -Filter "001_*.sql"
 ```
 
-Możesz też przez npm:
+You can also use npm:
 ```bash
 npm run local:db:plan
 npm run local:db

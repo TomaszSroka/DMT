@@ -34,7 +34,7 @@ function withApiErrorHandling(fallbackMessage, fallbackCode, handler) {
 
 
 
-// Zwracamy pełny obiekt (id, label, canUpdate, roles)
+// Return full object (id, label, canUpdate, roles)
 
 async function getStaticUserContext() {
   return getUserDictionaryContext(staticUser);
@@ -166,7 +166,7 @@ router.get(
   })
 );
 
-// Nowy endpoint: pobierz kolumny słownika dla danej wersji
+// New endpoint: fetch dictionary columns for a given version
 router.get(
   "/dictionaries/:name/columns",
   withApiErrorHandling("Could not load Dictionary columns.", "COLUMNS_LOAD_FAILED", async (req, res) => {

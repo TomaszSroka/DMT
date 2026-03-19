@@ -277,7 +277,7 @@ function updateFiltersSummary() {
 }
 
 
-// Zwracaj tylko techniczną nazwę słownika
+// Return only the technical dictionary name
 
 function getCurrentDictionaryLabel() {
   const match = Array.isArray(dictionaries)
@@ -803,7 +803,7 @@ function renderTable(rows) {
     return;
   }
 
-  // Render columns 1:1 with database names
+  // Render columns using DICTIONARY_COLUMN_BUSINESS
   const columns = Array.isArray(currentTableColumns)
     ? currentTableColumns.map(colObj =>
         typeof colObj === "object" && colObj !== null
@@ -812,14 +812,22 @@ function renderTable(rows) {
       )
     : [];
 
+  const businessHeaders = Array.isArray(currentTableColumns)
+    ? currentTableColumns.map(colObj =>
+        typeof colObj === "object" && colObj !== null && typeof colObj.DICTIONARY_COLUMN_BUSINESS === "string"
+          ? colObj.DICTIONARY_COLUMN_BUSINESS
+          : (typeof colObj === "object" && colObj !== null ? colObj.DICTIONARY_COLUMN_TECHNICAL : String(colObj))
+      )
+    : columns;
+
   const isCenteredColumn = (columnName) => String(columnName || "").toUpperCase() === "MET_DICTIONARY_VERSION";
 
-  const head = `<th>${escapeHtml(textValue("tableActionHeader"))}</th>${columns
-    .map((col) => {
-      const isActiveSort = currentSortColumn === String(col).toUpperCase();
+  const head = `<th>${escapeHtml(textValue("tableActionHeader"))}</th>${businessHeaders
+    .map((col, idx) => {
+      const isActiveSort = currentSortColumn === String(columns[idx]).toUpperCase();
       const directionMark = isActiveSort ? (currentSortDirection === "DESC" ? " ▼" : " ▲") : "";
-      const headerClass = isCenteredColumn(col) ? " class=\"col-center\"" : "";
-      return `<th${headerClass}><button type="button" class="th-sort-btn" data-sort-column="${escapeHtml(col)}">${escapeHtml(
+      const headerClass = isCenteredColumn(columns[idx]) ? " class=\"col-center\"" : "";
+      return `<th${headerClass}><button type="button" class="th-sort-btn" data-sort-column="${escapeHtml(columns[idx])}">${escapeHtml(
         col
       )}${directionMark}</button></th>`;
     })
