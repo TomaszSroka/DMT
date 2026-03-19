@@ -375,7 +375,7 @@ th {
   background: #f5ebdd;
   z-index: 1;
   font-size: var(--font-size-ui);
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.03em;
 }
 
@@ -511,7 +511,7 @@ tbody tr:hover {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--muted);
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.02em;
 }
 
@@ -719,7 +719,7 @@ tbody tr:hover {
   background: #f5ebdd;
   z-index: 1;
   font-size: var(--font-size-ui);
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.03em;
 }
 
