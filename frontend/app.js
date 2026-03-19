@@ -1325,8 +1325,25 @@ function publishChanges() {
 }
 
 function startDictionaryEditMode() {
-  // Disabled: Edit record modal does not appear in any situation
-  return;
+  // Pokazuje okienko Not yet implemented
+  const previousTitle = saveDialogTitle.textContent;
+  const previousIntro = saveDialogIntro.textContent;
+  const previousStayText = saveStayButton.textContent;
+  const previousConfirmText = saveConfirmButton.textContent;
+  const previousStayHidden = saveStayButton.hidden;
+
+  saveDialogTitle.textContent = textValue("editDictionary");
+  saveDialogIntro.textContent = textValue("notYetImplemented");
+  saveStayButton.hidden = true;
+  saveConfirmButton.textContent = textValue("close");
+
+  askConfirmationWithChanges(saveDialog, saveChangesList, saveStayButton, saveConfirmButton, [], false).then(() => {
+    saveDialogTitle.textContent = previousTitle;
+    saveDialogIntro.textContent = previousIntro;
+    saveStayButton.textContent = previousStayText;
+    saveConfirmButton.textContent = previousConfirmText;
+    saveStayButton.hidden = previousStayHidden;
+  });
 }
 
 function handleTableClick(event) {
