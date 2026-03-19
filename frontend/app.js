@@ -345,18 +345,25 @@ function getNextFilterColumn(previousColumn = "") {
     return "";
   }
 
+  // Wyciągnij techniczne nazwy kolumn
+  const technicalColumns = currentTableColumns.map(colObj =>
+    typeof colObj === "object" && colObj !== null && typeof colObj.DICTIONARY_COLUMN_TECHNICAL === "string"
+      ? colObj.DICTIONARY_COLUMN_TECHNICAL
+      : String(colObj)
+  );
+
   const normalizedPrevious = String(previousColumn || "").trim();
   if (!normalizedPrevious) {
-    return currentTableColumns[0];
+    return technicalColumns[0];
   }
 
-  const currentIndex = currentTableColumns.findIndex((column) => column === normalizedPrevious);
+  const currentIndex = technicalColumns.findIndex((column) => column === normalizedPrevious);
   if (currentIndex < 0) {
-    return currentTableColumns[0];
+    return technicalColumns[0];
   }
 
-  const nextIndex = (currentIndex + 1) % currentTableColumns.length;
-  return currentTableColumns[nextIndex];
+  const nextIndex = (currentIndex + 1) % technicalColumns.length;
+  return technicalColumns[nextIndex];
 }
 
 function renderFiltersDraft() {
@@ -370,7 +377,17 @@ function renderFiltersDraft() {
     return;
   }
 
-  const baseColumns = Array.isArray(currentTableColumns) ? [...currentTableColumns] : [];
+  const baseColumns = Array.isArray(currentTableColumns)
+    ? currentTableColumns.map(colObj => {
+        if (typeof colObj === "object" && colObj !== null) {
+          return {
+            technical: colObj.DICTIONARY_COLUMN_TECHNICAL,
+            business: colObj.DICTIONARY_COLUMN_BUSINESS
+          };
+        }
+        return { technical: String(colObj), business: String(colObj) };
+      })
+    : [];
   const header = `<div class="filters-rule-header">
     <span>${escapeHtml(textValue("filtersColumnLabel"))}</span>
     <span>${escapeHtml(textValue("filtersValueLabel"))}</span>
@@ -382,14 +399,14 @@ function renderFiltersDraft() {
       const column = rule && rule.column != null ? String(rule.column) : "";
       const value = rule && rule.value != null ? String(rule.value) : "";
       const rowColumns = [...baseColumns];
-      if (column && !rowColumns.includes(column)) {
-        rowColumns.unshift(column);
+      if (column && !rowColumns.some(col => col.technical === column)) {
+        rowColumns.unshift({ technical: column, business: column });
       }
 
       const options = rowColumns
         .map((item) => {
-          const selectedAttr = item === column ? " selected" : "";
-          return `<option value="${escapeHtml(item)}"${selectedAttr}>${escapeHtml(item)}</option>`;
+          const selectedAttr = item.technical === column ? " selected" : "";
+          return `<option value="${escapeHtml(item.technical)}"${selectedAttr}>${escapeHtml(item.business)}</option>`;
         })
         .join("");
 
@@ -409,12 +426,24 @@ function renderFiltersDraft() {
 }
 
 function openFiltersDialog() {
-  filtersDraft = Array.isArray(activeFilters) && activeFilters.length > 0
-    ? activeFilters.map((item) => ({
-        column: item && item.column != null ? String(item.column) : "",
+  if (Array.isArray(activeFilters) && activeFilters.length > 0) {
+    filtersDraft = activeFilters.map((item) => {
+      let col = item && item.column != null ? item.column : "";
+      // Jeśli kolumna jest obiektem, wyciągnij techniczną nazwę
+      if (typeof col === "object" && col !== null && typeof col.DICTIONARY_COLUMN_TECHNICAL === "string") {
+        col = col.DICTIONARY_COLUMN_TECHNICAL;
+      } else {
+        col = String(col);
+      }
+      return {
+        column: col,
         value: item && item.value != null ? String(item.value) : ""
-      }))
-    : [];
+      };
+    });
+  } else {
+    // Domyślnie: filtr pusty
+    filtersDraft = [];
+  }
 
   renderFiltersDraft();
   filtersDialog.showModal();
