@@ -606,7 +606,8 @@ tbody tr:hover {
 }
 
 .edit-fields {
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 14px 16px 24px;
   display: grid;
   grid-template-columns: repeat(2, minmax(280px, 1fr));
@@ -624,6 +625,9 @@ tbody tr:hover {
   background: none;
   border: none;
   box-shadow: none;
+  width: 100%;
+  overflow: hidden;
+  white-space: normal;
 }
 }
 

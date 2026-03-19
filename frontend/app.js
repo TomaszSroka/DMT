@@ -283,8 +283,8 @@ function formatFiltersSummary() {
     return textValue("filtersSummaryNone");
   }
 
-  // Dodaj odstęp po AND
-  // Dodaj spację przed każdą kolejną regułą
+  // Add space after AND
+  // Add space before each subsequent rule
   if (parts.length === 0) return textValue("filtersSummaryNone");
   let summary = parts[0];
   for (let i = 1; i < parts.length; i++) {
@@ -366,7 +366,7 @@ function getNextFilterColumn(previousColumn = "") {
     return "";
   }
 
-  // Wyciągnij techniczne nazwy kolumn
+  // Extract technical column names
   const technicalColumns = currentTableColumns.map(colObj =>
     typeof colObj === "object" && colObj !== null && typeof colObj.DICTIONARY_COLUMN_TECHNICAL === "string"
       ? colObj.DICTIONARY_COLUMN_TECHNICAL
@@ -450,7 +450,7 @@ function openFiltersDialog() {
   if (Array.isArray(activeFilters) && activeFilters.length > 0) {
     filtersDraft = activeFilters.map((item) => {
       let col = item && item.column != null ? item.column : "";
-      // Jeśli kolumna jest obiektem, wyciągnij techniczną nazwę
+      // If column is an object, extract technical name
       if (typeof col === "object" && col !== null && typeof col.DICTIONARY_COLUMN_TECHNICAL === "string") {
         col = col.DICTIONARY_COLUMN_TECHNICAL;
       } else {
@@ -462,7 +462,7 @@ function openFiltersDialog() {
       };
     });
   } else {
-    // Domyślnie: filtr pusty
+    // Default: empty filter
     filtersDraft = [];
   }
 
@@ -910,7 +910,7 @@ function renderRoles(dictionaryRoles) {
     return;
   }
 
-  // Mapuj id słownika na label
+  // Map dictionary id to label
   const dictionaryLabelMap = {};
   if (Array.isArray(dictionaries)) {
     dictionaries.forEach(dict => {
@@ -1120,7 +1120,7 @@ function openRowDialog(rowIndex, editable) {
   rowSaveButton.hidden = !isEditable;
   rowSaveButton.disabled = true;
   rowCancelButton.textContent = isEditable ? textValue("cancel") : textValue("close");
-  editDialog.showModal();
+  // editDialog.showModal() removed: Edit record modal is not displayed
 }
 
 function collectDraftFromModal() {
@@ -1395,17 +1395,8 @@ function publishChanges() {
 }
 
 function startDictionaryEditMode() {
-  if (!activeDictionary || !selectedDictionaryVersionKey || !hasLoadedTableData || !currentDictionaryCanUpdate) {
-    return;
-  }
-  editDialogTitle.textContent = 'Not yet implemented';
-  editFields.innerHTML = '<div class="edit-field edit-field-not-implemented"><span>Not yet implemented</span></div>';
-  rowSaveButton.hidden = true;
-  rowCancelButton.textContent = textValue("close");
-  editDialog.showModal();
-  saveButton.disabled = true;
-  discardButton.disabled = true;
-  publishButton.disabled = true;
+  // Disabled: Edit record modal does not appear in any situation
+  return;
 }
 
 function handleTableClick(event) {
@@ -1454,9 +1445,6 @@ function handleAccountToggle() {
 async function initialize() {
   applyStaticConfig();
   setLoading(textValue("loadingWorkspace"));
-  // Usunięto automatyczne otwieranie modalu Edit record na starcie
-  // Usuwam wszelkie wywołania editDialog.showModal() poza startDictionaryEditMode
-  // Dodatkowo, w startDictionaryEditMode dodaję warunek, by nie otwierać modalu jeśli nie jest tryb edycji
   try {
     const meta = await fetchJson("/api/meta");
     applyMeta(meta);
