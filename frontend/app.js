@@ -654,19 +654,15 @@ function setLoading(message = textValue("loadingData")) {
 }
 
 function setError(message) {
-  setErrorWithDetails(message, "");
+  lastErrorMessage = message || 'Unknown error';
+  lastErrorDetails = '';
+  openErrorDetailsDialog();
 }
 
 function setErrorWithDetails(message, details) {
   lastErrorMessage = String(message || "");
   lastErrorDetails = String(details || "").trim();
-  const actions = lastErrorDetails
-    ? `<div class="error-state-actions"><button id="showErrorDetailsButton" type="button" class="btn btn-discard">${escapeHtml(
-        textValue("errorDetailsShow")
-      )}</button></div>`
-    : "";
-
-  tableContainer.innerHTML = `<div class="error-state">${escapeHtml(lastErrorMessage)}${actions}</div>`;
+  openErrorDetailsDialog();
 }
 
 function extractErrorDetails(error) {
@@ -953,6 +949,9 @@ async function loadUserContext() {
   } catch (error) {
     userNameField.textContent = "";
     rolesList.innerHTML = `<li>${escapeHtml(error.message)}</li>`;
+    lastErrorMessage = error.message || 'Unknown error';
+    lastErrorDetails = extractErrorDetails(error) || JSON.stringify(error, null, 2);
+    openErrorDetailsDialog();
   }
 }
 
@@ -990,7 +989,6 @@ async function loadRows(dictionaryName, requestedPage = 1, dictionaryVersionKey 
     totalRows = data.totalRows || 0;
     currentDictionaryCanUpdate = Boolean(data.canUpdate);
     currentSnapshotToken = typeof data.snapshotToken === "string" ? data.snapshotToken : "";
-    // Use backend-provided business columns if available
     if (Array.isArray(data.columns) && data.columns.length > 0) {
       currentTableColumns = [...data.columns];
     } else if (workingRows.length > 0) {
@@ -1009,7 +1007,9 @@ async function loadRows(dictionaryName, requestedPage = 1, dictionaryVersionKey 
     totalPages = 1;
     currentPage = 1;
     updatePaginationControls();
-    setErrorWithDetails(error.message, extractErrorDetails(error));
+    lastErrorMessage = error.message || 'Unknown error';
+    lastErrorDetails = extractErrorDetails(error) || JSON.stringify(error, null, 2);
+    openErrorDetailsDialog();
   }
 }
 
@@ -1036,12 +1036,13 @@ async function loadDictionaryVersions(dictionaryName) {
   } catch (error) {
     dictionaryVersionSelect.innerHTML = `<option value="">${escapeHtml(error.message)}</option>`;
     dictionaryVersionSelect.disabled = true;
-    setErrorWithDetails(error.message, extractErrorDetails(error));
+    lastErrorMessage = error.message || 'Unknown error';
+    lastErrorDetails = extractErrorDetails(error) || JSON.stringify(error, null, 2);
+    openErrorDetailsDialog();
   }
 }
 
-
-function applyMeta(meta) {
+async function applyMeta(meta) {
   dictionaries = meta.dictionaries || [];
 
 
@@ -1397,9 +1398,14 @@ function startDictionaryEditMode() {
   if (!activeDictionary || !selectedDictionaryVersionKey || !hasLoadedTableData || !currentDictionaryCanUpdate) {
     return;
   }
-
-  isDictionaryEditMode = true;
-  renderTable(workingRows);
+  editDialogTitle.textContent = 'Not yet implemented';
+  editFields.innerHTML = '<div class="edit-field edit-field-not-implemented"><span>Not yet implemented</span></div>';
+  rowSaveButton.hidden = true;
+  rowCancelButton.textContent = textValue("close");
+  editDialog.showModal();
+  saveButton.disabled = true;
+  discardButton.disabled = true;
+  publishButton.disabled = true;
 }
 
 function handleTableClick(event) {
@@ -1448,13 +1454,17 @@ function handleAccountToggle() {
 async function initialize() {
   applyStaticConfig();
   setLoading(textValue("loadingWorkspace"));
-
+  // Usunięto automatyczne otwieranie modalu Edit record na starcie
+  // Usuwam wszelkie wywołania editDialog.showModal() poza startDictionaryEditMode
+  // Dodatkowo, w startDictionaryEditMode dodaję warunek, by nie otwierać modalu jeśli nie jest tryb edycji
   try {
     const meta = await fetchJson("/api/meta");
     applyMeta(meta);
     await loadUserContext();
   } catch (error) {
-    setErrorWithDetails(error.message, extractErrorDetails(error));
+    lastErrorMessage = error.message || 'Unknown error';
+    lastErrorDetails = extractErrorDetails(error) || JSON.stringify(error, null, 2);
+    openErrorDetailsDialog();
   }
 }
 
