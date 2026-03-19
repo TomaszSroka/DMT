@@ -1,4 +1,30 @@
-﻿const FRONTEND_RUNTIME_CONFIG = window.FRONTEND_RUNTIME_CONFIG || {};
+﻿// Globalny handler błędów JS – pokaż w errorDetailsDialog
+window.addEventListener('error', function(event) {
+  lastErrorMessage = event.message || 'Unknown JS error';
+  lastErrorDetails = (event.filename ? (event.filename + ':' + event.lineno + ':' + event.colno + '\n') : '') + (event.error && event.error.stack ? event.error.stack : '');
+  openErrorDetailsDialog();
+});
+
+window.addEventListener('unhandledrejection', function(event) {
+  lastErrorMessage = (event.reason && event.reason.message) ? event.reason.message : 'Unhandled promise rejection';
+  lastErrorDetails = event.reason && event.reason.stack ? event.reason.stack : String(event.reason);
+  openErrorDetailsDialog();
+});
+
+
+function showRecordViewDialog(rowIndex) {
+  const row = workingRows[rowIndex];
+  if (!row || !Array.isArray(currentTableColumns)) return;
+  const fieldsHtml = currentTableColumns.map(colObj => {
+    const colKey = typeof colObj === "object" && colObj !== null ? colObj.DICTIONARY_COLUMN_TECHNICAL : String(colObj);
+    const colLabel = typeof colObj === "object" && colObj !== null && colObj.DICTIONARY_COLUMN_BUSINESS ? colObj.DICTIONARY_COLUMN_BUSINESS : colKey;
+    const value = row[colKey] == null ? "" : String(row[colKey]);
+    return `<div class="edit-field"><label>${escapeHtml(colLabel)}</label><input value="${escapeHtml(value)}" readonly disabled tabindex="-1" /></div>`;
+  }).join("");
+  recordViewFields.innerHTML = fieldsHtml;
+  recordViewDialog.showModal();
+}
+const FRONTEND_RUNTIME_CONFIG = window.FRONTEND_RUNTIME_CONFIG || {};
 const UI_TEXT = FRONTEND_RUNTIME_CONFIG.text || {};
 const UI_DEFAULTS = FRONTEND_RUNTIME_CONFIG.defaults || {};
 const UI_TYPOGRAPHY = FRONTEND_RUNTIME_CONFIG.typography || {};
@@ -820,11 +846,10 @@ function getVisibleColumnsFromRow(row) {
 
 function updateActionButtons() {
   const canStartEditing = Boolean(activeDictionary && selectedDictionaryVersionKey && hasLoadedTableData && currentDictionaryCanUpdate);
-  const hasPending = pendingRowChanges.size > 0;
-
-  editButton.disabled = !canStartEditing || isDictionaryEditMode;
-  saveButton.disabled = !isDictionaryEditMode;
-  discardButton.disabled = !hasPending;
+  // Edycja wyłączona, przyciski save/discard nieaktywne, editButton tylko na not implemented
+  editButton.disabled = !canStartEditing;
+  saveButton.disabled = true;
+  discardButton.disabled = true;
   publishButton.disabled = true;
 }
 
@@ -869,11 +894,8 @@ function renderTable(rows) {
 
   const body = rows
     .map((row, rowIndex) => {
-      const rowActionLabel = isDictionaryEditMode ? textValue("editRowButton") : textValue("showRowButton");
-      const disabledAttr = "";
-      const actionCell = `<td><button class="row-edit-btn" data-row-index="${rowIndex}" ${disabledAttr}>${escapeHtml(
-        rowActionLabel
-      )}</button></td>`;
+      // Show button removed
+      const actionCell = "<td></td>";
       const tds = columns
         .map((col) => {
           const fullValue = row[col] == null ? "" : String(row[col]);
@@ -1259,17 +1281,7 @@ function handleTableClick(event) {
     return;
   }
 
-  const button = event.target.closest(".row-edit-btn");
-  if (!button) {
-    return;
-  }
 
-  if (button.disabled) {
-    return;
-  }
-
-  const rowIndex = Number.parseInt(button.getAttribute("data-row-index"), 10);
-  openRowDialog(rowIndex, isDictionaryEditMode && currentDictionaryCanUpdate);
 }
 
 function handleAccountToggle() {
@@ -1439,8 +1451,7 @@ errorDetailsCloseButton.addEventListener("click", () => {
 errorDetailsCopyButton.addEventListener("click", copyErrorDetails);
 accountToggle.addEventListener("click", handleAccountToggle);
 tableContainer.addEventListener("click", handleTableClick);
-// Usunięto obsługę nieistniejących elementów dialogu edycji rekordu
-// Usunięto obsługę zdarzenia cancel dla dialogu edycji rekordu
+
 
 document.addEventListener("click", (event) => {
   if (!accountPanel.classList.contains("hidden") && !event.target.closest(".account-wrap")) {

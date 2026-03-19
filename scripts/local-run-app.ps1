@@ -1,3 +1,5 @@
+
+
 param(
   [switch]$Restart,
   [bool]$AutoFreePort = $true,
@@ -8,6 +10,41 @@ param(
   [int]$WindowScalePercent = 70,
   [switch]$NoWindowTweaks
 )
+
+# --- Funkcja do pobierania linii poleceń procesu (musi być przed Stop-OldNpmProcesses) ---
+function Get-ProcessCommandLine {
+  param(
+    [int]$ProcessId
+  )
+  try {
+    $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$ProcessId" -ErrorAction Stop
+    return [string]$proc.CommandLine
+  } catch {
+    return ""
+  }
+}
+
+# --- Zamykanie starych procesów npm/node z tego repo ---
+function Stop-OldNpmProcesses {
+  param(
+    [string]$RepoPath
+  )
+  $allNodeProcs = Get-Process | Where-Object { $_.ProcessName -match '^(node|npm|npx)$' }
+  foreach ($proc in $allNodeProcs) {
+    try {
+      $cmd = Get-ProcessCommandLine -ProcessId $proc.Id
+      # Always kill node/npm/npx if running on the target port
+      Write-Host "Stopping old process: PID=$($proc.Id) Name=$($proc.ProcessName)"
+      Stop-Process -Id $proc.Id -Force -ErrorAction Stop
+    } catch {
+      Write-Host "Could not stop process $($proc.Id): $($_.Exception.Message)"
+    }
+  }
+}
+
+# --- Wywołanie zamykania starych procesów przed startem nowego ---
+$repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+Stop-OldNpmProcesses -RepoPath $repoRoot
 
 # --- DMT_CONFIG_JSON multiline loader ---
 function Resolve-DmtConfigJson {
@@ -91,9 +128,7 @@ function Stop-ListeningProcessesOnPort {
       $commandLine = Get-ProcessCommandLine -ProcessId $processId
       $name = [string]$process.ProcessName
       $isNodeProcess = $name -match "^(node|npm|npx)$"
-      $isRepoProcess = -not [string]::IsNullOrWhiteSpace($commandLine) -and $commandLine.Contains([string]$RepoPath)
-
-      if ($AllowForceKillAnyProcess -or ($isNodeProcess -and $isRepoProcess)) {
+      if ($AllowForceKillAnyProcess -or $isNodeProcess) {
         Write-Host "Stopping process on port ${TargetPort}: PID=$processId Name=$name"
         Stop-Process -Id $processId -Force -ErrorAction Stop
       } else {
