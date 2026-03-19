@@ -914,10 +914,21 @@ function renderRoles(dictionaryRoles) {
     return;
   }
 
+  // Mapuj id słownika na label
+  const dictionaryLabelMap = {};
+  if (Array.isArray(dictionaries)) {
+    dictionaries.forEach(dict => {
+      if (dict && typeof dict.id === "string" && typeof dict.label === "string") {
+        dictionaryLabelMap[dict.id] = dict.label;
+      }
+    });
+  }
+
   const labels = dictionaryRoles.map((item) => {
-    const dictionary = item && typeof item.dictionary === "string" ? item.dictionary.trim() : "";
+    const dictionaryId = item && typeof item.dictionary === "string" ? item.dictionary.trim() : "";
+    const dictionaryLabel = dictionaryLabelMap[dictionaryId] || dictionaryId;
     const role = item && typeof item.role === "string" ? item.role.trim() : "";
-    return dictionary && role ? `${dictionary}${ACCOUNT_ROLE_SEPARATOR}${role}` : dictionary || role;
+    return dictionaryLabel && role ? `${dictionaryLabel}${ACCOUNT_ROLE_SEPARATOR}${role}` : dictionaryLabel || role;
   });
 
   if (labels.length > USER_DETAILS_DROPDOWN_THRESHOLD) {
