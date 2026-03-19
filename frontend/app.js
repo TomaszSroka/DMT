@@ -74,11 +74,7 @@ const dictionaryVersionLabel = document.getElementById("dictionaryVersionLabel")
 const dictionaryVersionSelect = document.getElementById("dictionaryVersionSelect");
 const showVersionDetailsButton = document.getElementById("showVersionDetailsButton");
 const appTitle = document.getElementById("appTitle");
-const editDialog = document.getElementById("editDialog");
-const editFields = document.getElementById("editFields");
-const editDialogTitle = document.getElementById("editDialogTitle");
-const rowSaveButton = document.getElementById("rowSaveButton");
-const rowCancelButton = document.getElementById("rowCancelButton");
+// Usunięto inicjalizację dialogu edycji rekordu
 const discardDialog = document.getElementById("discardDialog");
 const discardDialogTitle = document.getElementById("discardDialogTitle");
 const discardDialogIntro = document.getElementById("discardDialogIntro");
@@ -221,8 +217,7 @@ function applyStaticConfig() {
   setTableDataLoadedState(false);
   prevPageButton.textContent = textValue("previous");
   nextPageButton.textContent = textValue("next");
-  rowSaveButton.textContent = textValue("save");
-  rowCancelButton.textContent = textValue("cancel");
+  // Usunięto odwołania do nieistniejących elementów dialogu edycji rekordu
   discardDialogTitle.textContent = textValue("discardDialogTitle");
   discardDialogIntro.textContent = textValue("discardDialogIntro");
   discardStayButton.textContent = textValue("discardDialogKeepEditing");
@@ -235,7 +230,7 @@ function applyStaticConfig() {
   discardAllDialogIntro.textContent = textValue("discardAllDialogIntro");
   discardAllStayButton.textContent = textValue("discardAllDialogBack");
   discardAllConfirmButton.textContent = textValue("discardAllDialogConfirm");
-  editDialogTitle.textContent = textValue("editRecordTitle");
+  // Usunięto odwołanie do nieistniejącego elementu dialogu edycji rekordu
   tableMeta.textContent = textValue("rowsInitial");
   pageInfo.textContent = textValue("pageInfoInitial");
   updateCurrentDictionaryInfo();
@@ -678,12 +673,9 @@ function extractErrorDetails(error) {
 }
 
 function openErrorDetailsDialog() {
-  if (!lastErrorDetails) {
-    return;
-  }
-
-  errorDetailsMessage.textContent = lastErrorMessage;
-  errorDetailsText.textContent = lastErrorDetails;
+  // Fallback: zawsze pokazuj okno błędu, nawet jeśli brak szczegółów
+  errorDetailsMessage.textContent = lastErrorMessage || "Nie można zainicjalizować aplikacji. Sprawdź połączenie z API lub konfigurację frontendu.";
+  errorDetailsText.textContent = lastErrorDetails || "Brak szczegółów błędu. Sprawdź konsolę przeglądarki i backend.";
   errorDetailsCopyButton.textContent = textValue("errorDetailsCopy");
   errorDetailsDialog.showModal();
 }
@@ -1090,37 +1082,7 @@ function openRowDialog(rowIndex, editable) {
     return;
   }
 
-  editRowIndex = rowIndex;
-  editedDraft = normalizeRowForModal(workingRows[rowIndex]);
-  modalOriginalDraft = normalizeRowForModal(workingRows[rowIndex]);
-  const isEditable = Boolean(editable);
-  editDialogTitle.textContent = isEditable ? textValue("editRecordTitle") : textValue("showRecordTitle");
-
-  const fields = Object.keys(editedDraft)
-    .map((key) => {
-      const value = editedDraft[key] == null ? "" : String(editedDraft[key]);
-      const isLong = value.length > LONG_TEXT_THRESHOLD;
-      let control = "";
-
-      if (isEditable) {
-        control = isLong
-          ? `<textarea data-field="${escapeHtml(key)}">${escapeHtml(value)}</textarea>`
-          : `<input data-field="${escapeHtml(key)}" value="${escapeHtml(value)}" />`;
-      } else {
-        control = isLong
-          ? `<textarea readonly disabled>${escapeHtml(value)}</textarea>`
-          : `<input value="${escapeHtml(value)}" readonly disabled />`;
-      }
-
-      return `<div class="edit-field"><label>${escapeHtml(key)}</label>${control}</div>`;
-    })
-    .join("");
-
-  editFields.innerHTML = fields;
-  rowSaveButton.hidden = !isEditable;
-  rowSaveButton.disabled = true;
-  rowCancelButton.textContent = isEditable ? textValue("cancel") : textValue("close");
-  // editDialog.showModal() removed: Edit record modal is not displayed
+  // Usunięto dialog edycji rekordu (Edit Record)
 }
 
 function collectDraftFromModal() {
@@ -1285,40 +1247,8 @@ async function saveModalChanges() {
     return;
   }
 
-  if (editRowIndex < 0 || !editedDraft) {
-    editDialog.close();
-    return;
-  }
-
-  if (!isModalDirty()) {
-    editDialog.close();
-    return;
-  }
-
-  const changes = getModalChanges();
-  const shouldSave = await askSaveWithChanges(changes);
-  if (!shouldSave) {
-    return;
-  }
-
-  editedDraft = collectDraftFromModal();
-  workingRows[editRowIndex] = {
-    ...(workingRows[editRowIndex] || {}),
-    ...editedDraft
-  };
-
-  const original = JSON.stringify(normalizeRowForModal(originalRows[editRowIndex] || {}));
-  const current = JSON.stringify(normalizeRowForModal(workingRows[editRowIndex] || {}));
-  if (original === current) {
-    pendingRowChanges.delete(editRowIndex);
-  } else {
-    pendingRowChanges.set(editRowIndex, true);
-  }
-
-  hasSavedChanges = false;
-  renderTable(workingRows);
-  modalOriginalDraft = null;
-  editDialog.close();
+  // Usunięto obsługę dialogu edycji rekordu
+  // ...existing code...
 }
 
 async function handleModalCancel() {
@@ -1604,13 +1534,8 @@ errorDetailsCloseButton.addEventListener("click", () => {
 errorDetailsCopyButton.addEventListener("click", copyErrorDetails);
 accountToggle.addEventListener("click", handleAccountToggle);
 tableContainer.addEventListener("click", handleTableClick);
-rowSaveButton.addEventListener("click", saveModalChanges);
-rowCancelButton.addEventListener("click", handleModalCancel);
-editFields.addEventListener("input", updateModalSaveState);
-editDialog.addEventListener("cancel", (event) => {
-  event.preventDefault();
-  handleModalCancel();
-});
+// Usunięto obsługę nieistniejących elementów dialogu edycji rekordu
+// Usunięto obsługę zdarzenia cancel dla dialogu edycji rekordu
 
 document.addEventListener("click", (event) => {
   if (!accountPanel.classList.contains("hidden") && !event.target.closest(".account-wrap")) {
