@@ -131,11 +131,7 @@ let activeDictionary = "";
 let dictionaries = [];
 let originalRows = [];
 let workingRows = [];
-let pendingRowChanges = new Map();
-let hasSavedChanges = false;
-let editRowIndex = -1;
-let editedDraft = null;
-let modalOriginalDraft = null;
+// Usunięto mechanizmy draftów, pendingRowChanges, edycji rekordu
 let currentPage = 1;
 let totalPages = 1;
 let totalRows = 0;
@@ -1078,85 +1074,28 @@ function normalizeRowForModal(row) {
 }
 
 function openRowDialog(rowIndex, editable) {
-  if (!Number.isInteger(rowIndex) || rowIndex < 0 || rowIndex >= workingRows.length) {
-    return;
-  }
-
-  // Usunięto dialog edycji rekordu (Edit Record)
+  // Usunięto całą logikę edycji rekordu
+  return;
 }
 
 function collectDraftFromModal() {
-  const controls = editFields.querySelectorAll("[data-field]");
-  const draft = {};
-
-  controls.forEach((control) => {
-    const key = control.getAttribute("data-field");
-    draft[key] = control.value;
-  });
-
-  return draft;
+  // Usunięto mechanizm draftów
+  return {};
 }
 
 function isModalDirty() {
-  if (!modalOriginalDraft) {
-    return false;
-  }
-
-  const current = collectDraftFromModal();
-  return JSON.stringify(current) !== JSON.stringify(modalOriginalDraft);
+  // Usunięto mechanizm sprawdzania zmian w modalu
+  return false;
 }
 
 function getModalChanges() {
-  if (!modalOriginalDraft) {
-    return [];
-  }
-
-  const current = collectDraftFromModal();
-  const keys = Array.from(new Set([...Object.keys(modalOriginalDraft), ...Object.keys(current)])).sort((a, b) =>
-    a.localeCompare(b)
-  );
-
-  return keys
-    .map((key) => {
-      const oldValue = modalOriginalDraft[key] == null ? "" : String(modalOriginalDraft[key]);
-      const newValue = current[key] == null ? "" : String(current[key]);
-      return {
-        field: key,
-        oldValue,
-        newValue,
-        changed: oldValue !== newValue
-      };
-    })
-    .filter((item) => item.changed);
+  // Usunięto mechanizm porównywania zmian
+  return [];
 }
 
 function getPendingChanges() {
-  const allChanges = [];
-
-  pendingRowChanges.forEach((_, rowIndex) => {
-    const originalRow = normalizeRowForModal(originalRows[rowIndex] || {});
-    const currentRow = normalizeRowForModal(workingRows[rowIndex] || {});
-    const keys = Array.from(new Set([...Object.keys(originalRow), ...Object.keys(currentRow)])).sort((a, b) =>
-      a.localeCompare(b)
-    );
-
-    keys.forEach((key) => {
-      const oldValue = originalRow[key] == null ? "" : String(originalRow[key]);
-      const newValue = currentRow[key] == null ? "" : String(currentRow[key]);
-      if (oldValue === newValue) {
-        return;
-      }
-
-      allChanges.push({
-        field: `${textValue("rowLabel")} ${rowIndex + 1} / ${key}`,
-        oldValue,
-        newValue,
-        changed: true
-      });
-    });
-  });
-
-  return allChanges;
+  // Usunięto mechanizm pendingRowChanges
+  return [];
 }
 
 function renderChangesList(container, changes) {
@@ -1233,70 +1172,19 @@ function askDiscardAllWithChanges(changes) {
 }
 
 function updateModalSaveState() {
-  if (!isDictionaryEditMode) {
-    rowSaveButton.disabled = true;
-    return;
-  }
-
-  rowSaveButton.disabled = !isModalDirty();
+  // Usunięto mechanizm updateModalSaveState
 }
 
 async function saveModalChanges() {
-  if (!isDictionaryEditMode) {
-    editDialog.close();
-    return;
-  }
-
-  // Usunięto obsługę dialogu edycji rekordu
-  // ...existing code...
+  // Usunięto obsługę zapisu rekordu
 }
 
 async function handleModalCancel() {
-  if (!isDictionaryEditMode) {
-    modalOriginalDraft = null;
-    editDialog.close();
-    return;
-  }
-
-  if (!isModalDirty()) {
-    modalOriginalDraft = null;
-    editDialog.close();
-    return;
-  }
-
-  const changes = getModalChanges();
-  const shouldDiscard = await askDiscardWithChanges(changes);
-  if (shouldDiscard) {
-    modalOriginalDraft = null;
-    editDialog.close();
-  }
+  // Usunięto obsługę anulowania edycji rekordu
 }
 
 async function discardAllChanges() {
-  if (pendingRowChanges.size === 0) {
-    return;
-  }
-
-  const allChanges = getPendingChanges();
-  const previewChanges = allChanges.slice(0, 10);
-  if (allChanges.length > 10) {
-    previewChanges.push({
-      field: "...",
-      oldValue: "",
-      newValue: "",
-      changed: true
-    });
-  }
-
-  const shouldDiscardAll = await askDiscardAllWithChanges(previewChanges);
-  if (!shouldDiscardAll) {
-    return;
-  }
-
-  workingRows = JSON.parse(JSON.stringify(originalRows));
-  pendingRowChanges = new Map();
-  hasSavedChanges = false;
-  renderTable(workingRows);
+  // Usunięto obsługę odrzucania zestawu zmian
 }
 
 async function saveAllChanges() {
