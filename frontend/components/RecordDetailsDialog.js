@@ -15,7 +15,7 @@ export function setupRecordDetailsDialog() {
 }
 
 export function showRecordDetailsDialog(row, columns) {
-	// Pola do ukrycia
+	// Fields to hide
 	const hiddenFields = [
 		"DICTIONARY_KEY",
 		"DICTIONARY_SORT_ORDER",
@@ -24,7 +24,7 @@ export function showRecordDetailsDialog(row, columns) {
 		"DICTIONARY_LOCATION"
 	];
 
-	// Obsługa wielu wersji: row może być tablicą lub obiektem
+	// Handling multiple versions: row can be an array or an object
 	const rows = Array.isArray(row) ? row : [row];
 	if (!rows.length || !Array.isArray(columns)) return;
 
@@ -45,7 +45,7 @@ export function showRecordDetailsDialog(row, columns) {
 		}))
 		.filter(colObj => !hiddenFields.includes(colObj.tech));
 
-	// Renderuj tabelę: nagłówki, potem wiersze wersji
+	// Render table: headers, then version rows
 	let tableHtml = '<table><thead><tr>';
 	visibleCols.forEach(colObj => {
 		tableHtml += `<th>${escapeHtml(colObj.business)}</th>`;
