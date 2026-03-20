@@ -1,0 +1,80 @@
+/* dialogs.css – dialogi, modale, formularze, error-state, confirm, edit, filters */
+
+/* Dialog base styles */
+.dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--color-bg);
+  border-radius: 8px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.18);
+  min-width: 320px;
+  max-width: 90vw;
+  z-index: 1000;
+  padding: 24px 32px;
+}
+
+/* Modal overlay */
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.18);
+  z-index: 999;
+}
+
+/* Error state */
+.dialog-error {
+  color: var(--color-error);
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error);
+}
+
+/* Confirm dialog */
+.dialog-confirm {
+  color: var(--color-confirm);
+  background: var(--color-confirm-bg);
+  border: 1px solid var(--color-confirm);
+}
+
+/* Edit dialog */
+.dialog-edit {
+  color: var(--color-edit);
+  background: var(--color-edit-bg);
+  border: 1px solid var(--color-edit);
+}
+
+/* Filter dialog */
+.dialog-filter {
+  color: var(--color-filter);
+  background: var(--color-filter-bg);
+  border: 1px solid var(--color-filter);
+}
+
+/* Form styles */
+.dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dialog-form input,
+.dialog-form select,
+.dialog-form textarea {
+  width: 100%;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  font-size: 1rem;
+}
+
+.dialog-form .error-message {
+  color: var(--color-error);
+  font-size: 0.95rem;
+  margin-top: 4px;
+}
+
+/* ...add more dialog/modal/form styles as needed... */
