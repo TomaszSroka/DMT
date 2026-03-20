@@ -1,0 +1,141 @@
+/* tables.css – style tabel, table, th, td, .table-header-layout, .table-header-actions, .table-header-right, .table-wrap, .pager-controls, #pageInfo, #tableMeta, #activeFiltersInfo, .row-edit-btn, .th-sort-btn */
+
+.table-wrap {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-ui);
+  background: #fffdf9;
+  border: 1px solid #d6c1a6;
+}
+
+th,
+td {
+  border-bottom: 1px solid #e3d3bc;
+  border-right: 1px solid #e3d3bc;
+  padding: 9px 10px;
+  text-align: left;
+  white-space: normal;
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+th:last-child,
+td:last-child {
+  border-right: none;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background: #f5ebdd;
+  z-index: 1;
+  font-size: var(--font-size-ui);
+  text-transform: none;
+  letter-spacing: 0.03em;
+}
+
+.th-sort-btn {
+  all: unset;
+  cursor: pointer;
+  display: inline-block;
+  width: 100%;
+}
+
+.th-sort-btn:hover {
+  color: #5b432b;
+}
+
+th.col-center,
+td.col-center {
+  text-align: center;
+}
+
+th.col-center .th-sort-btn {
+  text-align: center;
+}
+
+tbody tr:hover {
+  background: #fff4e4;
+}
+
+.row-edit-btn {
+  border: 1px solid #afc2d6;
+  background: #e9f0f7;
+  color: #214a6e;
+}
+
+.row-edit-btn:hover {
+  background: #d8e5f2;
+}
+
+.table-header-layout {
+  display: grid;
+  width: 100%;
+  gap: 10px;
+}
+
+.table-header-actions {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--btn-gap);
+}
+
+.table-header-left,
+.table-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--btn-gap);
+}
+
+.table-header-right {
+  justify-content: flex-end;
+}
+
+.pager-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--btn-gap);
+  margin-left: 2px;
+}
+
+#pageInfo {
+  min-width: 92px;
+  text-align: center;
+  font-size: var(--font-size-ui);
+  color: var(--muted);
+}
+
+#tableMeta {
+  color: var(--muted);
+  font-size: var(--font-size-ui);
+}
+
+#activeFiltersInfo {
+  color: var(--muted);
+  font-size: var(--font-size-ui);
+}
+
+@media (max-width: 900px) {
+  .table-header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  .table-header-left,
+  .table-header-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}

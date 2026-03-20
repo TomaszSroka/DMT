@@ -34,9 +34,6 @@
   --btn-padding-x: 13px;
   --btn-gap: 10px;
 }
-
-* {
-  box-sizing: border-box;
 }
 
 body {
@@ -45,20 +42,17 @@ body {
   font-family: var(--font-primary);
   font-size: var(--font-size-ui);
   color: var(--text);
-  background: var(--bg-accent);
 }
 
 .app-shell {
   width: min(98vw, 1800px);
   margin: 0 auto;
   padding: 20px 10px 28px;
-}
 
 .topbar {
   display: grid;
   gap: 12px;
   margin-bottom: 18px;
-  padding: 16px;
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   border-radius: 14px;
@@ -69,7 +63,6 @@ body {
 
 .topbar-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: 14px;
 }
@@ -87,13 +80,11 @@ body {
   letter-spacing: 0.01em;
 }
 
-.brand-wrap {
   display: grid;
   gap: 2px;
 }
 
 .account-wrap {
-  position: relative;
 }
 
 .account-toggle {
@@ -102,8 +93,6 @@ body {
   border-color: #cdb89f;
   color: #745a3f;
   display: block;
-  margin: 0;
-  margin-bottom: 0 !important;
   font-family: var(--font-primary);
   font-size: var(--font-size-ui);
   font-weight: 600;
@@ -116,12 +105,9 @@ body {
   word-break: break-word;
 }
 
-.roles-block {
-  margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid rgba(191, 174, 150, 0.7);
 }
-
 .roles-block p {
   margin: 0 0 6px;
   font-size: var(--font-size-ui);
@@ -131,46 +117,36 @@ body {
 
 .roles-block ul {
   margin: 0;
-  padding-left: 16px;
   max-height: 180px;
   overflow-y: auto;
   overflow-x: hidden;
   font-family: var(--font-mono);
   font-size: var(--font-size-select);
 }
-
 .roles-select {
   width: 100%;
   max-width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 8px;
   padding: 6px 8px;
   font-family: var(--font-mono);
   font-size: var(--font-size-select);
-  background: #fff;
 }
 
 .dictionary-select-wrap {
-  display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface-strong);
   font-size: var(--font-size-ui);
 }
 
-.dictionary-select-wrap select {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 6px 8px;
-  min-width: 280px;
   font-family: var(--font-mono);
   font-size: var(--font-size-select);
   background: #fff;
 }
-
 
 
 .table-header-layout {
@@ -179,37 +155,30 @@ body {
   gap: 10px;
 }
 
-.table-header-actions {
-  display: flex;
   width: 100%;
   align-items: center;
   justify-content: space-between;
   gap: var(--btn-gap);
 }
-
 .table-header-left,
 .table-header-right {
   display: flex;
-  align-items: center;
   gap: var(--btn-gap);
 }
 
 .table-header-right {
   justify-content: flex-end;
 }
-
 .current-dictionary-info {
   font-size: var(--font-size-ui);
   color: var(--muted);
   font-weight: 600;
   text-align: left;
   white-space: nowrap;
-}
 
 #openFiltersButton {
   margin-right: 0;
 }
-
 .pager-controls {
   display: flex;
   align-items: center;

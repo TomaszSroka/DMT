@@ -1,0 +1,54 @@
+/* forms.css – pola formularzy, input, select, textarea, label, edit-fields, dictionary-select-wrap */
+
+input,
+select,
+textarea {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-select);
+  background: #fff;
+}
+
+label {
+  font-size: var(--font-size-ui);
+  color: var(--muted);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.edit-fields {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dictionary-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-strong);
+  font-size: var(--font-size-ui);
+}
+
+.dictionary-select-wrap select {
+  min-width: 280px;
+}
+
+@media (max-width: 900px) {
+  .edit-fields {
+    grid-template-columns: 1fr;
+  }
+  .dictionary-select-wrap {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .dictionary-select-wrap select {
+    min-width: 0;
+    width: 62%;
+  }
+}
