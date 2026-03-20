@@ -1,25 +1,72 @@
 /* --- Record Details Dialog --- */
 .record-details-dialog {
-  width: 80vw;
+  width: min(80vw, 1600px);
   max-width: 1600px;
   border: 1px solid var(--panel-border);
   border-radius: 14px;
   background: var(--panel-bg);
   box-shadow: var(--shadow);
   padding: 0;
+  overflow: hidden;
 }
 
 .record-details-form {
   display: flex;
   flex-direction: column;
   width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+.record-details-header {
+  padding: 24px 32px 18px 32px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg);
+  justify-content: flex-start;
+}
+
+.record-details-title {
+  margin: 0;
+  font-size: clamp(1rem, 1.3vw, 1.15rem);
+  letter-spacing: 0.01em;
+  font-family: var(--font-primary);
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+}
+
+  font-size: 0.8em;
+  margin-left: auto;
 }
 
 .record-details-fields {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 22px;
+  display: block;
   padding: 32px;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.record-details-fields table {
+  width: 100%;
+  table-layout: fixed;
+}
+.record-details-fields td,
+.record-details-fields th {
+  width: 1%;
+}
+}
+
+.record-details-fields > * {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.record-details-fields * {
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .record-details-section {
@@ -28,9 +75,10 @@
   border-radius: 10px;
   padding: 16px 14px 12px 14px;
   display: flex;
-  flex-direction: column;
   min-width: 0;
+  max-width: 100%;
   word-break: break-word;
+  overflow-wrap: anywhere;
   box-shadow: 0 2px 8px rgba(52,37,18,0.04);
 }
 
@@ -43,8 +91,17 @@
   font-family: var(--font-primary);
 }
 
+.record-details-label[data-label="Dictionary Version Description"] {
+  font-size: 1.18em;
+  color: var(--primary);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  margin-bottom: 9px;
+}
+}
+
 .record-details-value {
-  font-size: 1.13em;
+  font-size: var(--font-size-ui);
   color: #1a1a1a;
   font-family: var(--font-primary);
   font-weight: 500;
@@ -55,11 +112,13 @@
   background: #fff;
   outline: none;
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
   min-height: 38px;
   transition: border-color 0.2s;
   white-space: pre-wrap;
   word-break: break-word;
+  overflow-wrap: anywhere;
 }
 /* Record details dialog title */
 .record-view-title {
@@ -114,7 +173,12 @@
   --shadow: 0 16px 34px rgba(52, 37, 18, 0.14);
   --font-primary: sans-serif;
   --font-mono: var(--font-primary);
-  --font-size-ui: 0.9rem;
+  --font-size-ui: 1.0em;
+  --font-size-select: 0.9em;
+    font-family: var(--font-primary);
+    font-size: var(--font-size-ui);
+    font-weight: 500;
+    font-style: normal;
   --btn-font-size: var(--font-size-ui);
   --btn-padding-y: 9px;
   --btn-padding-x: 13px;
@@ -198,7 +262,7 @@ body {
   position: absolute;
   right: 0;
   top: calc(100% + 8px);
-  width: min(380px, 82vw);
+  width: min(570px, 100vw);
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -216,17 +280,13 @@ body {
   margin: 0;
   margin-bottom: 4px;
   font-size: var(--font-size-ui);
-  color: var(--muted);
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 7px;
+  letter-spacing: 0.01em;
+  font-family: var(--font-primary);
 }
 
-.account-user-value {
-  margin: 0;
-  margin-bottom: 10px;
-  font-family: var(--font-mono);
-  font-size: var(--font-size-ui);
-  font-weight: 400;
-  color: var(--text);
-  line-height: normal;
   word-break: break-word;
 }
 
@@ -240,6 +300,7 @@ body {
   margin: 0 0 6px;
   font-size: var(--font-size-ui);
   color: var(--muted);
+  /* Roles label text update will be handled in HTML/JS */
 }
 
 .roles-block ul {
@@ -249,7 +310,7 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   font-family: var(--font-mono);
-  font-size: var(--font-size-ui);
+  font-size: var(--font-size-select);
 }
 
 .roles-select {
@@ -259,7 +320,7 @@ body {
   border-radius: 8px;
   padding: 6px 8px;
   font-family: var(--font-mono);
-  font-size: var(--font-size-ui);
+  font-size: var(--font-size-select);
   background: #fff;
 }
 
@@ -280,6 +341,7 @@ body {
   padding: 6px 8px;
   min-width: 280px;
   font-family: var(--font-mono);
+  font-size: var(--font-size-select);
   background: #fff;
 }
 
@@ -453,10 +515,12 @@ td {
   border-right: 1px solid #e3d3bc;
   padding: 9px 10px;
   text-align: left;
-  white-space: nowrap;
+  white-space: normal;
   max-width: 420px;
   overflow: hidden;
   text-overflow: ellipsis;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 th:last-child,
@@ -711,6 +775,8 @@ tbody tr:hover {
 .edit-field {
   display: grid;
   gap: 6px;
+  min-width: 0;
+}
 
 .edit-field-not-implemented {
   padding: 18px 0;
@@ -722,7 +788,6 @@ tbody tr:hover {
   width: 100%;
   overflow: hidden;
   white-space: normal;
-}
 }
 
 .edit-field label {
@@ -815,10 +880,12 @@ tbody tr:hover {
   border-right: 1px solid #e3d3bc;
   padding: 8px 10px;
   text-align: left;
-  white-space: nowrap;
+  white-space: normal;
   max-width: 380px;
   overflow: hidden;
   text-overflow: ellipsis;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .version-details-content th:last-child,
@@ -893,5 +960,28 @@ tbody tr:hover {
   .current-dictionary-info {
     width: 100%;
     text-align: left;
+  }
+}
+
+
+@media (max-width: 1100px) {
+  .record-details-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 24px;
+  }
+}
+
+@media (max-width: 700px) {
+  .record-details-dialog {
+    width: min(96vw, 1600px);
+  }
+
+  .record-details-header {
+    padding: 18px 20px 14px;
+  }
+
+  .record-details-fields {
+    grid-template-columns: 1fr;
+    padding: 20px;
   }
 }

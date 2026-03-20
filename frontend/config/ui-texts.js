@@ -2,8 +2,8 @@
 export const uiTexts = {
   appTitle: "DMT - Dictionary Management Tool",
   accountButton: "Account",
-  userLabel: "User",
-  rolesLabel: "Roles",
+  userLabel: "User:",
+  rolesLabel: "Dictionary Name - Role Name:",
     dictionaryLabel: "Dictionary",
     dictionaryVersionLabel: "Dictionary Version",
     showVersionDetails: "Version History",

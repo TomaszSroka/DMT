@@ -34,13 +34,49 @@ export function showRecordDetailsDialog(row, columns) {
 			? colObj.DICTIONARY_COLUMN_TECHNICAL
 			: String(colObj)
 	);
-	const fields = techColumns.map((col, idx) => {
-		if (hiddenFields.includes(col)) return "";
-		const colLabel = businessHeaders[idx];
-		const value = row[col] == null ? "" : String(row[col]);
-		return `<div class="record-details-section"><div class="record-details-label">${escapeHtml(colLabel)}</div><div class="record-details-value">${escapeHtml(value)}</div></div>`;
-	}).filter(Boolean);
-	recordDetailsFields.innerHTML = fields.join("");
+	// Filtruj kolumny
+	const visibleCols = techColumns
+		.map((col, idx) => ({
+			tech: col,
+			business: businessHeaders[idx]
+		}))
+		.filter(colObj => !hiddenFields.includes(colObj.tech));
+
+	// Renderuj tabelę 4-kolumnową z nagłówkami nad wartościami
+	let tableHtml = '<table><tbody>';
+	for (let i = 0; i < visibleCols.length; i += 4) {
+		// Wiersz nagłówków
+		tableHtml += '<tr>';
+		for (let j = 0; j < 4; j++) {
+			const colObj = visibleCols[i + j];
+			if (colObj) {
+				tableHtml += `<td><div class=\"record-details-label\" data-label=\"${escapeHtml(colObj.business)}\">${escapeHtml(colObj.business)}</div></td>`;
+			} else {
+				tableHtml += '<td></td>';
+			}
+		}
+		tableHtml += '</tr>';
+		// Wiersz wartości
+		tableHtml += '<tr>';
+		for (let j = 0; j < 4; j++) {
+			const colObj = visibleCols[i + j];
+			if (colObj) {
+				const value = row[colObj.tech] == null ? "" : String(row[colObj.tech]);
+				tableHtml += `<td><div class=\"record-details-section\"><div class=\"record-details-value\">${escapeHtml(value)}</div></div></td>`;
+			} else {
+				tableHtml += '<td></td>';
+			}
+		}
+		tableHtml += '</tr>';
+	}
+	tableHtml += '</tbody></table>';
+	recordDetailsFields.innerHTML = tableHtml;
+	// Przesuwam tytuł Version History na lewo
+	const recordDetailsTitle = document.getElementById("recordDetailsTitle");
+	if (recordDetailsTitle) {
+		recordDetailsTitle.style.textAlign = "left";
+		recordDetailsTitle.style.justifySelf = "start";
+	}
 	recordDetailsDialog.showModal();
 }
 
