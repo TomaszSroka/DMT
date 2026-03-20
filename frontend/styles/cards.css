@@ -1,4 +1,10 @@
-/* cards.css – karty, .card, .card-header, sekcje, content */
+/*
+ * cards.css
+ *
+ * Styles for card UI elements, sections, and content containers.
+ * - Defines appearance for .card, .card-header, and .content.
+ * Usage: Imported in index.html after buttons.css.
+ */
 
 .content {
   display: grid;

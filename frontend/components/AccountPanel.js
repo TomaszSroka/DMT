@@ -1,4 +1,11 @@
-// Account panel logic
+/**
+ * AccountPanel.js
+ *
+ * Manages the user account panel in the UI.
+ * - Handles toggling panel visibility, displaying user info, and closing on outside click.
+ * Usage: Call setupAccountPanel() after DOM is loaded.
+ */
+
 export function setupAccountPanel() {
   const accountToggle = document.getElementById("accountToggle");
   const accountPanel = document.getElementById("accountPanel");

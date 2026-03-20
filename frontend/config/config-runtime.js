@@ -1,3 +1,12 @@
+/**
+ * config-runtime.js
+ *
+ * Builds and normalizes the runtime configuration for the frontend (window.FRONTEND_RUNTIME_CONFIG).
+ * - Normalizes values from FRONTEND_CONFIG for use at runtime.
+ * - Ensures fallback values for missing or invalid config entries.
+ * Usage: Loaded after config-frontend.js to provide runtime config for the app.
+ */
+
 (function buildFrontendRuntimeConfig() {
   const frontendConfig = window.FRONTEND_CONFIG || {};
   const rawDefaults = frontendConfig.defaults || {};

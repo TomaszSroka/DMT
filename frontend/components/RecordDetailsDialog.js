@@ -1,5 +1,11 @@
-// RecordDetailsDialog.js
-// Handles the Record Details dialog UI and logic
+/**
+ * RecordDetailsDialog.js
+ *
+ * Manages the Record Details dialog for versioned dictionary row details.
+ * - Sets up dialog elements and event listeners.
+ * - Renders and displays row details in a modal table.
+ * Usage: Call setupRecordDetailsDialog() and showRecordDetailsDialog(row, columns) as needed.
+ */
 
 let recordDetailsDialog, recordDetailsFields, recordDetailsCloseButton;
 

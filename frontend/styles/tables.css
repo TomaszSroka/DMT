@@ -1,4 +1,10 @@
-/* tables.css – style tabel, table, th, td, .table-header-layout, .table-header-actions, .table-header-right, .table-wrap, .pager-controls, #pageInfo, #tableMeta, #activeFiltersInfo, .row-edit-btn, .th-sort-btn */
+/*
+ * tables.css
+ *
+ * Styles for tables, headers, cells, sorting buttons, and table wrappers.
+ * - Defines appearance for .table-wrap, table, th, td, .th-sort-btn, and pager controls.
+ * Usage: Imported in index.html after forms.css.
+ */
 
 .table-wrap {
   overflow-x: auto;

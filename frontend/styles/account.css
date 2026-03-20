@@ -1,4 +1,11 @@
-/* Account panel, user info, roles */
+/*
+ * account.css
+ *
+ * Styles for account panel, user info, and roles section.
+ * - Defines appearance and layout for account-related UI elements.
+ * Usage: Imported in index.html after layout.css.
+ */
+
 .account-wrap { position: relative; }
 .account-toggle {
   padding: 7px 11px;

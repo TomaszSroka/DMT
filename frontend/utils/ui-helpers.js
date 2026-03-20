@@ -1,4 +1,11 @@
-// Unified UI helpers
+/**
+ * ui-helpers.js
+ *
+ * Provides utility functions for UI components.
+ * - Escapes HTML, formats text, truncates values, fills templates, and formats meta info.
+ * - Used throughout the frontend for safe rendering and consistent formatting.
+ * Usage: Import functions as needed in UI scripts and components.
+ */
 
 export function escapeHtml(value) {
   return String(value)

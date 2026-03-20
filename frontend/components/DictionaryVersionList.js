@@ -1,3 +1,12 @@
+/**
+ * DictionaryVersionList.js
+ *
+ * Renders the dropdown list of dictionary versions for a selected dictionary.
+ * - Populates select options from API.
+ * - Handles selection events and enables/disables the dropdown.
+ * Usage: Call renderDictionaryVersionList(dictionaryId) after DOM is loaded.
+ */
+
 import { fetchJson } from '../services/ApiClient.js';
 
 export async function renderDictionaryVersionList(dictionaryId) {

@@ -1,3 +1,11 @@
+/*
+ * variables.css
+ *
+ * Defines global CSS variables for colors, fonts, spacing, and UI elements.
+ * - Used throughout all modular CSS files for consistent theming.
+ * Usage: Imported first in index.html and other CSS files.
+ */
+
 :root {
   --bg: #f3eee4;
   --bg-accent: repeating-linear-gradient(

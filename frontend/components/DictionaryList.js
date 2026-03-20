@@ -1,3 +1,12 @@
+/**
+ * DictionaryList.js
+ *
+ * Renders the dropdown list of available dictionaries.
+ * - Populates select options from API.
+ * - Handles selection and visibility of dictionary options.
+ * Usage: Call renderDictionaryList() after DOM is loaded.
+ */
+
 import { fetchJson } from '../services/ApiClient.js';
 
 export async function renderDictionaryList() {

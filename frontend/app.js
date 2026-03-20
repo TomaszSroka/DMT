@@ -1,4 +1,15 @@
-﻿// Import UI texts
+﻿/**
+ * app.js
+ *
+ * Main entry point for the frontend application.
+ * - Imports UI texts, components, and dialogs.
+ * - Sets up DOMContentLoaded event to initialize UI elements and dialogs.
+ * - Assigns static texts to UI elements.
+ * - Handles page title and dialog setup.
+ * Usage: Included in index.html as the main script.
+ */
+
+// Import UI texts
 import { uiTexts } from './config/ui-texts.js';
 import { setupAccountPanel } from './components/AccountPanel.js';
 import { loadUserInfo } from './components/UserInfo.js';

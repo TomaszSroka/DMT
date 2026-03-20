@@ -1,3 +1,13 @@
+/**
+ * VersionHistoryButton.js
+ *
+ * Handles the setup and behavior of the 'Version History' button in the UI.
+ * - Enables/disables the button based on dictionary/version selection.
+ * - Fetches version history details from the backend API.
+ * - Displays version details in a dialog using RecordDetailsDialog.js.
+ * Usage: Call setupVersionHistoryButton() after DOM is loaded.
+ */
+
 export function setupVersionHistoryButton() {
   const versionSelect = document.getElementById('dictionaryVersionSelect');
   const versionHistoryBtn = document.getElementById('showVersionDetailsButton');

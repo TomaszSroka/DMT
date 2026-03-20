@@ -1,3 +1,12 @@
+/**
+ * ui-texts.js
+ *
+ * Provides static UI text labels and messages for the frontend application.
+ * - Centralizes all UI strings for easy translation and maintenance.
+ * - Used by app.js and components to display consistent text.
+ * Usage: Import uiTexts where UI labels/messages are needed.
+ */
+
 // Static UI texts for the app
 export const uiTexts = {
   appTitle: "DMT - Dictionary Management Tool",

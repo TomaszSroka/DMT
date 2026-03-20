@@ -1,3 +1,12 @@
+/**
+ * ApiClient.js
+ *
+ * Provides unified API client functions for the frontend.
+ * - Defines ApiRequestError for standardized error handling.
+ * - Exposes fetchJson() for fetching JSON from backend APIs with error handling.
+ * Usage: Import fetchJson() to make API requests and handle errors.
+ */
+
 // Unified API client for fetching JSON with error handling
 export class ApiRequestError extends Error {
   constructor(message, details = "") {

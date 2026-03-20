@@ -1,1 +1,9 @@
+/*
+ * styles.css
+ *
+ * Contains global and custom styles for the frontend application.
+ * - Use for styles that do not fit into modular CSS files.
+ * Usage: Imported last in index.html for global overrides and custom rules.
+ */
+
 /* styles.css – space for global, custom styles */

@@ -1,4 +1,11 @@
-/* forms.css – pola formularzy, input, select, textarea, label, edit-fields, dictionary-select-wrap */
+/*
+ * forms.css
+ *
+ * Styles for form fields, input, select, textarea, labels, and edit-fields.
+ * - Defines appearance for dictionary and version select wrappers.
+ * - Includes responsive styles for form layouts.
+ * Usage: Imported in index.html after cards.css.
+ */
 
 input,
 select,

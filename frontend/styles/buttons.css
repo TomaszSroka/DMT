@@ -1,4 +1,10 @@
-/* buttons.css – przyciski, akcje, style .btn, .row-edit-btn, .actions */
+/*
+ * buttons.css
+ *
+ * Styles for buttons, actions, and related UI elements.
+ * - Defines appearance for .btn, .row-edit-btn, .account-toggle, and .actions.
+ * Usage: Imported in index.html after dialogs.css.
+ */
 
 .btn,
 .row-edit-btn,

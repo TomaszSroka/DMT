@@ -1,6 +1,14 @@
 /* dialogs.css – dialogi, modale, formularze, error-state, confirm, edit, filters */
 
-/* Dialog base styles */
+/*
+ * dialogs.css
+ *
+ * Styles for dialogs, modals, forms, error states, confirm, edit, and filter dialogs.
+ * - Defines base dialog appearance and overlays.
+ * - Includes form and error state styles for dialogs.
+ * Usage: Imported in index.html after account.css.
+ */
+
 .dialog {
   position: fixed;
   top: 50%;

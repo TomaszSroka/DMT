@@ -185,12 +185,34 @@ DMT/
 │       └── async-handler.js          # asyncHandler(fn) middleware wrapper
 ├── frontend/
 │   ├── index.html                    # SPA shell
-│   ├── config-frontend.js            # Static UI configuration defaults
-│   ├── config-runtime.js             # Normalizes config-frontend at page load
-│   ├── shared-ui.js                  # window.DMT.sharedUi — render helpers
-│   ├── api-client.js                 # window.DMT.apiClient — fetchJson wrapper
 │   ├── app.js                        # Main application logic
-│   └── styles.css
+│   ├── app.backup.js                 # Backup of main app logic
+│   ├── components/                   # Modular UI components (AccountPanel, DictionaryList, etc.)
+│   │   ├── AccountPanel.js           # User account panel logic
+│   │   ├── DictionaryList.js         # Dictionary dropdown logic
+│   │   ├── DictionaryVersionList.js  # Dictionary version dropdown logic
+│   │   ├── RecordDetailsDialog.js    # Record details modal logic
+│   │   ├── UserInfo.js               # User info loader
+│   │   └── VersionHistoryButton.js   # Version history button logic
+│   ├── config/                      # UI and runtime configuration
+│   │   ├── config-frontend.js        # Static UI config defaults
+│   │   ├── config-runtime.js         # Runtime config normalization
+│   │   └── ui-texts.js               # UI text definitions
+│   ├── services/                    # API client wrappers
+│   │   └── ApiClient.js              # fetchJson and API helpers
+│   ├── utils/                       # Utility functions
+│   │   └── ui-helpers.js             # HTML/text formatting helpers
+│   ├── styles/                      # Modular CSS files
+│   │   ├── variables.css             # CSS variables
+│   │   ├── layout.css                # Layout styles
+│   │   ├── account.css               # Account panel styles
+│   │   ├── dialogs.css               # Dialog/modal styles
+│   │   ├── buttons.css               # Button styles
+│   │   ├── cards.css                 # Card styles
+│   │   ├── forms.css                 # Form/input styles
+│   │   └── tables.css                # Table styles
+│   ├── styles.css                   # Global/custom styles (empty or minimal)
+│   ├── styles.backup.css            # Backup of original styles
 ├── logs/
 │   └── snowflake.log                 # Snowflake SDK log output (git-ignored)
 └── scripts/

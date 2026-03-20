@@ -1,3 +1,12 @@
+/**
+ * config-frontend.js
+ *
+ * Defines the main frontend configuration object (window.FRONTEND_CONFIG).
+ * - Sets typography, UI defaults, and behavior settings.
+ * - Provides text labels and templates for UI elements.
+ * Usage: Loaded before app.js to provide configuration for the frontend.
+ */
+
 window.FRONTEND_CONFIG = {
   typography: {
     primaryFont: '"Space Grotesk", sans-serif',

@@ -1,3 +1,12 @@
+/**
+ * UserInfo.js
+ *
+ * Loads and displays user information and dictionary-role pairs in the account panel.
+ * - Fetches user context from API.
+ * - Handles error display for user info and roles.
+ * Usage: Call loadUserInfo() after DOM is loaded.
+ */
+
 import { fetchJson } from '../services/ApiClient.js';
 
 export async function loadUserInfo() {

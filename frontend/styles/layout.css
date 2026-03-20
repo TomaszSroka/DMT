@@ -1,3 +1,11 @@
+/*
+ * layout.css
+ *
+ * Contains layout and structure styles for the main app shell, topbar, controls, and responsive design.
+ * - Defines grid, flex, and media queries for adaptive UI.
+ * Usage: Imported in index.html after variables.css.
+ */
+
 * { box-sizing: border-box; }
 body {
   margin: 0;
