@@ -7,7 +7,7 @@ export async function renderDictionaryVersionList(dictionaryId) {
   // Add empty start option
   const emptyOption = document.createElement('option');
   emptyOption.value = '';
-  emptyOption.textContent = '--- Select Dictionary Version ---';
+  emptyOption.textContent = '--- Select Version ---';
   dictionaryVersionSelect.appendChild(emptyOption);
   if (!dictionaryId) {
     dictionaryVersionSelect.disabled = true;

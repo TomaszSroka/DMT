@@ -38,6 +38,9 @@ label {
 .dictionary-select-wrap select {
   min-width: 280px;
 }
+.version-select-wrap select {
+  min-width: 140px;
+}
 
 @media (max-width: 900px) {
   .edit-fields {
