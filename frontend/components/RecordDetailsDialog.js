@@ -15,7 +15,6 @@ export function setupRecordDetailsDialog() {
 }
 
 export function showRecordDetailsDialog(row, columns) {
-	if (!row || !Array.isArray(columns)) return;
 	// Pola do ukrycia
 	const hiddenFields = [
 		"DICTIONARY_KEY",
@@ -24,6 +23,11 @@ export function showRecordDetailsDialog(row, columns) {
 		"DICTIONARY_VERSION_CODE",
 		"DICTIONARY_LOCATION"
 	];
+
+	// Obsługa wielu wersji: row może być tablicą lub obiektem
+	const rows = Array.isArray(row) ? row : [row];
+	if (!rows.length || !Array.isArray(columns)) return;
+
 	const businessHeaders = columns.map(colObj =>
 		typeof colObj === "object" && colObj !== null && typeof colObj.DICTIONARY_COLUMN_BUSINESS === "string"
 			? colObj.DICTIONARY_COLUMN_BUSINESS
@@ -34,7 +38,6 @@ export function showRecordDetailsDialog(row, columns) {
 			? colObj.DICTIONARY_COLUMN_TECHNICAL
 			: String(colObj)
 	);
-	// Filtruj kolumny
 	const visibleCols = techColumns
 		.map((col, idx) => ({
 			tech: col,
@@ -42,36 +45,22 @@ export function showRecordDetailsDialog(row, columns) {
 		}))
 		.filter(colObj => !hiddenFields.includes(colObj.tech));
 
-	// Renderuj tabelę 4-kolumnową z nagłówkami nad wartościami
-	let tableHtml = '<table><tbody>';
-	for (let i = 0; i < visibleCols.length; i += 4) {
-		// Wiersz nagłówków
+	// Renderuj tabelę: nagłówki, potem wiersze wersji
+	let tableHtml = '<table><thead><tr>';
+	visibleCols.forEach(colObj => {
+		tableHtml += `<th>${escapeHtml(colObj.business)}</th>`;
+	});
+	tableHtml += '</tr></thead><tbody>';
+	rows.forEach(rowObj => {
 		tableHtml += '<tr>';
-		for (let j = 0; j < 4; j++) {
-			const colObj = visibleCols[i + j];
-			if (colObj) {
-				tableHtml += `<td><div class=\"record-details-label\" data-label=\"${escapeHtml(colObj.business)}\">${escapeHtml(colObj.business)}</div></td>`;
-			} else {
-				tableHtml += '<td></td>';
-			}
-		}
+		visibleCols.forEach(colObj => {
+			const value = rowObj[colObj.tech] == null ? "" : String(rowObj[colObj.tech]);
+			tableHtml += `<td><div class=\"record-details-section\"><div class=\"record-details-value\">${escapeHtml(value)}</div></div></td>`;
+		});
 		tableHtml += '</tr>';
-		// Wiersz wartości
-		tableHtml += '<tr>';
-		for (let j = 0; j < 4; j++) {
-			const colObj = visibleCols[i + j];
-			if (colObj) {
-				const value = row[colObj.tech] == null ? "" : String(row[colObj.tech]);
-				tableHtml += `<td><div class=\"record-details-section\"><div class=\"record-details-value\">${escapeHtml(value)}</div></div></td>`;
-			} else {
-				tableHtml += '<td></td>';
-			}
-		}
-		tableHtml += '</tr>';
-	}
+	});
 	tableHtml += '</tbody></table>';
 	recordDetailsFields.innerHTML = tableHtml;
-	// Przesuwam tytuł Version History na lewo
 	const recordDetailsTitle = document.getElementById("recordDetailsTitle");
 	if (recordDetailsTitle) {
 		recordDetailsTitle.style.textAlign = "left";
