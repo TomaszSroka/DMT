@@ -1,6 +1,6 @@
 /* --- Record Details Dialog --- */
 .record-details-dialog {
-  width: min(85vw, 1700px);
+  width: min(95vw, 1700px);
   max-width: 1700px;
   border: 1px solid var(--panel-border);
   border-radius: 14px;
