@@ -1,4 +1,5 @@
-// Funkcje pomocnicze
+// Unified UI helpers
+
 export function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -23,6 +24,10 @@ export function truncateValue(value, maxLength = 120) {
   return `${text.slice(0, maxLength - 1)}...`;
 }
 
+export function fillTemplate(template, values) {
+  return String(template || "").replace(/\{(\w+)\}/g, (_, k) => values[k] ?? "");
+}
+
 export function formatRowsMeta(visibleRowsCount, allRowsCount, textValueFn) {
   return `${textValueFn("rowsLabel")}: ${visibleRowsCount}/${allRowsCount}`;
 }
@@ -31,14 +36,10 @@ export function formatPagesMeta(page, pages, textValueFn) {
   return `${textValueFn("pageLabel")}: ${page}/${pages}`;
 }
 
-export function fillTemplate(template, values) {
-  // Prosta zamiana {key} na values[key]
-  return String(template || "").replace(/\{(\w+)\}/g, (_, k) => values[k] ?? "");
-}
-
-export async function fetchJson(url, API_CLIENT = {}) {
-  if (typeof API_CLIENT.fetchJson === "function") {
-    return API_CLIENT.fetchJson(url);
-  }
-  throw new Error("unknownApiError");
-}
+export const uiFormats = {
+  filtersSummaryTemplate: '{column} IN "{value}"',
+  filtersSummaryJoiner: ' AND ',
+  rolePairSeparator: ' - ',
+  changeArrow: ' -> ',
+  filterDraftRowTemplate: 'Filter rule: Column - Value: {column} - {value}'
+};
