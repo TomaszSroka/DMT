@@ -8,7 +8,6 @@ export async function loadUserInfo() {
     if (userNameField) userNameField.textContent = data.user || '';
     if (rolesList) {
       rolesList.innerHTML = '';
-      // Map dictionary id to label (DICTIONARY_NAME)
       const dictionaryLabelMap = {};
       if (Array.isArray(data.dictionaries)) {
         data.dictionaries.forEach(dict => {

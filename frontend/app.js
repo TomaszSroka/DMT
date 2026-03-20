@@ -4,7 +4,8 @@ import { setupAccountPanel } from './components/AccountPanel.js';
 import { loadUserInfo } from './components/UserInfo.js';
 import { renderDictionaryList } from './components/DictionaryList.js';
 import { renderDictionaryVersionList } from './components/DictionaryVersionList.js';
-import { logUserContext } from './services/DebugApi.js';
+import { setupVersionHistoryButton } from './components/VersionHistoryButton.js';
+import { setupRecordDetailsDialog, showRecordDetailsDialog } from './components/RecordDetailsDialog.js';
 
 document.addEventListener("DOMContentLoaded", () => {
   // Set page title
@@ -12,6 +13,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const appTitle = document.getElementById("appTitle");
   if (appTitle) appTitle.textContent = uiTexts.appTitle;
 
+  // Initialize Record Details dialog
+  setupRecordDetailsDialog();
   // Assign texts to UI elements
   const assignText = [
     ["accountToggle", "accountButton"],
@@ -79,6 +82,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Debug: log API response
-  logUserContext();
+  // Setup Version History button
+  setupVersionHistoryButton();
 });

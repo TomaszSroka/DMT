@@ -396,7 +396,6 @@ async function getUserDictionaryContext(userLogin) {
   const dictionaries = Array.from(permissions.values())
     .filter((item) => item.canRead)
     .map((item) => {
-      // label zawsze z DMT.MET_USER_DICTIONARY_ROLE_DETAILS.DICTIONARY_NAME
       let label = item.metadata && item.metadata.DICTIONARY_NAME
         ? String(item.metadata.DICTIONARY_NAME).trim()
         : item.id;
