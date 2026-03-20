@@ -172,28 +172,6 @@ body {
 }
 
 
-.content {
-  display: grid;
-  gap: 12px;
-}
-
-.card {
-  border: 1px solid var(--panel-border);
-  border-radius: 14px;
-  background: var(--panel-bg);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-}
-
-.card-header {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 8px;
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-  background: #fff7ec;
-}
 
 .table-header-layout {
   display: grid;
