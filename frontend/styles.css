@@ -58,6 +58,8 @@
   box-sizing: border-box;
   min-height: 38px;
   transition: border-color 0.2s;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 /* Record details dialog title */
 .record-view-title {
