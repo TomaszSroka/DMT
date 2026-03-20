@@ -6,6 +6,36 @@
   border-radius: 14px;
   background: var(--panel-bg);
   box-shadow: var(--shadow);
+  padding: 0;
+  overflow: hidden;
+}
+
+.record-details-form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+.record-details-header {
+  padding: 24px 34px 18px 34px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg);
+  justify-content: flex-start;
+}
+
+.record-details-title {
+  margin: 0;
+  font-size: clamp(1rem, 1.3vw, 1.15rem);
+  letter-spacing: 0.01em;
+  font-family: var(--font-primary);
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+}
 
   font-size: 0.8em;
   margin-left: auto;

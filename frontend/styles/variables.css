@@ -1,0 +1,30 @@
+:root {
+  --bg: #f3eee4;
+  --bg-accent: repeating-linear-gradient(
+      0deg,
+      rgba(120, 94, 60, 0.035) 0px,
+      rgba(120, 94, 60, 0.035) 1px,
+      transparent 1px,
+      transparent 28px
+    ),
+    linear-gradient(135deg, #f5f0e7 0%, #efe4d2 60%, #eadcc6 100%);
+  --surface: rgba(255, 255, 255, 0.78);
+  --surface-strong: #fffaf2;
+  --border: #bfae96;
+  --panel-bg: #fff7ec;
+  --panel-border: #bfae96;
+  --text: #2a241c;
+  --muted: #675b4b;
+  --primary: #0f6a52;
+  --primary-strong: #0a503e;
+  --warning: #9f4300;
+  --shadow: 0 16px 34px rgba(52, 37, 18, 0.14);
+  --font-primary: sans-serif;
+  --font-mono: var(--font-primary);
+  --font-size-ui: 1.0em;
+  --font-size-select: 0.9em;
+  --btn-font-size: var(--font-size-ui);
+  --btn-padding-y: 9px;
+  --btn-padding-x: 13px;
+  --btn-gap: 10px;
+}
