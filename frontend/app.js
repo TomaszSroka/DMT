@@ -55,7 +55,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   assignText.forEach(([id, key]) => {
     const el = document.getElementById(id);
-    if (el && uiTexts[key]) el.textContent = uiTexts[key];
+    if (el && (key === "dictionaryLabel" || key === "dictionaryVersionLabel")) {
+      el.textContent = uiTexts[key].replace(/:.*/, "") + ":";
+    } else if (el && uiTexts[key]) {
+      el.textContent = uiTexts[key];
+    }
   });
 
   // Setup Account panel logic
