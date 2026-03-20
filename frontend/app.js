@@ -2,6 +2,8 @@
 import { uiTexts } from './config/ui-texts.js';
 import { setupAccountPanel } from './components/AccountPanel.js';
 import { loadUserInfo } from './components/UserInfo.js';
+import { renderDictionaryList } from './components/DictionaryList.js';
+import { renderDictionaryVersionList } from './components/DictionaryVersionList.js';
 import { logUserContext } from './services/DebugApi.js';
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -61,6 +63,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Load user info from API
   loadUserInfo();
+
+  // Render dictionary list
+  renderDictionaryList();
+
+  // Render dictionary version list on dictionary change
+  const dictionarySelect = document.getElementById('dictionarySelect');
+  if (dictionarySelect) {
+    dictionarySelect.addEventListener('change', () => {
+      renderDictionaryVersionList(dictionarySelect.value);
+    });
+  }
 
   // Debug: log API response
   logUserContext();
