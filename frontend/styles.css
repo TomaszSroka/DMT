@@ -32,7 +32,7 @@
   font-size: clamp(1rem, 1.3vw, 1.15rem);
   letter-spacing: 0.01em;
   font-family: var(--font-primary);
-  font-weight: 600;
+  font-weight: normal;
   color: var(--text);
   text-align: left;
 }
@@ -85,7 +85,7 @@
 .record-details-label {
   font-size: var(--font-size-ui);
   color: var(--text);
-  font-weight: 600;
+  font-weight: normal;
   margin-bottom: 7px;
   letter-spacing: 0.01em;
   font-family: var(--font-primary);
@@ -275,6 +275,7 @@ body {
   display: none;
 }
 
+
 .account-field-label {
   display: block;
   margin: 0;
@@ -285,7 +286,36 @@ body {
   color: var(--text);
   line-height: normal;
   word-break: break-word;
-  border-bottom: 1px solid #e3d3bc;
+  /* separator removed */
+}
+
+
+.account-user-value {
+  font-family: var(--font-primary);
+  font-size: var(--font-size-ui);
+  color: var(--text);
+  line-height: normal;
+  word-break: break-word;
+  margin: 0 0 10px 0;
+  font-weight: normal;
+}
+
+.account-separator {
+  border: none;
+  border-top: 1px solid #e3d3bc;
+  margin: 8px 0 12px 0;
+}
+
+.account-roles-label {
+  display: block;
+  margin: 0;
+  margin-bottom: 0 !important;
+  font-family: var(--font-primary);
+  font-size: var(--font-size-ui);
+  font-weight: 600;
+  color: var(--text);
+  line-height: normal;
+  word-break: break-word;
   padding-bottom: 8px;
 }
 

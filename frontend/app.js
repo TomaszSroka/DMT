@@ -58,7 +58,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   assignText.forEach(([id, key]) => {
     const el = document.getElementById(id);
-    if (el && (key === "dictionaryLabel" || key === "dictionaryVersionLabel")) {
+    if (id === "rolesLabel" && el) {
+      el.textContent = "Dictionary Name - Role Name:";
+    } else if (el && (key === "dictionaryLabel" || key === "dictionaryVersionLabel")) {
       el.textContent = uiTexts[key].replace(/:.*/, "") + ":";
     } else if (el && uiTexts[key]) {
       el.textContent = uiTexts[key];
