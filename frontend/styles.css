@@ -171,66 +171,6 @@ body {
   background: #fff;
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--btn-gap);
-  margin-left: auto;
-}
-
-.btn,
-.row-edit-btn,
-.account-toggle {
-  border-radius: 9px;
-  padding: var(--btn-padding-y) var(--btn-padding-x);
-  font-weight: 600;
-  font-family: var(--font-primary);
-  font-size: var(--btn-font-size);
-  line-height: 1.2;
-  cursor: pointer;
-}
-
-.btn,
-.row-edit-btn {
-  border: 1px solid transparent;
-}
-
-.btn:disabled,
-.row-edit-btn:disabled,
-.account-toggle:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.btn.btn-save {
-  background: #d9f2dc;
-  border-color: #9ac89f;
-  color: #1f5f2a;
-}
-
-.btn.btn-save:not(:disabled):hover {
-  background: #c9eacb;
-}
-
-.btn.btn-discard {
-  background: #f3e6d8;
-  border-color: #d7bda0;
-  color: #63492f;
-}
-
-.btn.btn-discard:not(:disabled):hover {
-  background: #ead8c3;
-}
-
-.btn.btn-publish {
-  background: #1f6f55;
-  border-color: #14523f;
-  color: #ffffff;
-}
-
-.btn.btn-publish:not(:disabled):hover {
-  background: #14523f;
-}
 
 .content {
   display: grid;
