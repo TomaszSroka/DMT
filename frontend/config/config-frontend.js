@@ -25,6 +25,7 @@ window.FRONTEND_CONFIG = {
   },
   uiBehavior: {
     defaultSortDirection: "ASC",
+    noWrapValueMaxLength: 15,
     versionDetailsHiddenColumns: ["DICTIONARY_LOCATION", "DICTIONARY_VERSION_CODE", "DICTIONARY_VERSION_KEY", "DICTIONARY_KEY"],
     filtersSummaryTemplate: '{column} IN "{value}"',
     filtersSummaryJoiner: " AND ",

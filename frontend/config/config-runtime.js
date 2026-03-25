@@ -78,6 +78,7 @@
     },
     uiBehavior: {
       defaultSortDirection: normalizeSortDirection(rawUiBehavior.defaultSortDirection, "ASC"),
+      noWrapValueMaxLength: normalizePositiveInteger(rawUiBehavior.noWrapValueMaxLength, 15),
       versionDetailsHiddenColumns: normalizeHiddenColumns(rawUiBehavior.versionDetailsHiddenColumns, ["DICTIONARY_LOCATION", "DICTIONARY_VERSION_CODE", "DICTIONARY_VERSION_KEY"]),
       filtersSummaryTemplate: normalizeString(rawUiBehavior.filtersSummaryTemplate, '{column} IN "{value}"'),
       filtersSummaryJoiner: normalizeString(rawUiBehavior.filtersSummaryJoiner, " AND "),

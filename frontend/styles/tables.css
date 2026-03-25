@@ -74,6 +74,10 @@ th.col-center .th-sort-btn {
   text-align: center;
 }
 
+td.col-nowrap-short {
+  white-space: nowrap;
+}
+
 tbody tr:hover {
   background: #fff4e4;
 }

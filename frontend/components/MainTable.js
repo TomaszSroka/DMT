@@ -29,6 +29,9 @@ const HIDDEN_COLUMNS = new Set(
 const DEFAULT_SORT_DIRECTION = String(behaviorConfig.defaultSortDirection || 'ASC').toUpperCase() === 'DESC'
   ? 'DESC'
   : 'ASC';
+const NO_WRAP_VALUE_MAX_LENGTH = Number.isFinite(Number(behaviorConfig.noWrapValueMaxLength))
+  ? Number(behaviorConfig.noWrapValueMaxLength)
+  : 15;
 
 function formatPagesMeta(page, pages) {
   return `${uiTexts.pageLabel || 'Page'}: ${page}/${pages}`;
@@ -162,6 +165,14 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
 
     const technicalColumns = state.columns.map((c) => c.DICTIONARY_COLUMN_TECHNICAL);
     const businessHeaders = state.columns.map((c) => c.DICTIONARY_COLUMN_BUSINESS || c.DICTIONARY_COLUMN_TECHNICAL);
+    const noWrapColumns = new Set(
+      technicalColumns.filter((columnName) =>
+        state.rows.every((row) => {
+          const text = row && row[columnName] != null ? String(row[columnName]) : '';
+          return text.length <= NO_WRAP_VALUE_MAX_LENGTH;
+        })
+      )
+    );
 
     const head = `<th>${escapeHtml(uiTexts.tableActionHeader || 'Action')}</th>${businessHeaders
       .map((header, idx) => {
@@ -182,7 +193,8 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
         const cells = technicalColumns
           .map((columnName) => {
             const fullValue = row[columnName] == null ? '' : String(row[columnName]);
-            return `<td title="${escapeHtml(fullValue)}">${escapeHtml(truncateValue(fullValue, MAX_CELL_CHARS))}</td>`;
+            const cellClass = noWrapColumns.has(columnName) ? ' class="col-nowrap-short"' : '';
+            return `<td${cellClass} title="${escapeHtml(fullValue)}">${escapeHtml(truncateValue(fullValue, MAX_CELL_CHARS))}</td>`;
           })
           .join('');
         return `<tr>${actionCell}${cells}</tr>`;
