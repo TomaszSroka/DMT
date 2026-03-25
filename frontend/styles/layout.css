@@ -195,6 +195,7 @@ body {
   color: var(--text);
   font-family: var(--font-mono);
   font-size: var(--font-size-ui);
+  line-height: 1.25;
 }
 
 .show-record-control[disabled] {
@@ -204,42 +205,22 @@ body {
 }
 
 .show-record-control[readonly] {
-  cursor: default;
-}
-
-.show-record-control-wrap {
-  position: relative;
-  display: block;
-}
-
-.show-record-control-ellipsis {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding-right: 34px;
-}
-
-.show-record-ellipsis-badge {
-  position: absolute;
-  top: 50%;
-  right: 8px;
-  transform: translateY(-50%);
-  min-width: 22px;
-  padding: 0 4px 1px;
-  border: 1px solid #c5a27f;
-  border-radius: 6px;
-  background: #ead4bc;
-  color: #6a4a2d;
-  font-family: var(--font-mono);
-  font-size: 0.82rem;
-  line-height: 1.1;
-  text-align: center;
-  pointer-events: none;
+  cursor: zoom-in;
 }
 
 .show-record-card textarea.show-record-control {
-  min-height: 88px;
-  resize: vertical;
+  min-height: 52px;
+  max-height: 52px;
+  resize: none;
+  overflow-y: hidden;
+  transition: max-height 120ms ease, min-height 120ms ease;
+}
+
+.show-record-card textarea.show-record-control.show-record-control-expanded {
+  min-height: 120px;
+  max-height: 220px;
+  overflow-y: auto;
+  cursor: zoom-out;
 }
 
 .show-record-empty {

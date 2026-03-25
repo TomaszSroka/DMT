@@ -8,8 +8,8 @@ let recordDetailsDialog;
 let recordDetailsTitle;
 let recordDetailsCloseButton;
 let recordDetailsContent;
+let isDblClickHandlerBound = false;
 const MAX_VISIBLE_FIELDS = 20;
-const ELLIPSIS_HINT_MIN_LENGTH = 24;
 
 export function setupRecordDetailsDialog() {
   recordDetailsDialog = document.getElementById('showRecordDialog');
@@ -19,6 +19,11 @@ export function setupRecordDetailsDialog() {
 
   if (recordDetailsCloseButton && recordDetailsDialog) {
     recordDetailsCloseButton.addEventListener('click', () => recordDetailsDialog.close());
+  }
+
+  if (recordDetailsContent && !isDblClickHandlerBound) {
+    recordDetailsContent.addEventListener('dblclick', handleFieldDblClick);
+    isDblClickHandlerBound = true;
   }
 }
 
@@ -66,15 +71,7 @@ function buildReadGrid(row, columns) {
   const fieldCards = limitedFields
     .map((field) => {
       const rawValue = safeRow[field.technical] == null ? '' : String(safeRow[field.technical]);
-      const controlType = rawValue.length > 100 || rawValue.includes('\n') ? 'textarea' : 'input';
-      if (controlType === 'textarea') {
-        return `<label class="show-record-card"><span class="show-record-label">${escapeHtml(field.business)}</span><textarea class="show-record-control" readonly disabled title="${escapeHtml(rawValue)}">${escapeHtml(rawValue)}</textarea></label>`;
-      }
-      const showEllipsisBadge = rawValue.length > ELLIPSIS_HINT_MIN_LENGTH;
-      const ellipsisBadge = showEllipsisBadge
-        ? '<span class="show-record-ellipsis-badge" aria-hidden="true">...</span>'
-        : '';
-      return `<label class="show-record-card"><span class="show-record-label">${escapeHtml(field.business)}</span><span class="show-record-control-wrap"><input class="show-record-control show-record-control-ellipsis" type="text" value="${escapeHtml(rawValue)}" readonly disabled title="${escapeHtml(rawValue)}" />${ellipsisBadge}</span></label>`;
+      return `<label class="show-record-card"><span class="show-record-label">${escapeHtml(field.business)}</span><textarea class="show-record-control" rows="2" readonly title="${escapeHtml(rawValue)}">${escapeHtml(rawValue)}</textarea></label>`;
     })
     .join('');
 
@@ -88,4 +85,15 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+}
+
+function handleFieldDblClick(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLTextAreaElement)) {
+    return;
+  }
+  if (!target.classList.contains('show-record-control')) {
+    return;
+  }
+  target.classList.toggle('show-record-control-expanded');
 }
