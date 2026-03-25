@@ -105,5 +105,8 @@ module.exports = {
     clientSessionKeepAlive: toBoolean(getRawValue("SNOWFLAKE_CLIENT_SESSION_KEEP_ALIVE", false), false),
     queryTag: String(getRawValue("SNOWFLAKE_QUERY_TAG", ""))
   },
-  staticUser: String(getRawValue("APP_STATIC_USER", "SUPTOSR@flsmidth.com"))
+  staticUser: String(getRawValue("APP_STATIC_USER", "SUPTOSR@flsmidth.com")),
+  userReader: String(getRawValue("APP_USER_READER", "")),
+  userUpdater: String(getRawValue("APP_USER_UPDATER", "")),
+  userCreator: String(getRawValue("APP_USER_CREATOR", ""))
 };

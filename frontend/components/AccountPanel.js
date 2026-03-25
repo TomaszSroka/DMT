@@ -6,9 +6,12 @@
  * Usage: Call setupAccountPanel() after DOM is loaded.
  */
 
+import { setCurrentUserKey } from '../services/ApiClient.js';
+
 export function setupAccountPanel() {
   const accountToggle = document.getElementById("accountToggle");
   const accountPanel = document.getElementById("accountPanel");
+  const signOutButton = document.getElementById('signOutButton');
 
   if (!accountToggle || !accountPanel) return;
 
@@ -23,4 +26,11 @@ export function setupAccountPanel() {
       accountToggle.setAttribute("aria-expanded", "false");
     }
   });
+
+  if (signOutButton) {
+    signOutButton.addEventListener('click', () => {
+      setCurrentUserKey('');
+      window.location.reload();
+    });
+  }
 }

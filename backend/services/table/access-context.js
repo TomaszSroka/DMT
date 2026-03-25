@@ -96,7 +96,12 @@ function buildDictionaryPermissions(accessRows) {
       accessRows: []
     };
 
-    existing.roles.add(role);
+    if (role === ROLE_UPDATER) {
+      existing.roles.add(ROLE_UPDATER);
+      existing.roles.delete(ROLE_READER);
+    } else if (role === ROLE_READER && !existing.roles.has(ROLE_UPDATER)) {
+      existing.roles.add(ROLE_READER);
+    }
     existing.canRead = true;
     if (!existing.tableIdentifier && tableIdentifier) {
       existing.tableIdentifier = tableIdentifier;
@@ -115,8 +120,7 @@ function buildDictionaryPermissions(accessRows) {
 }
 
 function buildDictionaryRolePairs(accessRows) {
-  const pairs = [];
-  const seen = new Set();
+  const bestRoleByDictionary = new Map();
 
   accessRows.forEach((row) => {
     const roleKey = normalizeUserKey(row.ROLE_KEY);
@@ -130,14 +134,18 @@ function buildDictionaryRolePairs(accessRows) {
       return;
     }
 
-    const key = `${dictionaryId}::${role}`;
-    if (seen.has(key)) {
+    const dictionaryKey = normalizeDictionaryName(dictionaryId);
+    const currentEntry = bestRoleByDictionary.get(dictionaryKey);
+    if (currentEntry && currentEntry.role === ROLE_UPDATER) {
       return;
     }
 
-    seen.add(key);
-    pairs.push({ dictionary: dictionaryId, role });
+    if (role === ROLE_UPDATER || !currentEntry) {
+      bestRoleByDictionary.set(dictionaryKey, { dictionary: dictionaryId, role });
+    }
   });
+
+  const pairs = Array.from(bestRoleByDictionary.values());
 
   return pairs.sort((a, b) => {
     const dictionaryCmp = a.dictionary.localeCompare(b.dictionary);

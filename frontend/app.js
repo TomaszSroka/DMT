@@ -21,6 +21,8 @@ import { setupRecordDetailsDialog, showRecordDetailsDialog } from './components/
 import { setupErrorDetailsDialog, showErrorDetailsDialog } from './components/ErrorDetailsDialog.js';
 import { createMainTableController } from './components/MainTable.js';
 import { createFiltersDialogController } from './components/FiltersDialog.js';
+import { setupLoginScreen } from './components/LoginScreen.js';
+import { setCurrentUserKey } from './services/ApiClient.js';
 
 function applyTypographyConfig() {
   const runtimeConfig = window.FRONTEND_RUNTIME_CONFIG || {};
@@ -65,8 +67,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Set page title
   document.title = uiTexts.appTitle;
+
+  setupLoginScreen((userKey) => {
+    setCurrentUserKey(userKey);
+    const loginScreen = document.getElementById('loginScreen');
+    const appShell = document.querySelector('.app-shell');
+    if (loginScreen) loginScreen.classList.add('hidden');
+    if (appShell) appShell.classList.remove('hidden');
+    initMainApp();
+  });
+});
+
+function initMainApp() {
   const appTitle = document.getElementById("appTitle");
   if (appTitle) appTitle.textContent = uiTexts.appTitle;
+  const editButton = document.getElementById('editButton');
+  const notImplementedDialog = document.getElementById('notImplementedDialog');
+  const notImplementedCloseButton = document.getElementById('notImplementedCloseButton');
+
+  if (notImplementedDialog && notImplementedCloseButton) {
+    notImplementedCloseButton.addEventListener('click', () => notImplementedDialog.close());
+  }
 
   // Initialize dialogs
   setupVersionHistoryDialog();
@@ -75,6 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Assign texts to UI elements
   const assignText = [
     ["accountToggle", "accountButton"],
+    ["signOutButton", "signOutButton"],
     ["userNameLabel", "userLabel"],
     ["rolesLabel", "rolesLabel"],
     ["dictionaryLabel", "dictionaryLabel"],
@@ -133,10 +155,23 @@ document.addEventListener("DOMContentLoaded", () => {
   const currentDictionaryInfo = document.getElementById('currentDictionaryInfo');
   const dictionarySelect = document.getElementById('dictionarySelect');
   const dictionaryVersionSelect = document.getElementById('dictionaryVersionSelect');
+  const dictionaryAccessById = new Map();
+  let isUpdaterEditMode = false;
   let filtersController = null;
 
   const tableController = createMainTableController({
     onDetailsRequested: (row, columns) => {
+      const selectedDictionary = dictionarySelect ? String(dictionarySelect.value || '').trim() : '';
+      const dictionaryAccess = dictionaryAccessById.get(selectedDictionary);
+      const canUpdate = dictionaryAccess ? Boolean(dictionaryAccess.canUpdate) : false;
+
+      if (isUpdaterEditMode && canUpdate) {
+        if (notImplementedDialog) {
+          notImplementedDialog.showModal();
+        }
+        return;
+      }
+
       const selectedDictionaryLabel =
         dictionarySelect && dictionarySelect.selectedOptions && dictionarySelect.selectedOptions[0]
           ? dictionarySelect.selectedOptions[0].textContent
@@ -160,6 +195,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!currentDictionaryInfo) {
         return;
+      }
+
+      if (editButton) {
+        editButton.disabled = !state.hasLoadedTableData || !state.activeDictionary || !state.selectedDictionaryVersionKey;
       }
 
       if (!state.hasLoadedTableData) {
@@ -192,13 +231,25 @@ document.addEventListener("DOMContentLoaded", () => {
   tableController.initialize();
 
   // Render dictionary list
-  renderDictionaryList();
+  renderDictionaryList().then((dictionaries) => {
+    dictionaryAccessById.clear();
+    (Array.isArray(dictionaries) ? dictionaries : []).forEach((dict) => {
+      if (!dict || typeof dict.id !== 'string') {
+        return;
+      }
+
+      dictionaryAccessById.set(dict.id, {
+        canUpdate: Boolean(dict.canUpdate)
+      });
+    });
+  });
 
   // Render dictionary version list and rows on selection changes
   if (dictionarySelect) {
     dictionarySelect.addEventListener('change', async () => {
       const selectedDictionary = String(dictionarySelect.value || '').trim();
       tableController.setDictionary(selectedDictionary);
+      isUpdaterEditMode = false;
       await renderDictionaryVersionList(selectedDictionary);
     });
   }
@@ -211,4 +262,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Setup Version History button
   setupVersionHistoryButton();
-});
+
+  if (editButton) {
+    editButton.addEventListener('click', () => {
+      const selectedDictionary = dictionarySelect ? String(dictionarySelect.value || '').trim() : '';
+      const selectedVersion = dictionaryVersionSelect ? String(dictionaryVersionSelect.value || '').trim() : '';
+      if (!selectedDictionary || !selectedVersion) {
+        return;
+      }
+
+      const dictionaryAccess = dictionaryAccessById.get(selectedDictionary);
+      const canUpdate = dictionaryAccess ? Boolean(dictionaryAccess.canUpdate) : false;
+
+      if (!canUpdate) {
+        isUpdaterEditMode = false;
+        if (notImplementedDialog) {
+          notImplementedDialog.showModal();
+        }
+        return;
+      }
+
+      if (!isUpdaterEditMode) {
+        isUpdaterEditMode = true;
+        tableController.setRowActionLabel(uiTexts.editDictionary || 'Edit');
+        return;
+      }
+
+      if (notImplementedDialog) {
+        notImplementedDialog.showModal();
+      }
+    });
+  }
+}

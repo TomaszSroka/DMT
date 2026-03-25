@@ -15,7 +15,24 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="app-shell">
+    <div id="loginScreen" class="login-screen">
+      <div class="login-card">
+        <h1 class="login-title">DMT</h1>
+        <p class="login-subtitle">Dictionary Management Tool</p>
+        <div class="login-form">
+          <label class="login-label" for="userKeySelect">Użytkownik</label>
+          <select id="userKeySelect" class="login-select">
+            <option value="READER@FLSMIDTH.COM" selected>READER@FLSMIDTH.COM</option>
+            <option value="UPDATER@FLSMIDTH.COM">UPDATER@FLSMIDTH.COM</option>
+            <option value="CREATOR@FLSMIDTH.COM">CREATOR@FLSMIDTH.COM</option>
+          </select>
+          <button id="loginButton" type="button" class="btn btn-publish login-button">Zaloguj</button>
+          <p id="loginError" class="login-error" role="alert"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="app-shell hidden">
       <header class="topbar">
         <div class="topbar-row">
           <div class="brand-wrap">
@@ -30,6 +47,7 @@
             <div id="accountPanel" class="account-panel hidden">
               <p id="userNameLabel" class="account-field-label"></p>
               <p id="userNameField" class="account-user-value"></p>
+              <button id="signOutButton" type="button" class="btn btn-discard account-signout-button"></button>
               <hr class="account-separator" />
               <p id="rolesLabel" class="account-roles-label"></p>
               <ul id="rolesList"></ul>
@@ -191,6 +209,20 @@
         <div class="error-details-content">
           <p id="errorDetailsMessage" class="error-details-message"></p>
           <pre id="errorDetailsText" class="error-details-text"></pre>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="notImplementedDialog" class="error-details-dialog">
+      <form id="notImplementedForm" class="error-details-form" method="dialog">
+        <div class="edit-header error-details-header">
+          <h3 id="notImplementedTitle">Info</h3>
+          <div class="edit-actions">
+            <button id="notImplementedCloseButton" type="button" class="btn btn-discard">Close</button>
+          </div>
+        </div>
+        <div class="error-details-content">
+          <p id="notImplementedMessage" class="error-details-message">Not Yet Implemented.</p>
         </div>
       </form>
     </dialog>

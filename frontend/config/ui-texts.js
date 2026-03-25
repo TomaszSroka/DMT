@@ -11,6 +11,7 @@
 export const uiTexts = {
   appTitle: "DMT - Dictionary Management Tool",
   accountButton: "Account",
+  signOutButton: "Signout",
   userLabel: "User:",
   rolesLabel: "Dictionary Name - Role Name:",
     dictionaryLabel: "Dictionary",

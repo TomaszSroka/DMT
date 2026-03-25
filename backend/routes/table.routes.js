@@ -1,5 +1,5 @@
 const express = require("express");
-const { staticUser } = require("../config/env");
+const { staticUser, userReader, userUpdater, userCreator } = require("../config/env");
 const { asyncHandler } = require("../utils/async-handler");
 const { createAppError } = require("../errors/app-error");
 const {
@@ -12,6 +12,22 @@ const { getErrorPayload } = require("../errors/app-error");
 const { getDictionaryColumns } = require("../services/table/dictionary-columns");
 
 const router = express.Router();
+
+const USER_KEY_TO_LOGIN = new Map([
+  ["READER", userReader || staticUser],
+  ["UPDATER", userUpdater || staticUser],
+  ["CREATOR", userCreator || staticUser]
+]);
+
+function getUserLogin(userKey) {
+  const rawValue = String(userKey || "").trim();
+  if (!rawValue) {
+    return staticUser;
+  }
+
+  const key = rawValue.toUpperCase();
+  return USER_KEY_TO_LOGIN.get(key) || rawValue;
+}
 
 function sendApiError(res, error, fallbackMessage, fallbackCode) {
   const { status, message, errorCode, details } = getErrorPayload(error, fallbackMessage, fallbackCode);
@@ -36,8 +52,8 @@ function withApiErrorHandling(fallbackMessage, fallbackCode, handler) {
 
 // Return full object (id, label, canUpdate, roles)
 
-async function getStaticUserContext() {
-  return getUserDictionaryContext(staticUser);
+async function getDynamicUserContext(req) {
+  return getUserDictionaryContext(getUserLogin(req.query.userKey));
 }
 
 function hasQueryValue(value) {
@@ -113,7 +129,7 @@ function validateRowsQuery(req) {
 }
 
 router.get("/meta", withApiErrorHandling("Could not load Dictionaries for user.", "META_LOAD_FAILED", async (req, res) => {
-  const context = await getStaticUserContext();
+  const context = await getDynamicUserContext(req);
   res.json({
     user: context.user,
     dictionaries: context.dictionaries || []
@@ -123,7 +139,7 @@ router.get("/meta", withApiErrorHandling("Could not load Dictionaries for user."
 router.get(
   "/user-context",
   withApiErrorHandling("Could not load user roles.", "USER_CONTEXT_LOAD_FAILED", async (req, res) => {
-    const context = await getStaticUserContext();
+    const context = await getDynamicUserContext(req);
     res.json({
       user: context.user,
       roles: context.roles,
@@ -138,7 +154,7 @@ router.get(
   withApiErrorHandling("Snowflake query failed.", "ROWS_QUERY_FAILED", async (req, res) => {
     const { page, pageSize, dictionaryVersionKey, filters, sortColumn, sortDirection } = validateRowsQuery(req);
     const payload = await getDictionaryRowsPageForUser(
-      staticUser,
+      getUserLogin(req.query.userKey),
       req.params.name,
       page,
       pageSize,
@@ -154,7 +170,7 @@ router.get(
 router.get(
   "/dictionaries/:name/versions",
   withApiErrorHandling("Could not load Dictionary versions.", "VERSIONS_LOAD_FAILED", async (req, res) => {
-    const payload = await getDictionaryVersionsForUser(staticUser, req.params.name);
+    const payload = await getDictionaryVersionsForUser(getUserLogin(req.query.userKey), req.params.name);
     res.json(payload);
   })
 );
@@ -162,7 +178,7 @@ router.get(
 router.get(
   "/dictionaries/:name/version-history",
   withApiErrorHandling("Could not load Dictionary version details.", "VERSION_HISTORY_LOAD_FAILED", async (req, res) => {
-    const payload = await getDictionaryVersionHistoryForUser(staticUser, req.params.name);
+    const payload = await getDictionaryVersionHistoryForUser(getUserLogin(req.query.userKey), req.params.name);
     res.json(payload);
   })
 );

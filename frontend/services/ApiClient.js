@@ -4,6 +4,7 @@
  * Provides unified API client functions for the frontend.
  * - Defines ApiRequestError for standardized error handling.
  * - Exposes fetchJson() for fetching JSON from backend APIs with error handling.
+ * - Exposes setCurrentUserKey() to configure the active user for all requests.
  * Usage: Import fetchJson() to make API requests and handle errors.
  */
 
@@ -16,8 +17,24 @@ export class ApiRequestError extends Error {
   }
 }
 
+let _currentUserKey = '';
+
+export function setCurrentUserKey(key) {
+  _currentUserKey = String(key || '').trim();
+}
+
+export function getCurrentUserKey() {
+  return _currentUserKey;
+}
+
 export async function fetchJson(url) {
-  const response = await fetch(url, {
+  let finalUrl = url;
+  if (_currentUserKey) {
+    const separator = url.includes('?') ? '&' : '?';
+    finalUrl = url + separator + 'userKey=' + encodeURIComponent(_currentUserKey);
+  }
+
+  const response = await fetch(finalUrl, {
     headers: {
       'Accept': 'application/json'
     }

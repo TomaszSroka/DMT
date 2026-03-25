@@ -9,6 +9,7 @@
  */
 
 import { uiTexts } from '../config/ui-texts.js';
+import { fetchJson } from '../services/ApiClient.js';
 import { showErrorDetailsDialog } from './ErrorDetailsDialog.js';
 
 export function setupVersionHistoryButton() {
@@ -27,9 +28,7 @@ export function setupVersionHistoryButton() {
     try {
       // Fetch version details from backend
       const url = `/api/dictionaries/${encodeURIComponent(dictionarySelect.value)}/version-history`;
-      const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
-      if (!response.ok) throw new Error('API error: ' + response.status);
-      const data = await response.json();
+      const data = await fetchJson(url);
 
       const rows = Array.isArray(data.rows) ? data.rows : [];
       if (rows.length === 0) throw new Error('Version details not found');

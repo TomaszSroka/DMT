@@ -57,6 +57,7 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
     totalRows: 0,
     rows: [],
     columns: [],
+    rowActionLabel: uiTexts.showRowButton || 'Show',
     hasLoadedTableData: false,
     currentSortColumn: '',
     currentSortDirection: DEFAULT_SORT_DIRECTION
@@ -197,7 +198,7 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
     const body = state.rows
       .map((row, rowIndex) => {
         const actionCell = `<td><button type="button" class="btn btn-discard show-row-btn" data-row-index="${rowIndex}">${escapeHtml(
-          uiTexts.showRowButton || 'Details'
+          state.rowActionLabel || uiTexts.showRowButton || 'Show'
         )}</button></td>`;
         const cells = technicalColumns
           .map((columnName) => {
@@ -264,6 +265,7 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
     state.activeDictionary = String(dictionaryId || '').trim();
     state.selectedDictionaryVersionKey = '';
     state.activeFilters = [];
+    state.rowActionLabel = uiTexts.showRowButton || 'Show';
     state.currentSortColumn = '';
     state.currentSortDirection = DEFAULT_SORT_DIRECTION;
 
@@ -410,12 +412,24 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
     };
   }
 
+  function setRowActionLabel(label) {
+    const normalized = String(label || '').trim();
+    state.rowActionLabel = normalized || uiTexts.showRowButton || 'Show';
+
+    if (state.hasLoadedTableData) {
+      renderTable();
+    } else {
+      emitState();
+    }
+  }
+
   return {
     initialize,
     setDictionary,
     setDictionaryVersion,
     setFilters,
     clearFilters,
+    setRowActionLabel,
     getState
   };
 }
