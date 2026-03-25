@@ -192,6 +192,54 @@
   width: 100%;
 }
 
+/* Error details dialog */
+.error-details-dialog {
+  width: min(92vw, 600px);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow);
+  padding: 0;
+  overflow: hidden;
+}
+
+.error-details-form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.error-details-content {
+  padding: 16px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.error-details-message {
+  margin: 0;
+  font-size: var(--font-size-ui);
+  color: var(--text);
+  word-break: break-word;
+}
+
+.error-details-text {
+  margin: 0;
+  padding: 10px 12px;
+  background: #f7f3ee;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-select);
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
 @media (max-width: 900px) {
   .edit-header {
     padding: 12px 14px;

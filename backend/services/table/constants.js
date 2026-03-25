@@ -1,0 +1,28 @@
+const accessConfigTable = "DMT.MET_USER_DICTIONARY_ROLE_DETAILS";
+const dictionaryVersionDetailsView = "DMT.MET_DICTIONARY_VERSION_DETAILS";
+
+const ROLE_READER = "DICTIONARY_READER";
+const ROLE_UPDATER = "DICTIONARY_UPDATER";
+const ROLE_READER_KEY = "1";
+const ROLE_UPDATER_KEY = "2";
+
+const DEFAULT_PAGE_SIZE = 100;
+const MAX_PAGE_SIZE = 1000;
+const ACCESS_CACHE_TTL_MS = 60 * 1000;
+const USER_CONTEXT_CACHE_TTL_MS = 60 * 1000;
+
+const allowedRoleKeys = new Set([ROLE_READER_KEY, ROLE_UPDATER_KEY]);
+
+module.exports = {
+  accessConfigTable,
+  dictionaryVersionDetailsView,
+  ROLE_READER,
+  ROLE_UPDATER,
+  ROLE_READER_KEY,
+  ROLE_UPDATER_KEY,
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  ACCESS_CACHE_TTL_MS,
+  USER_CONTEXT_CACHE_TTL_MS,
+  allowedRoleKeys
+};

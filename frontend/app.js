@@ -18,6 +18,7 @@ import { renderDictionaryVersionList } from './components/DictionaryVersionList.
 import { setupVersionHistoryButton } from './components/VersionHistoryButton.js';
 import { setupVersionHistoryDialog } from './components/VersionHistoryDialog.js';
 import { setupRecordDetailsDialog, showRecordDetailsDialog } from './components/RecordDetailsDialog.js';
+import { setupErrorDetailsDialog } from './components/ErrorDetailsDialog.js';
 import { createMainTableController } from './components/MainTable.js';
 import { createFiltersDialogController } from './components/FiltersDialog.js';
 
@@ -70,6 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initialize dialogs
   setupVersionHistoryDialog();
   setupRecordDetailsDialog();
+  setupErrorDetailsDialog();
   // Assign texts to UI elements
   const assignText = [
     ["accountToggle", "accountButton"],
@@ -178,7 +180,7 @@ document.addEventListener("DOMContentLoaded", () => {
           ? dictionaryVersionSelect.selectedOptions[0].textContent
           : state.selectedDictionaryVersionKey;
 
-      currentDictionaryInfo.textContent = `${uiTexts.currentDictionaryPrefix} ${selectedDictionaryLabel} ${uiTexts.currentDictionaryVersionShort} ${selectedVersionLabel}`;
+      currentDictionaryInfo.textContent = `${selectedDictionaryLabel} ${uiTexts.currentDictionaryVersionShort} ${selectedVersionLabel}`;
     }
   });
 

@@ -9,6 +9,7 @@
  */
 
 import { uiTexts } from '../config/ui-texts.js';
+import { showErrorDetailsDialog } from './ErrorDetailsDialog.js';
 
 export function setupVersionHistoryButton() {
   const versionSelect = document.getElementById('dictionaryVersionSelect');
@@ -43,7 +44,10 @@ export function setupVersionHistoryButton() {
 
       showVersionHistoryDialog(rows, columns);
     } catch (err) {
-      alert('Failed to load version details: ' + err.message);
+      showErrorDetailsDialog(
+        uiTexts.versionDetailsLoadError || 'Failed to load version details.',
+        err.message
+      );
     }
   });
 }

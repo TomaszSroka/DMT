@@ -78,11 +78,14 @@
 .roles-block ul {
   margin: 0;
   padding-left: 16px;
-  max-height: 180px;
-  overflow-y: auto;
   overflow-x: hidden;
   font-family: var(--font-mono);
   font-size: var(--font-size-select);
+}
+
+.roles-block ul.roles-list-scrollable {
+  max-height: 220px;
+  overflow-y: auto;
 }
 .roles-select {
   width: 100%;

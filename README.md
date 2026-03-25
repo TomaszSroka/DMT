@@ -1,239 +1,220 @@
-# DMT — Dictionary Management Tool
+# DMT - Dictionary Management Tool
 
-Web application for browsing Snowflake dictionaries. Runs as a Node.js/Express server that serves a plain-HTML frontend and exposes a JSON API backed by Snowflake.
+Web application for browsing Snowflake dictionaries.
 
----
+The project consists of:
+- backend: Node.js + Express + Snowflake SDK
+- frontend: plain HTML/CSS/JS (modularized components)
 
 ## Requirements
 
-- **Node.js** 20 LTS or newer
-- **npm** 10+
-- Access to a Snowflake account with JWT key-pair authentication
-- **SnowSQL CLI** (for local DB object scripts from `scripts/sql`)
-
----
+- Node.js 20+
+- npm 10+
+- Snowflake account (JWT key pair auth)
+- Windows PowerShell for local helper scripts
+- SnowSQL CLI (optional, for local DB recreate scripts)
 
 ## Configuration
 
-All runtime configuration is passed through a single environment variable: `DMT_CONFIG_JSON`.
+Application runtime config is loaded from `DMT_CONFIG_JSON`.
 
-Create a `.env` file at the repo root (it is git-ignored):
+Create `.env` in repo root:
 
-```
+```env
 DMT_CONFIG_JSON={"SNOWFLAKE_ACCOUNT":"...","SNOWFLAKE_USER":"...","SNOWFLAKE_ROLE":"...","SNOWFLAKE_WAREHOUSE":"...","SNOWFLAKE_DATABASE":"...","SNOWFLAKE_SCHEMA":"...","SNOWFLAKE_PRIVATE_KEY_PATH":"...","SNOWFLAKE_PRIVATE_KEY_PASSPHRASE":"..."}
 ```
 
 ### Required keys
 
-| Key | Description |
-|---|---|
-| `SNOWFLAKE_ACCOUNT` | Snowflake account identifier (e.g. `xy12345.eu-west-1`) |
-| `SNOWFLAKE_USER` | Snowflake user login |
-| `SNOWFLAKE_ROLE` | Default Snowflake role |
-| `SNOWFLAKE_WAREHOUSE` | Snowflake virtual warehouse |
-| `SNOWFLAKE_DATABASE` | Target database |
-| `SNOWFLAKE_SCHEMA` | Target schema |
-| `SNOWFLAKE_PRIVATE_KEY_PATH` | Absolute path to the RSA private key file (`.p8`) |
-| `SNOWFLAKE_PRIVATE_KEY_PASSPHRASE` | Passphrase for the private key |
+- `SNOWFLAKE_ACCOUNT`
+- `SNOWFLAKE_USER`
+- `SNOWFLAKE_ROLE`
+- `SNOWFLAKE_WAREHOUSE`
+- `SNOWFLAKE_DATABASE`
+- `SNOWFLAKE_SCHEMA`
+- `SNOWFLAKE_PRIVATE_KEY_PATH`
+- `SNOWFLAKE_PRIVATE_KEY_PASSPHRASE`
 
 ### Optional keys
 
-| Key | Default | Description |
-|---|---|---|
-| `DMT_PORT` | `3000` | HTTP port the server listens on |
-| `APP_STATIC_USER` | `SUPTOSR@flsmidth.com` | Hardcoded user identity (app has no auth layer) |
-| `SNOWFLAKE_POOL_SIZE` | `2` | Number of persistent Snowflake connections |
-| `SNOWFLAKE_POOL_WAIT_TIMEOUT_MS` | `15000` | Max wait time for a free connection (ms) |
-| `SNOWFLAKE_POOL_DEBUG` | `false` | Enable verbose pool logging |
-| `SNOWFLAKE_CLIENT_SESSION_KEEP_ALIVE` | `false` | Keep Snowflake sessions alive between queries |
-| `SNOWFLAKE_QUERY_TAG` | _(empty)_ | Tag attached to every query in Snowflake query history |
-| `READINESS_CACHE_MS` | `5000` | How long `/api/ready` result is cached (ms) |
+- `DMT_PORT` (default: `3000`)
+- `APP_STATIC_USER` (default: `SUPTOSR@flsmidth.com`)
+- `SNOWFLAKE_POOL_SIZE` (default: `2`)
+- `SNOWFLAKE_POOL_WAIT_TIMEOUT_MS` (default: `15000`)
+- `SNOWFLAKE_POOL_DEBUG` (default: `false`)
+- `SNOWFLAKE_CLIENT_SESSION_KEEP_ALIVE` (default: `false`)
+- `SNOWFLAKE_QUERY_TAG` (default: empty)
+- `READINESS_CACHE_MS` (default: `5000`)
 
-Values can reference OS environment variables using `${}` syntax:
-```json
-{ "SNOWFLAKE_PRIVATE_KEY_PASSPHRASE": "${MY_SECRET_ENV_VAR}" }
-```
+`DMT_CONFIG_JSON` supports `${ENV_VAR}` substitutions for secrets.
 
----
+## Run locally
 
-## Running locally
-
-### Using npm scripts
+### npm
 
 ```bash
 npm install
-npm start          # production mode
-npm run dev        # watch mode (auto-restart on file changes)
+npm start
 ```
 
-### Using PowerShell scripts
+Dev mode:
+
+```bash
+npm run dev
+```
+
+### PowerShell helper
 
 ```powershell
-# Start server + open Firefox
+# Start app and browser
 .\scripts\local-run-app.ps1
+
+# Restart app
+.\scripts\local-run-app.ps1 -Restart
 
 # Start in watch mode
 .\scripts\local-run-app.ps1 -UseDevServer
-
-# Kill and restart (only kills Node processes from this repo)
-.\scripts\local-run-app.ps1 -Restart
-
-# Force-kill any process on port 3000 (use with caution)
-.\scripts\local-run-app.ps1 -Restart -ForceKillAnyProcessOnPort
-
-# Skip terminal window resizing
-.\scripts\local-run-app.ps1 -NoWindowTweaks
-
-# Custom port
-.\scripts\local-run-app.ps1 -Port 4000 -Url "http://localhost:4000"
 ```
 
-Or via npm:
+## Tests
+
 ```bash
-npm run local:start
-npm run local:restart
+npm run test:unit
+npm run test:api-contract
 ```
 
-### Local DB object scripts (development only)
-
-# SQL scripts for local development
-
-Folder for Snowflake DDL/DML scripts executed przez `scripts/local-run-db.ps1`.
-
-## Konwencje
-
-- Scripts should be idempotent (`IF NOT EXISTS`, `CREATE OR REPLACE` where safe).
-- Use numbered prefixes for order, e.g. `001_...sql`, `010_...sql`, `900_...sql`.
-- Folder SQL jest tylko do developmentu (nie wrzucaj tu migracji produkcyjnych).
-
-## Uruchamianie
+All-in-one on Windows:
 
 ```powershell
-# Preview of what will be executed
-.\scripts\local-run-db.ps1
-
-# Execute all SQL files
-.\scripts\local-run-db.ps1 -Apply
-
-# Execute selected files
-.\scripts\local-run-db.ps1 -Apply -Filter "001_*.sql"
+.\scripts\local-run-tests.ps1
 ```
 
-You can also use npm:
+Useful flags:
+
+```powershell
+.\scripts\local-run-tests.ps1 -SkipNpmInstall
+.\scripts\local-run-tests.ps1 -UseNpmCi
+.\scripts\local-run-tests.ps1 -IncludeUnitTests:$false
+```
+
+## API endpoints
+
+- `GET /api/health`
+- `GET /api/ready`
+- `GET /api/meta`
+- `GET /api/user-context`
+- `GET /api/dictionaries/:name/versions`
+- `GET /api/dictionaries/:name/rows`
+- `GET /api/dictionaries/:name/version-history`
+- `GET /api/dictionaries/:name/columns?dictionaryVersionKey=...`
+
+Rows endpoint supports:
+- pagination (`page`, `pageSize`)
+- filter rules (`filters` JSON array)
+- sorting (`sortColumn`, `sortDirection`)
+
+## Service architecture (after migration)
+
+Main backend facade remains:
+- `backend/services/table.service.js`
+
+Implementation was split into focused modules:
+- `backend/services/table/constants.js`
+- `backend/services/table/helpers.js`
+- `backend/services/table/access-context.js`
+- `backend/services/table/version-details.js`
+- `backend/services/table/rows-page.js`
+- `backend/services/table/versions.js`
+- `backend/services/table/version-history.js`
+
+Additional services:
+- `backend/services/table.validation.js`
+- `backend/services/table/dictionary-columns.js`
+
+Backup (not modified by migration):
+- `backend/services/table.service.backup.js`
+
+## Project structure
+
+```text
+DMT/
+├── backend/
+│   ├── api/
+│   │   ├── app.js
+│   │   └── api.contract.test.js
+│   ├── config/
+│   │   ├── env.js
+│   │   └── snowflake.js
+│   ├── errors/
+│   │   └── app-error.js
+│   ├── routes/
+│   │   └── table.routes.js
+│   ├── services/
+│   │   ├── dictionary-columns.js
+│   │   ├── dictionary-columns.service.js
+│   │   ├── table.service.js
+│   │   ├── table.service.backup.js
+│   │   ├── table.validation.js
+│   │   ├── table.validation.test.js
+│   │   └── table/
+│   │       ├── access-context.js
+│   │       ├── constants.js
+│   │       ├── dictionary-columns.js
+│   │       ├── helpers.js
+│   │       ├── rows-page.js
+│   │       ├── version-details.js
+│   │       ├── version-history.js
+│   │       └── versions.js
+│   └── utils/
+│       └── async-handler.js
+├── frontend/
+│   ├── app.js
+│   ├── app.backup.js
+│   ├── index.html
+│   ├── components/
+│   ├── config/
+│   ├── services/
+│   ├── styles/
+│   └── utils/
+├── scripts/
+│   ├── local-clear-logs.ps1
+│   ├── local-recreate-db.ps1
+│   ├── local-run-app.ps1
+│   └── local-run-tests.ps1
+├── package.json
+└── README.md
+```
+
+## Local DB recreate script
+
+NPM wrappers:
+
 ```bash
 npm run local:db:plan
 npm run local:db
 ```
 
-Wymagania:
-- SnowSQL CLI w PATH.
-- `DMT_CONFIG_JSON` w env albo w pliku `.env`.
+Direct PowerShell:
 
----
-
-## Testing
-
-```bash
-# Unit tests (validation helpers)
-npm run test:unit
-
-# API contract tests (starts a real server on port 3310)
-npm run test:api-contract
-
-# Both via PowerShell (smart install + unit + contract)
-.\scripts\local-run-tests.ps1
-
-# Skip npm install if node_modules already present
-.\scripts\local-run-tests.ps1 -SkipNpmInstall
-
-# Use npm ci instead of npm install
-.\scripts\local-run-tests.ps1 -UseNpmCi
-
-# Skip unit tests, run only contract tests
-.\scripts\local-run-tests.ps1 -IncludeUnitTests:$false
+```powershell
+.\scripts\local-recreate-db.ps1 -list
+.\scripts\local-recreate-db.ps1 -apply
 ```
 
-Or via npm:
-```bash
-npm run local:test
-```
+Notes:
+- script executes SQL files from configured DBeaver Scripts directory
+- files with `_CHECK_` in name are excluded from execution
 
----
+## Frontend notes
 
-## Project structure
+Frontend uses runtime text config from:
+- `frontend/config/ui-texts.js`
 
-```
-DMT/
-├── .env                              # Local secrets (git-ignored)
-├── package.json
-├── backend/
-│   ├── api/
-│   │   ├── app.js                    # Express server entry point
-│   │   └── api.contract.test.js      # HTTP contract tests (node:test)
-│   ├── config/
-│   │   ├── env.js                    # Loads and validates DMT_CONFIG_JSON
-│   │   └── snowflake.js              # Snowflake SDK + connection pool
-│   ├── errors/
-│   │   └── app-error.js              # AppError class + error payload helpers
-│   ├── routes/
-│   │   └── table.routes.js           # Express router — all /api/* endpoints
-│   ├── services/
-│   │   ├── table.service.js          # Business logic + Snowflake queries
-│   │   ├── table.validation.js       # Input sanitization (filters, sort, LIKE)
-│   │   └── table.validation.test.js  # Unit tests for validation helpers
-│   └── utils/
-│       └── async-handler.js          # asyncHandler(fn) middleware wrapper
-├── frontend/
-│   ├── index.html                    # SPA shell
-│   ├── app.js                        # Main application logic
-│   ├── app.backup.js                 # Backup of main app logic
-│   ├── components/                   # Modular UI components (AccountPanel, DictionaryList, etc.)
-│   │   ├── AccountPanel.js           # User account panel logic
-│   │   ├── DictionaryList.js         # Dictionary dropdown logic
-│   │   ├── DictionaryVersionList.js  # Dictionary version dropdown logic
-│   │   ├── RecordDetailsDialog.js    # Record details modal logic
-│   │   ├── UserInfo.js               # User info loader
-│   │   └── VersionHistoryButton.js   # Version history button logic
-│   ├── config/                      # UI and runtime configuration
-│   │   ├── config-frontend.js        # Static UI config defaults
-│   │   ├── config-runtime.js         # Runtime config normalization
-│   │   └── ui-texts.js               # UI text definitions
-│   ├── services/                    # API client wrappers
-│   │   └── ApiClient.js              # fetchJson and API helpers
-│   ├── utils/                       # Utility functions
-│   │   └── ui-helpers.js             # HTML/text formatting helpers
-│   ├── styles/                      # Modular CSS files
-│   │   ├── variables.css             # CSS variables
-│   │   ├── layout.css                # Layout styles
-│   │   ├── account.css               # Account panel styles
-│   │   ├── dialogs.css               # Dialog/modal styles
-│   │   ├── buttons.css               # Button styles
-│   │   ├── cards.css                 # Card styles
-│   │   ├── forms.css                 # Form/input styles
-│   │   └── tables.css                # Table styles
-│   ├── styles.css                   # Global/custom styles (empty or minimal)
-│   ├── styles.backup.css            # Backup of original styles
-├── logs/
-│   └── snowflake.log                 # Snowflake SDK log output (git-ignored)
-└── scripts/
-    ├── local-run-app.ps1             # Start server + browser (Windows)
-    ├── local-run-db.ps1              # Run local SQL scripts against Snowflake (Windows)
-    └── local-run-tests.ps1           # Install deps + run tests (Windows)
-    └── sql/
-        ├── 001_create_dev_objects.sql # Dev-only sample objects (idempotent)
-        └── README.md                  # SQL folder conventions
-```
+For consistency, UI labels should be changed there instead of hardcoding in components.
 
----
+## Maintenance notes
 
-## API endpoints
-
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/api/health` | Liveness check — always returns 200 |
-| `GET` | `/api/ready` | Readiness check — verifies Snowflake connectivity |
-| `GET` | `/api/user-context` | Returns current user login and assigned roles |
-| `GET` | `/api/meta` | Lists dictionaries accessible to the current user |
-| `GET` | `/api/dictionaries/:id/versions` | Lists version instances for a dictionary |
-| `GET` | `/api/dictionaries/:id/rows` | Paginated rows with optional filters and sort |
-| `GET` | `/api/dictionaries/:id/version-history` | Full version history for a dictionary |
+- Keep `table.service.js` as facade, place query-specific logic in `backend/services/table/*` modules.
+- `backend/services/dictionary-columns.service.js` is kept as a compatibility wrapper and forwards to `backend/services/dictionary-columns.js`.
+- Keep `table.service.backup.js` as historical backup only.
+- When adding new query flow, prefer one module per use case.

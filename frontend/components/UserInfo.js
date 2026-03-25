@@ -9,6 +9,11 @@
 
 import { fetchJson } from '../services/ApiClient.js';
 
+const ROLES_SCROLL_THRESHOLD = (() => {
+  const cfg = window.FRONTEND_CONFIG;
+  return (cfg && cfg.defaults && cfg.defaults.userDetailsDropdownThreshold) || 10;
+})();
+
 export async function loadUserInfo() {
   try {
     const data = await fetchJson('/api/user-context');
@@ -31,6 +36,12 @@ export async function loadUserInfo() {
         li.textContent = `${dictLabel} - ${role.role}`;
         rolesList.appendChild(li);
       });
+
+      if (rolesList.children.length > ROLES_SCROLL_THRESHOLD) {
+        rolesList.classList.add('roles-list-scrollable');
+      } else {
+        rolesList.classList.remove('roles-list-scrollable');
+      }
     }
   } catch (error) {
     const userNameField = document.getElementById('userNameField');

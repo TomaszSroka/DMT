@@ -9,7 +9,7 @@ const {
   getUserDictionaryContext
 } = require("../services/table.service");
 const { getErrorPayload } = require("../errors/app-error");
-const { getDictionaryColumns } = require("../services/dictionary-columns.service");
+const { getDictionaryColumns } = require("../services/table/dictionary-columns");
 
 const router = express.Router();
 

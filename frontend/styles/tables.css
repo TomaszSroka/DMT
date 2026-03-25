@@ -98,6 +98,21 @@ tbody tr:hover {
   gap: 10px;
 }
 
+.current-dictionary-info {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #d8b891;
+  border-radius: 9px;
+  background: #fff7ea;
+  color: #63492f;
+  font-family: var(--font-primary);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
 .table-header-actions {
   display: flex;
   width: 100%;

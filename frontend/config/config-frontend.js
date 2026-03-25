@@ -20,7 +20,7 @@ window.FRONTEND_CONFIG = {
     maxCellChars: 120,
     pageSize: 100,
     longTextThreshold: 90,
-    userDetailsDropdownThreshold: 15,
+    userDetailsDropdownThreshold: 10,
     hiddenColumns: ["DICTIONARY_VERSION_KEY", "DICTIONARY_KEY"]
   },
   uiBehavior: {
@@ -41,7 +41,6 @@ window.FRONTEND_CONFIG = {
     rolesLabel: "Dictionary - Role:",
     rolesSelectAriaLabel: "Dictionary role list",
     dictionaryLabel: "Dictionary name:",
-    currentDictionaryPrefix: "Dictionary:",
     currentDictionaryVersionShort: "ver.",
     currentDictionaryNone: "Dictionary: -",
     dictionaryVersionLabel: "Dictionary version:",

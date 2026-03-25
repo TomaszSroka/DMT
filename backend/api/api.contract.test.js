@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { spawn } = require("node:child_process");
 const path = require("node:path");
+const fs = require("node:fs");
 const dotenv = require("dotenv");
 
 const TEST_PORT = 3310;
@@ -11,9 +12,74 @@ let serverProcess;
 
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
+function tryParseJsonObject(raw) {
+  if (typeof raw !== "string") {
+    return null;
+  }
+
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
+    return parsed;
+  } catch (error) {
+    return null;
+  }
+}
+
+function readDmtConfigJsonFromEnvFile() {
+  const envPath = path.resolve(process.cwd(), ".env");
+  if (!fs.existsSync(envPath)) {
+    return "";
+  }
+
+  const lines = fs.readFileSync(envPath, "utf8").split(/\r?\n/);
+  const startIdx = lines.findIndex((line) => /^\s*DMT_CONFIG_JSON\s*=\s*/.test(line));
+  if (startIdx < 0) {
+    return "";
+  }
+
+  const jsonLines = [];
+  let foundStart = false;
+
+  for (let i = startIdx; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (!foundStart) {
+      const afterPrefix = line.replace(/^\s*DMT_CONFIG_JSON\s*=\s*/, "");
+      if (/^\s*\{/.test(afterPrefix)) {
+        jsonLines.push(afterPrefix);
+        foundStart = true;
+        if (/\}\s*$/.test(afterPrefix)) {
+          break;
+        }
+      }
+      continue;
+    }
+
+    jsonLines.push(line);
+    if (/^\s*\}/.test(line)) {
+      break;
+    }
+  }
+
+  return jsonLines.join("\n");
+}
+
 function buildTestConfigJson() {
-  const raw = process.env.DMT_CONFIG_JSON || "{}";
-  const parsed = JSON.parse(raw);
+  const parsedFromEnv = tryParseJsonObject(process.env.DMT_CONFIG_JSON);
+  const parsedFromFile = parsedFromEnv ? null : tryParseJsonObject(readDmtConfigJsonFromEnvFile());
+  const parsed = parsedFromEnv || parsedFromFile;
+
+  if (!parsed) {
+    throw new Error("Unable to parse DMT_CONFIG_JSON from environment or .env file.");
+  }
+
   parsed.DMT_PORT = TEST_PORT;
   parsed.READINESS_CACHE_MS = 0;
   return JSON.stringify(parsed);
