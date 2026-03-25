@@ -193,6 +193,10 @@
 }
 
 /* Error details dialog */
+.error-details-header .edit-actions {
+  margin-left: auto;
+}
+
 .error-details-dialog {
   width: min(92vw, 600px);
   border: 1px solid var(--panel-border);

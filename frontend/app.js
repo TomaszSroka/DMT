@@ -18,7 +18,7 @@ import { renderDictionaryVersionList } from './components/DictionaryVersionList.
 import { setupVersionHistoryButton } from './components/VersionHistoryButton.js';
 import { setupVersionHistoryDialog } from './components/VersionHistoryDialog.js';
 import { setupRecordDetailsDialog, showRecordDetailsDialog } from './components/RecordDetailsDialog.js';
-import { setupErrorDetailsDialog } from './components/ErrorDetailsDialog.js';
+import { setupErrorDetailsDialog, showErrorDetailsDialog } from './components/ErrorDetailsDialog.js';
 import { createMainTableController } from './components/MainTable.js';
 import { createFiltersDialogController } from './components/FiltersDialog.js';
 
@@ -181,7 +181,8 @@ document.addEventListener("DOMContentLoaded", () => {
           : state.selectedDictionaryVersionKey;
 
       currentDictionaryInfo.textContent = `${selectedDictionaryLabel} ${uiTexts.currentDictionaryVersionShort} ${selectedVersionLabel}`;
-    }
+    },
+    onError: (err) => showErrorDetailsDialog(err && err.message ? err.message : String(err), err && err.details ? err.details : '')
   });
 
   filtersController = createFiltersDialogController({ tableController });

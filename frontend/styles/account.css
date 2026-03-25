@@ -75,7 +75,7 @@
   font-size: var(--font-size-ui);
   color: var(--muted);
 }
-.roles-block ul {
+#rolesList {
   margin: 0;
   padding-left: 16px;
   overflow-x: hidden;
@@ -83,7 +83,7 @@
   font-size: var(--font-size-select);
 }
 
-.roles-block ul.roles-list-scrollable {
+#rolesList.roles-list-scrollable {
   max-height: 220px;
   overflow-y: auto;
 }

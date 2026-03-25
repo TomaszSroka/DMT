@@ -128,6 +128,23 @@ tbody tr:hover {
   gap: var(--btn-gap);
 }
 
+.empty-state {
+  padding: 32px 24px;
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--font-primary);
+  font-size: var(--font-size-ui);
+}
+
+.empty-state--error {
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 24px;
+  padding: 20px 24px;
+  text-align: left;
+}
+
 .table-header-right {
   justify-content: flex-end;
 }

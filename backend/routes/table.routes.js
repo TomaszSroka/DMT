@@ -128,7 +128,7 @@ router.get(
       user: context.user,
       roles: context.roles,
       dictionaryRoles: context.dictionaryRoles,
-      dictionaries: context.dictionaries // <-- dodajemy listę słowników z label
+      dictionaries: context.dictionaries // list of dictionaries with labels
     });
   })
 );

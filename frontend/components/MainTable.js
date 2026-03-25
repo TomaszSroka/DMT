@@ -93,7 +93,7 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
     }
   }
 
-  function setTablePrompt(message) {
+  function setTablePrompt(message, isError = false) {
     state.rows = [];
     state.columns = [];
     state.totalRows = 0;
@@ -103,7 +103,8 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
 
     if (tableContainer) {
       if (message) {
-        tableContainer.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
+        const cls = isError ? 'empty-state empty-state--error' : 'empty-state';
+        tableContainer.innerHTML = `<div class="${cls}">${escapeHtml(message)}</div>`;
       } else {
         tableContainer.innerHTML = '';
       }
@@ -252,7 +253,7 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
       state.totalPages = 1;
       state.currentPage = 1;
       state.hasLoadedTableData = false;
-      setTablePrompt(error && error.message ? error.message : uiTexts.noRowsReturned);
+      setTablePrompt(error && error.message ? error.message : uiTexts.noRowsReturned, true);
       if (typeof onError === 'function') {
         onError(error);
       }
