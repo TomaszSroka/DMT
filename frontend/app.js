@@ -19,6 +19,7 @@ import { setupVersionHistoryButton } from './components/VersionHistoryButton.js'
 import { setupVersionHistoryDialog } from './components/VersionHistoryDialog.js';
 import { setupRecordDetailsDialog, showRecordDetailsDialog } from './components/RecordDetailsDialog.js';
 import { createMainTableController } from './components/MainTable.js';
+import { createFiltersDialogController } from './components/FiltersDialog.js';
 
 function applyTypographyConfig() {
   const runtimeConfig = window.FRONTEND_RUNTIME_CONFIG || {};
@@ -130,6 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const currentDictionaryInfo = document.getElementById('currentDictionaryInfo');
   const dictionarySelect = document.getElementById('dictionarySelect');
   const dictionaryVersionSelect = document.getElementById('dictionaryVersionSelect');
+  let filtersController = null;
 
   const tableController = createMainTableController({
     onDetailsRequested: (row, columns) => {
@@ -150,6 +152,10 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     },
     onStateChange: (state) => {
+      if (filtersController && typeof filtersController.updateFromTableState === 'function') {
+        filtersController.updateFromTableState(state);
+      }
+
       if (!currentDictionaryInfo) {
         return;
       }
@@ -175,6 +181,10 @@ document.addEventListener("DOMContentLoaded", () => {
       currentDictionaryInfo.textContent = `${uiTexts.currentDictionaryPrefix} ${selectedDictionaryLabel} ${uiTexts.currentDictionaryVersionShort} ${selectedVersionLabel}`;
     }
   });
+
+  filtersController = createFiltersDialogController({ tableController });
+  filtersController.initialize();
+  filtersController.updateFromTableState(tableController.getState());
 
   tableController.initialize();
 

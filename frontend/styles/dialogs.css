@@ -85,4 +85,133 @@
   margin-top: 4px;
 }
 
-/* ...add more dialog/modal/form styles as needed... */
+.filters-dialog {
+  width: min(92vw, 1180px);
+  max-width: 1180px;
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow);
+  padding: 0;
+  overflow: hidden;
+}
+
+.filters-form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.edit-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  background: #fff7ec;
+}
+
+.edit-header h3 {
+  margin: 0;
+  flex: 0 1 auto;
+  white-space: nowrap;
+}
+
+.filters-header {
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filters-header h3 {
+  flex: 1 0 100%;
+}
+
+.filters-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.filters-actions-center {
+  order: 2;
+}
+
+.filters-actions-center .btn {
+  min-width: 112px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.filters-actions-right {
+  order: 3;
+  margin-left: auto;
+}
+
+.filters-actions-right .btn {
+  min-width: 128px;
+  justify-content: center;
+}
+
+.filters-content {
+  padding: 20px 22px 24px;
+}
+
+.filters-intro {
+  margin: 0 0 12px;
+  color: var(--muted);
+}
+
+.filters-rules-list {
+  display: grid;
+  gap: 10px;
+}
+
+.filters-rule-header,
+.filters-rule-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(250px, 2fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.filters-rule-header {
+  font-size: var(--font-size-ui);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.filters-rule-row select,
+.filters-rule-row input {
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .edit-header {
+    padding: 12px 14px;
+  }
+
+  .filters-content {
+    padding: 16px 14px 18px;
+  }
+
+  .filters-actions-center,
+  .filters-actions-right {
+    margin-left: 0;
+  }
+
+  .filters-rule-header,
+  .filters-rule-row {
+    grid-template-columns: 1fr;
+  }
+
+  .filters-rule-header span:last-child {
+    display: none;
+  }
+}

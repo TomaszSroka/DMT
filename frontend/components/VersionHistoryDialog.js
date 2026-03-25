@@ -14,7 +14,7 @@ export function setupVersionHistoryDialog() {
 	recordDetailsFields = document.getElementById("recordDetailsFields");
 	recordDetailsCloseButton = document.getElementById("recordDetailsCloseButton");
 	const recordDetailsTitle = document.getElementById("recordDetailsTitle");
-	if (recordDetailsTitle) recordDetailsTitle.textContent = "Version History";
+	if (recordDetailsTitle) recordDetailsTitle.textContent = "Versions";
 	if (recordDetailsCloseButton && recordDetailsDialog) {
 		recordDetailsCloseButton.addEventListener("click", () => recordDetailsDialog.close());
 	}

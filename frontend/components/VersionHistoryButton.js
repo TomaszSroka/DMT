@@ -8,13 +8,14 @@
  * Usage: Call setupVersionHistoryButton() after DOM is loaded.
  */
 
+import { uiTexts } from '../config/ui-texts.js';
+
 export function setupVersionHistoryButton() {
   const versionSelect = document.getElementById('dictionaryVersionSelect');
   const versionHistoryBtn = document.getElementById('showVersionDetailsButton');
   const dictionarySelect = document.getElementById('dictionarySelect');
   if (!versionSelect || !versionHistoryBtn) return;
-  // Change button text to 'Version History'
-  versionHistoryBtn.textContent = 'Version History';
+  versionHistoryBtn.textContent = uiTexts.showVersionDetails;
   versionHistoryBtn.disabled = true;
   versionSelect.addEventListener('change', () => {
     versionHistoryBtn.disabled = !versionSelect.value;

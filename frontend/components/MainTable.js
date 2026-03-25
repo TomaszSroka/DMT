@@ -51,6 +51,7 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
   const state = {
     activeDictionary: '',
     selectedDictionaryVersionKey: '',
+    activeFilters: [],
     currentPage: 1,
     totalPages: 1,
     totalRows: 0,
@@ -63,7 +64,10 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
 
   function emitState() {
     if (typeof onStateChange === 'function') {
-      onStateChange({ ...state });
+      onStateChange({
+        ...state,
+        activeFilters: Array.isArray(state.activeFilters) ? [...state.activeFilters] : []
+      });
     }
   }
 
@@ -118,6 +122,10 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
       pageSize: String(PAGE_SIZE),
       dictionaryVersionKey: String(state.selectedDictionaryVersionKey)
     });
+
+    if (Array.isArray(state.activeFilters) && state.activeFilters.length > 0) {
+      params.set('filters', JSON.stringify(state.activeFilters));
+    }
 
     if (state.currentSortColumn) {
       params.set('sortColumn', state.currentSortColumn);
@@ -254,6 +262,7 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
   function setDictionary(dictionaryId) {
     state.activeDictionary = String(dictionaryId || '').trim();
     state.selectedDictionaryVersionKey = '';
+    state.activeFilters = [];
     state.currentSortColumn = '';
     state.currentSortDirection = DEFAULT_SORT_DIRECTION;
 
@@ -270,6 +279,41 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
 
     if (!state.selectedDictionaryVersionKey) {
       setTablePrompt('');
+      return;
+    }
+
+    loadRows(1);
+  }
+
+  function normalizeFilters(filters) {
+    if (!Array.isArray(filters)) {
+      return [];
+    }
+
+    return filters
+      .map((item) => ({
+        column: String(item && item.column != null ? item.column : '').trim(),
+        value: String(item && item.value != null ? item.value : '').trim()
+      }))
+      .filter((item) => item.column.length > 0 && item.value.length > 0);
+  }
+
+  function setFilters(filters) {
+    state.activeFilters = normalizeFilters(filters);
+
+    if (!state.activeDictionary || !state.selectedDictionaryVersionKey) {
+      emitState();
+      return;
+    }
+
+    loadRows(1);
+  }
+
+  function clearFilters() {
+    state.activeFilters = [];
+
+    if (!state.activeDictionary || !state.selectedDictionaryVersionKey) {
+      emitState();
       return;
     }
 
@@ -359,13 +403,18 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
   }
 
   function getState() {
-    return { ...state };
+    return {
+      ...state,
+      activeFilters: Array.isArray(state.activeFilters) ? [...state.activeFilters] : []
+    };
   }
 
   return {
     initialize,
     setDictionary,
     setDictionaryVersion,
+    setFilters,
+    clearFilters,
     getState
   };
 }

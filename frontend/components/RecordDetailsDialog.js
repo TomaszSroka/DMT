@@ -36,7 +36,7 @@ export function showRecordDetailsDialog({ dictionaryLabel = '', versionLabel = '
   const safeVersion = String(versionLabel || '').trim();
   const titleSuffix = [safeDictionary, safeVersion ? `ver. ${safeVersion}` : ''].filter(Boolean).join(' ');
 
-  recordDetailsTitle.textContent = `Show Record for: ${titleSuffix}`;
+  recordDetailsTitle.textContent = `Record for: ${titleSuffix}`;
   recordDetailsContent.innerHTML = buildReadGrid(row, columns);
   recordDetailsDialog.showModal();
 }

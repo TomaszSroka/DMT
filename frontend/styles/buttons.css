@@ -71,6 +71,35 @@
   margin-left: auto;
 }
 
+.actions .btn {
+  min-width: 9.5ch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#accountToggle {
+  min-width: 9.5ch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#showVersionDetailsButton {
+  min-width: 9.5ch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#prevPageButton,
+#nextPageButton {
+  min-width: 10ch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 @media (max-width: 900px) {
   .actions {
     margin-left: 0;
