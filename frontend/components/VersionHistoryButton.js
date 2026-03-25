@@ -4,7 +4,7 @@
  * Handles the setup and behavior of the 'Version History' button in the UI.
  * - Enables/disables the button based on dictionary/version selection.
  * - Fetches version history details from the backend API.
- * - Displays version details in a dialog using RecordDetailsDialog.js.
+ * - Displays version details in a dialog using VersionHistoryDialog.js.
  * Usage: Call setupVersionHistoryButton() after DOM is loaded.
  */
 
@@ -33,14 +33,14 @@ export function setupVersionHistoryButton() {
       if (rows.length === 0) throw new Error('Version details not found');
 
       // Show dialog with details
-      const { showRecordDetailsDialog } = await import('./RecordDetailsDialog.js');
+      const { showVersionHistoryDialog } = await import('./VersionHistoryDialog.js');
 
       const columns = Object.keys(rows[0]).map(col => ({
         DICTIONARY_COLUMN_TECHNICAL: col,
         DICTIONARY_COLUMN_BUSINESS: col.replace(/_/g, ' ')
       }));
 
-      showRecordDetailsDialog(rows, columns);
+      showVersionHistoryDialog(rows, columns);
     } catch (err) {
       alert('Failed to load version details: ' + err.message);
     }

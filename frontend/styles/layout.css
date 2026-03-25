@@ -113,3 +113,154 @@ body {
   max-width: 100%;
   box-sizing: border-box;
 }
+
+/* --- Show Record Dialog --- */
+.show-record-dialog {
+  width: min(96vw, 1820px);
+  max-width: 1820px;
+  height: calc(100vh - 120px);
+  max-height: calc(100vh - 120px);
+  margin-top: 90px;
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow);
+  padding: 0;
+  overflow: hidden;
+}
+
+.show-record-dialog::backdrop {
+  background: rgba(20, 16, 10, 0.18);
+}
+
+.show-record-form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.show-record-header {
+  padding: 20px 28px 16px 28px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg);
+}
+
+.show-record-title {
+  margin: 0;
+  font-size: clamp(1rem, 1.3vw, 1.15rem);
+  letter-spacing: 0.01em;
+  font-family: var(--font-primary);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.show-record-content {
+  flex: 1;
+  overflow: auto;
+  padding: 20px 28px;
+}
+
+.show-record-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.show-record-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fffdf9;
+}
+
+.show-record-label {
+  font-size: 0.9rem;
+  color: var(--muted);
+  font-family: var(--font-primary);
+}
+
+.show-record-control {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid #d7bda0;
+  border-radius: 8px;
+  padding: 7px 9px;
+  background: #fff;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-ui);
+}
+
+.show-record-control[disabled] {
+  opacity: 1;
+  color: var(--text);
+  background: #fff;
+}
+
+.show-record-control[readonly] {
+  cursor: default;
+}
+
+.show-record-control-wrap {
+  position: relative;
+  display: block;
+}
+
+.show-record-control-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 34px;
+}
+
+.show-record-ellipsis-badge {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  min-width: 22px;
+  padding: 0 4px 1px;
+  border: 1px solid #c5a27f;
+  border-radius: 6px;
+  background: #ead4bc;
+  color: #6a4a2d;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.1;
+  text-align: center;
+  pointer-events: none;
+}
+
+.show-record-card textarea.show-record-control {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.show-record-empty {
+  color: var(--muted);
+  font-family: var(--font-primary);
+}
+
+@media (max-width: 1200px) {
+  .show-record-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .show-record-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .show-record-grid {
+    grid-template-columns: 1fr;
+  }
+}

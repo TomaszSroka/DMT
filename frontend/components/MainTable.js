@@ -8,7 +8,7 @@
  */
 
 import { fetchJson } from '../services/ApiClient.js';
-import { escapeHtml, truncateValue } from '../utils/ui-helpers.js';
+import { escapeHtml } from '../utils/ui-helpers.js';
 import { uiTexts } from '../config/ui-texts.js';
 
 const runtimeConfig = window.FRONTEND_RUNTIME_CONFIG || {};
@@ -193,8 +193,14 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
         const cells = technicalColumns
           .map((columnName) => {
             const fullValue = row[columnName] == null ? '' : String(row[columnName]);
-            const cellClass = noWrapColumns.has(columnName) ? ' class="col-nowrap-short"' : '';
-            return `<td${cellClass} title="${escapeHtml(fullValue)}">${escapeHtml(truncateValue(fullValue, MAX_CELL_CHARS))}</td>`;
+            const shortValue = truncateValueWithoutEllipsis(fullValue, MAX_CELL_CHARS);
+            const classNames = [];
+            if (noWrapColumns.has(columnName)) {
+              classNames.push('col-nowrap-short');
+            }
+
+            const classAttr = classNames.length > 0 ? ` class="${classNames.join(' ')}"` : '';
+            return `<td${classAttr}>${escapeHtml(shortValue)}</td>`;
           })
           .join('');
         return `<tr>${actionCell}${cells}</tr>`;
@@ -291,7 +297,7 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
 
     if (tableContainer) {
       tableContainer.addEventListener('click', (event) => {
-        const detailsButton = event.target.closest('[data-row-index]');
+        const detailsButton = getClosestFromEventTarget(event.target, '[data-row-index]');
         if (detailsButton) {
           const rowIndex = Number.parseInt(detailsButton.getAttribute('data-row-index') || '', 10);
           if (Number.isInteger(rowIndex) && state.rows[rowIndex]) {
@@ -302,31 +308,54 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
           return;
         }
 
-        const sortButton = event.target.closest('[data-sort-column]');
-        if (!sortButton || !state.selectedDictionaryVersionKey || !state.activeDictionary) {
+        const sortButton = getClosestFromEventTarget(event.target, '[data-sort-column]');
+        if (sortButton) {
+          if (!state.selectedDictionaryVersionKey || !state.activeDictionary) {
+            return;
+          }
+
+          const sortColumn = String(sortButton.getAttribute('data-sort-column') || '').trim().toUpperCase();
+          if (!sortColumn) {
+            return;
+          }
+
+          if (state.currentSortColumn === sortColumn) {
+            state.currentSortDirection = state.currentSortDirection === 'ASC' ? 'DESC' : 'ASC';
+          } else {
+            state.currentSortColumn = sortColumn;
+            state.currentSortDirection = DEFAULT_SORT_DIRECTION;
+          }
+
+          loadRows(1);
           return;
         }
 
-        const sortColumn = String(sortButton.getAttribute('data-sort-column') || '').trim().toUpperCase();
-        if (!sortColumn) {
-          return;
-        }
-
-        if (state.currentSortColumn === sortColumn) {
-          state.currentSortDirection = state.currentSortDirection === 'ASC' ? 'DESC' : 'ASC';
-        } else {
-          state.currentSortColumn = sortColumn;
-          state.currentSortDirection = DEFAULT_SORT_DIRECTION;
-        }
-
-        loadRows(1);
       });
     }
+  }
+
+  function getClosestFromEventTarget(target, selector) {
+    if (target instanceof Element) {
+      return target.closest(selector);
+    }
+
+    if (target && target.parentElement instanceof Element) {
+      return target.parentElement.closest(selector);
+    }
+
+    return null;
   }
 
   function initialize() {
     bindEvents();
     setTablePrompt('');
+  }
+
+  function truncateValueWithoutEllipsis(value, maxLength) {
+    if (value.length <= maxLength) {
+      return value;
+    }
+    return value.slice(0, maxLength);
   }
 
   function getState() {

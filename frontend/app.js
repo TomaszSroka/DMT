@@ -16,6 +16,7 @@ import { loadUserInfo } from './components/UserInfo.js';
 import { renderDictionaryList } from './components/DictionaryList.js';
 import { renderDictionaryVersionList } from './components/DictionaryVersionList.js';
 import { setupVersionHistoryButton } from './components/VersionHistoryButton.js';
+import { setupVersionHistoryDialog } from './components/VersionHistoryDialog.js';
 import { setupRecordDetailsDialog, showRecordDetailsDialog } from './components/RecordDetailsDialog.js';
 import { createMainTableController } from './components/MainTable.js';
 
@@ -65,7 +66,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const appTitle = document.getElementById("appTitle");
   if (appTitle) appTitle.textContent = uiTexts.appTitle;
 
-  // Initialize Record Details dialog
+  // Initialize dialogs
+  setupVersionHistoryDialog();
   setupRecordDetailsDialog();
   // Assign texts to UI elements
   const assignText = [
@@ -130,7 +132,23 @@ document.addEventListener("DOMContentLoaded", () => {
   const dictionaryVersionSelect = document.getElementById('dictionaryVersionSelect');
 
   const tableController = createMainTableController({
-    onDetailsRequested: (row, columns) => showRecordDetailsDialog(row, columns),
+    onDetailsRequested: (row, columns) => {
+      const selectedDictionaryLabel =
+        dictionarySelect && dictionarySelect.selectedOptions && dictionarySelect.selectedOptions[0]
+          ? dictionarySelect.selectedOptions[0].textContent
+          : '';
+      const selectedVersionLabel =
+        dictionaryVersionSelect && dictionaryVersionSelect.selectedOptions && dictionaryVersionSelect.selectedOptions[0]
+          ? dictionaryVersionSelect.selectedOptions[0].textContent
+          : '';
+
+      showRecordDetailsDialog({
+        dictionaryLabel: selectedDictionaryLabel,
+        versionLabel: selectedVersionLabel,
+        row,
+        columns
+      });
+    },
     onStateChange: (state) => {
       if (!currentDictionaryInfo) {
         return;

@@ -1,94 +1,91 @@
 /**
  * RecordDetailsDialog.js
  *
- * Manages the Record Details dialog for versioned dictionary row details.
- * - Sets up dialog elements and event listeners.
- * - Renders and displays row details in a modal table.
- * Usage: Call setupRecordDetailsDialog() and showRecordDetailsDialog(row, columns) as needed.
+ * Dedicated read-mode dialog opened from the Show action in MainTable.
  */
 
-let recordDetailsDialog, recordDetailsFields, recordDetailsCloseButton;
-const MAX_CELL_CHARS = 120;
+let recordDetailsDialog;
+let recordDetailsTitle;
+let recordDetailsCloseButton;
+let recordDetailsContent;
+const MAX_VISIBLE_FIELDS = 20;
+const ELLIPSIS_HINT_MIN_LENGTH = 24;
 
 export function setupRecordDetailsDialog() {
-	recordDetailsDialog = document.getElementById("recordDetailsDialog");
-	recordDetailsFields = document.getElementById("recordDetailsFields");
-	recordDetailsCloseButton = document.getElementById("recordDetailsCloseButton");
-	const recordDetailsTitle = document.getElementById("recordDetailsTitle");
-	if (recordDetailsTitle) recordDetailsTitle.textContent = "Version History";
-	if (recordDetailsCloseButton && recordDetailsDialog) {
-		recordDetailsCloseButton.addEventListener("click", () => recordDetailsDialog.close());
-	}
+  recordDetailsDialog = document.getElementById('showRecordDialog');
+  recordDetailsTitle = document.getElementById('showRecordTitle');
+  recordDetailsCloseButton = document.getElementById('showRecordCloseButton');
+  recordDetailsContent = document.getElementById('showRecordContent');
+
+  if (recordDetailsCloseButton && recordDetailsDialog) {
+    recordDetailsCloseButton.addEventListener('click', () => recordDetailsDialog.close());
+  }
 }
 
-export function showRecordDetailsDialog(row, columns) {
-	// Fields to hide
-	const hiddenFields = [
-		"DICTIONARY_KEY",
-		"DICTIONARY_SORT_ORDER",
-		"DICTIONARY_VERSION_KEY",
-		"DICTIONARY_VERSION_CODE",
-		"DICTIONARY_LOCATION"
-	];
+export function showRecordDetailsDialog({ dictionaryLabel = '', versionLabel = '', row = {}, columns = [] } = {}) {
+  if (!recordDetailsDialog || !recordDetailsTitle || !recordDetailsContent) {
+    return;
+  }
 
-	// Handling multiple versions: row can be an array or an object
-	const rows = Array.isArray(row) ? row : [row];
-	if (!rows.length || !Array.isArray(columns)) return;
+  const safeDictionary = String(dictionaryLabel || '').trim();
+  const safeVersion = String(versionLabel || '').trim();
+  const titleSuffix = [safeDictionary, safeVersion ? `ver. ${safeVersion}` : ''].filter(Boolean).join(' ');
 
-	const businessHeaders = columns.map(colObj =>
-		typeof colObj === "object" && colObj !== null && typeof colObj.DICTIONARY_COLUMN_BUSINESS === "string"
-			? colObj.DICTIONARY_COLUMN_BUSINESS
-			: (typeof colObj === "object" && colObj !== null ? colObj.DICTIONARY_COLUMN_TECHNICAL : String(colObj))
-	);
-	const techColumns = columns.map(colObj =>
-		typeof colObj === "object" && colObj !== null
-			? colObj.DICTIONARY_COLUMN_TECHNICAL
-			: String(colObj)
-	);
-	const visibleCols = techColumns
-		.map((col, idx) => ({
-			tech: col,
-			business: businessHeaders[idx]
-		}))
-		.filter(colObj => !hiddenFields.includes(colObj.tech));
-
-	// Render plain table (columns + rows) to match MainTable look.
-	let tableHtml = '<table><thead><tr>';
-	visibleCols.forEach(colObj => {
-		tableHtml += `<th>${escapeHtml(colObj.business)}</th>`;
-	});
-	tableHtml += '</tr></thead><tbody>';
-	rows.forEach(rowObj => {
-		tableHtml += '<tr>';
-		visibleCols.forEach(colObj => {
-			const value = rowObj[colObj.tech] == null ? "" : String(rowObj[colObj.tech]);
-			const shortValue = truncateValue(value, MAX_CELL_CHARS);
-			tableHtml += `<td title="${escapeHtml(value)}">${escapeHtml(shortValue)}</td>`;
-		});
-		tableHtml += '</tr>';
-	});
-	tableHtml += '</tbody></table>';
-	recordDetailsFields.innerHTML = tableHtml;
-	const recordDetailsTitle = document.getElementById("recordDetailsTitle");
-	if (recordDetailsTitle) {
-		recordDetailsTitle.style.textAlign = "left";
-		recordDetailsTitle.style.justifySelf = "start";
-	}
-	recordDetailsDialog.showModal();
+  recordDetailsTitle.textContent = `Show Record for: ${titleSuffix}`;
+  recordDetailsContent.innerHTML = buildReadGrid(row, columns);
+  recordDetailsDialog.showModal();
 }
 
-function truncateValue(value, maxLength) {
-	if (value.length <= maxLength) {
-		return value;
-	}
-	return `${value.slice(0, maxLength - 1)}...`;
+function buildReadGrid(row, columns) {
+  const safeRow = row && typeof row === 'object' ? row : {};
+  const orderedFields = Array.isArray(columns) && columns.length > 0
+    ? columns
+        .map((columnDef) => {
+          const technical = columnDef && typeof columnDef.DICTIONARY_COLUMN_TECHNICAL === 'string'
+            ? columnDef.DICTIONARY_COLUMN_TECHNICAL
+            : '';
+          if (!technical) {
+            return null;
+          }
+          return {
+            technical,
+            business:
+              columnDef && typeof columnDef.DICTIONARY_COLUMN_BUSINESS === 'string' && columnDef.DICTIONARY_COLUMN_BUSINESS.trim().length > 0
+                ? columnDef.DICTIONARY_COLUMN_BUSINESS
+                : technical
+          };
+        })
+        .filter(Boolean)
+    : Object.keys(safeRow).map((key) => ({ technical: key, business: key }));
+
+  const limitedFields = orderedFields.slice(0, MAX_VISIBLE_FIELDS);
+  if (limitedFields.length === 0) {
+    return '<div class="show-record-empty">No fields to display.</div>';
+  }
+
+  const fieldCards = limitedFields
+    .map((field) => {
+      const rawValue = safeRow[field.technical] == null ? '' : String(safeRow[field.technical]);
+      const controlType = rawValue.length > 100 || rawValue.includes('\n') ? 'textarea' : 'input';
+      if (controlType === 'textarea') {
+        return `<label class="show-record-card"><span class="show-record-label">${escapeHtml(field.business)}</span><textarea class="show-record-control" readonly disabled title="${escapeHtml(rawValue)}">${escapeHtml(rawValue)}</textarea></label>`;
+      }
+      const showEllipsisBadge = rawValue.length > ELLIPSIS_HINT_MIN_LENGTH;
+      const ellipsisBadge = showEllipsisBadge
+        ? '<span class="show-record-ellipsis-badge" aria-hidden="true">...</span>'
+        : '';
+      return `<label class="show-record-card"><span class="show-record-label">${escapeHtml(field.business)}</span><span class="show-record-control-wrap"><input class="show-record-control show-record-control-ellipsis" type="text" value="${escapeHtml(rawValue)}" readonly disabled title="${escapeHtml(rawValue)}" />${ellipsisBadge}</span></label>`;
+    })
+    .join('');
+
+  return `<div class="show-record-grid">${fieldCards}</div>`;
 }
 
-function escapeHtml(str) {
-	return String(str)
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;")
-		.replace(/'/g, "&#39;");
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
