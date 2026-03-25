@@ -95,5 +95,35 @@ function handleFieldDblClick(event) {
   if (!target.classList.contains('show-record-control')) {
     return;
   }
-  target.classList.toggle('show-record-control-expanded');
+  const isExpanded = target.classList.toggle('show-record-control-expanded');
+  if (isExpanded) {
+    requestAnimationFrame(() => {
+      scrollFieldIntoDialogView(target);
+    });
+    // Run once more after the expand transition starts so final position is corrected.
+    window.setTimeout(() => {
+      scrollFieldIntoDialogView(target);
+    }, 140);
+  }
+}
+
+function scrollFieldIntoDialogView(fieldElement) {
+  if (!recordDetailsContent || !(recordDetailsContent instanceof HTMLElement)) {
+    return;
+  }
+
+  const containerRect = recordDetailsContent.getBoundingClientRect();
+  const fieldRect = fieldElement.getBoundingClientRect();
+  const edgePadding = 14;
+
+  if (fieldRect.bottom > containerRect.bottom - edgePadding) {
+    const delta = fieldRect.bottom - containerRect.bottom + edgePadding;
+    recordDetailsContent.scrollBy({ top: delta, behavior: 'smooth' });
+    return;
+  }
+
+  if (fieldRect.top < containerRect.top + edgePadding) {
+    const delta = fieldRect.top - containerRect.top - edgePadding;
+    recordDetailsContent.scrollBy({ top: delta, behavior: 'smooth' });
+  }
 }

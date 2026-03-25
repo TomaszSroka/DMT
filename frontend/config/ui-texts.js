@@ -52,7 +52,7 @@ export const uiTexts = {
   dictionaryVersionSelectorAriaLabel: "Select dictionary version",
   rowsInitial: "No data",
   pageInfoInitial: "Page: 0/0",
-  currentDictionaryNone: "No dictionary selected",
+  currentDictionaryNone: "No Dictionary Selected",
   currentDictionaryPrefix: "Dictionary:",
   currentDictionaryVersionShort: "ver.",
   filtersSummaryNone: "No active filters",
