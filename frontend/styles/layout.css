@@ -65,8 +65,8 @@ body {
 
 /* --- Record Details Dialog --- */
 .record-details-dialog {
-  width: min(95vw, 1700px);
-  max-width: 1700px;
+  width: min(90vw, 1615px);
+  max-width: 1615px;
   border: 1px solid var(--panel-border);
   border-radius: 14px;
   background: var(--panel-bg);
@@ -101,70 +101,15 @@ body {
 .record-details-fields {
   display: block;
   padding: 34px;
-  overflow-x: hidden;
+  overflow-x: auto;
   box-sizing: border-box;
 }
 .record-details-fields table {
   width: 100%;
-  table-layout: fixed;
-}
-.record-details-fields td,
-.record-details-fields th {
-  width: 1%;
+  table-layout: auto;
 }
 .record-details-fields > * {
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
-}
-.record-details-fields * {
-  overflow-wrap: break-word;
-  word-break: break-word;
-}
-.record-details-section {
-  background: var(--surface-strong);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 16px 14px 12px 14px;
-  display: flex;
-  min-width: 0;
-  max-width: 100%;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  box-shadow: 0 2px 8px rgba(52,37,18,0.04);
-}
-.record-details-label {
-  font-size: var(--font-size-ui);
-  color: var(--text);
-  font-weight: normal;
-  margin-bottom: 7px;
-  letter-spacing: 0.01em;
-  font-family: var(--font-primary);
-}
-.record-details-label[data-label="Dictionary Version Description"] {
-  font-size: 1.18em;
-  color: var(--primary);
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  margin-bottom: 9px;
-}
-.record-details-value {
-  font-size: var(--font-size-ui);
-  color: #1a1a1a;
-  font-family: var(--font-primary);
-  font-weight: 500;
-  padding: 9px 12px;
-  margin-top: 2px;
-  border: 1.5px solid var(--primary);
-  border-radius: 8px;
-  background: #fff;
-  outline: none;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  min-height: 38px;
-  transition: border-color 0.2s;
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow-wrap: anywhere;
 }

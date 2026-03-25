@@ -25,27 +25,22 @@ export function setupVersionHistoryButton() {
     try {
       // Fetch version details from backend
       const url = `/api/dictionaries/${encodeURIComponent(dictionarySelect.value)}/version-history`;
-      const response = await fetch(url, {
-        headers: { 'Accept': 'application/json' }
-      });
+      const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
       if (!response.ok) throw new Error('API error: ' + response.status);
       const data = await response.json();
+
+      const rows = Array.isArray(data.rows) ? data.rows : [];
+      if (rows.length === 0) throw new Error('Version details not found');
+
       // Show dialog with details
       const { showRecordDetailsDialog } = await import('./RecordDetailsDialog.js');
-      // Match selected version by key first, then by code (backward compatible).
-      const selectedVersion = String(versionSelect.value || '');
-      const versionRow = (data.rows || []).find((row) => {
-        const byKey = String(row && row.DICTIONARY_VERSION_KEY != null ? row.DICTIONARY_VERSION_KEY : '') === selectedVersion;
-        const byCode = String(row && row.DICTIONARY_VERSION_CODE != null ? row.DICTIONARY_VERSION_CODE : '') === selectedVersion;
-        return byKey || byCode;
-      });
-      if (!versionRow) throw new Error('Version details not found');
-      // Prepare columns
-      const columns = Object.keys(versionRow).map(col => ({
+
+      const columns = Object.keys(rows[0]).map(col => ({
         DICTIONARY_COLUMN_TECHNICAL: col,
         DICTIONARY_COLUMN_BUSINESS: col.replace(/_/g, ' ')
       }));
-      showRecordDetailsDialog(versionRow, columns);
+
+      showRecordDetailsDialog(rows, columns);
     } catch (err) {
       alert('Failed to load version details: ' + err.message);
     }

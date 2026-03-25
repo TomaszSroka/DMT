@@ -8,6 +8,7 @@
  */
 
 let recordDetailsDialog, recordDetailsFields, recordDetailsCloseButton;
+const MAX_CELL_CHARS = 120;
 
 export function setupRecordDetailsDialog() {
 	recordDetailsDialog = document.getElementById("recordDetailsDialog");
@@ -51,7 +52,7 @@ export function showRecordDetailsDialog(row, columns) {
 		}))
 		.filter(colObj => !hiddenFields.includes(colObj.tech));
 
-	// Render table: headers, then version rows
+	// Render plain table (columns + rows) to match MainTable look.
 	let tableHtml = '<table><thead><tr>';
 	visibleCols.forEach(colObj => {
 		tableHtml += `<th>${escapeHtml(colObj.business)}</th>`;
@@ -61,7 +62,8 @@ export function showRecordDetailsDialog(row, columns) {
 		tableHtml += '<tr>';
 		visibleCols.forEach(colObj => {
 			const value = rowObj[colObj.tech] == null ? "" : String(rowObj[colObj.tech]);
-			tableHtml += `<td><div class=\"record-details-section\"><div class=\"record-details-value\">${escapeHtml(value)}</div></div></td>`;
+			const shortValue = truncateValue(value, MAX_CELL_CHARS);
+			tableHtml += `<td title="${escapeHtml(value)}">${escapeHtml(shortValue)}</td>`;
 		});
 		tableHtml += '</tr>';
 	});
@@ -73,6 +75,13 @@ export function showRecordDetailsDialog(row, columns) {
 		recordDetailsTitle.style.justifySelf = "start";
 	}
 	recordDetailsDialog.showModal();
+}
+
+function truncateValue(value, maxLength) {
+	if (value.length <= maxLength) {
+		return value;
+	}
+	return `${value.slice(0, maxLength - 1)}...`;
 }
 
 function escapeHtml(str) {

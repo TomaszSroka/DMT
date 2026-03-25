@@ -54,7 +54,7 @@ export const uiTexts = {
   pageInfoInitial: "Page: 0/0",
   currentDictionaryNone: "No dictionary selected",
   currentDictionaryPrefix: "Dictionary:",
-  currentDictionaryVersionShort: "Version:",
+  currentDictionaryVersionShort: "ver.",
   filtersSummaryNone: "No active filters",
   filtersColumnLabel: "Column",
   filtersValueLabel: "Value",
