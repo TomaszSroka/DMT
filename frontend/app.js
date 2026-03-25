@@ -17,8 +17,49 @@ import { renderDictionaryList } from './components/DictionaryList.js';
 import { renderDictionaryVersionList } from './components/DictionaryVersionList.js';
 import { setupVersionHistoryButton } from './components/VersionHistoryButton.js';
 import { setupRecordDetailsDialog, showRecordDetailsDialog } from './components/RecordDetailsDialog.js';
+import { createMainTableController } from './components/MainTable.js';
+
+function applyTypographyConfig() {
+  const runtimeConfig = window.FRONTEND_RUNTIME_CONFIG || {};
+  const typography = runtimeConfig.typography || {};
+
+  if (Array.isArray(typography.preconnectUrls)) {
+    typography.preconnectUrls.forEach((url) => {
+      if (!url || document.head.querySelector(`link[rel="preconnect"][href="${url}"]`)) {
+        return;
+      }
+
+      const link = document.createElement('link');
+      link.rel = 'preconnect';
+      link.href = url;
+      if (url.includes('gstatic')) {
+        link.crossOrigin = '';
+      }
+      document.head.appendChild(link);
+    });
+  }
+
+  if (typography.stylesheetUrl && !document.head.querySelector(`link[rel="stylesheet"][href="${typography.stylesheetUrl}"]`)) {
+    const stylesheet = document.createElement('link');
+    stylesheet.rel = 'stylesheet';
+    stylesheet.href = typography.stylesheetUrl;
+    document.head.appendChild(stylesheet);
+  }
+
+  if (typography.primaryFont) {
+    document.documentElement.style.setProperty('--font-primary', typography.primaryFont);
+  }
+  if (typography.monoFont) {
+    document.documentElement.style.setProperty('--font-mono', typography.monoFont);
+  }
+  if (typography.columnHeaderFont) {
+    document.documentElement.style.setProperty('--font-column-header', typography.columnHeaderFont);
+  }
+}
 
 document.addEventListener("DOMContentLoaded", () => {
+  applyTypographyConfig();
+
   // Set page title
   document.title = uiTexts.appTitle;
   const appTitle = document.getElementById("appTitle");
@@ -32,7 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ["userNameLabel", "userLabel"],
     ["rolesLabel", "rolesLabel"],
     ["dictionaryLabel", "dictionaryLabel"],
-    ["dictionaryVersionLabel", "dictionaryVersionLabel"],
+    ["versionLabel", "dictionaryVersionLabel"],
     ["showVersionDetailsButton", "showVersionDetails"],
     ["editButton", "editDictionary"],
     ["saveButton", "save"],
@@ -84,14 +125,56 @@ document.addEventListener("DOMContentLoaded", () => {
   // Load user info from API
   loadUserInfo();
 
+  const currentDictionaryInfo = document.getElementById('currentDictionaryInfo');
+  const dictionarySelect = document.getElementById('dictionarySelect');
+  const dictionaryVersionSelect = document.getElementById('dictionaryVersionSelect');
+
+  const tableController = createMainTableController({
+    onDetailsRequested: (row, columns) => showRecordDetailsDialog(row, columns),
+    onStateChange: (state) => {
+      if (!currentDictionaryInfo) {
+        return;
+      }
+
+      if (!state.hasLoadedTableData) {
+        if (state.activeDictionary && state.selectedDictionaryVersionKey) {
+          currentDictionaryInfo.textContent = uiTexts.loadingData;
+        } else {
+          currentDictionaryInfo.textContent = uiTexts.currentDictionaryNone;
+        }
+        return;
+      }
+
+      const selectedDictionaryLabel =
+        dictionarySelect && dictionarySelect.selectedOptions && dictionarySelect.selectedOptions[0]
+          ? dictionarySelect.selectedOptions[0].textContent
+          : state.activeDictionary;
+      const selectedVersionLabel =
+        dictionaryVersionSelect && dictionaryVersionSelect.selectedOptions && dictionaryVersionSelect.selectedOptions[0]
+          ? dictionaryVersionSelect.selectedOptions[0].textContent
+          : state.selectedDictionaryVersionKey;
+
+      currentDictionaryInfo.textContent = `${uiTexts.currentDictionaryPrefix} ${selectedDictionaryLabel} ${uiTexts.currentDictionaryVersionShort} ${selectedVersionLabel}`;
+    }
+  });
+
+  tableController.initialize();
+
   // Render dictionary list
   renderDictionaryList();
 
-  // Render dictionary version list on dictionary change
-  const dictionarySelect = document.getElementById('dictionarySelect');
+  // Render dictionary version list and rows on selection changes
   if (dictionarySelect) {
-    dictionarySelect.addEventListener('change', () => {
-      renderDictionaryVersionList(dictionarySelect.value);
+    dictionarySelect.addEventListener('change', async () => {
+      const selectedDictionary = String(dictionarySelect.value || '').trim();
+      tableController.setDictionary(selectedDictionary);
+      await renderDictionaryVersionList(selectedDictionary);
+    });
+  }
+
+  if (dictionaryVersionSelect) {
+    dictionaryVersionSelect.addEventListener('change', () => {
+      tableController.setDictionaryVersion(dictionaryVersionSelect.value);
     });
   }
 

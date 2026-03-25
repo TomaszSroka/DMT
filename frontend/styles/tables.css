@@ -46,8 +46,11 @@ th {
   background: #f5ebdd;
   z-index: 1;
   font-size: var(--font-size-ui);
+  font-family: var(--font-column-header);
+  font-weight: 600;
   text-transform: none;
   letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 
 .th-sort-btn {
@@ -55,6 +58,7 @@ th {
   cursor: pointer;
   display: inline-block;
   width: 100%;
+  white-space: nowrap;
 }
 
 .th-sort-btn:hover {

@@ -13,7 +13,7 @@ export async function renderDictionaryList() {
   try {
     const data = await fetchJson('/api/user-context');
     const dictionarySelect = document.getElementById('dictionarySelect');
-    if (!dictionarySelect) return;
+    if (!dictionarySelect) return [];
     dictionarySelect.innerHTML = '';
     // Add empty start option
     const emptyOption = document.createElement('option');
@@ -47,10 +47,12 @@ export async function renderDictionaryList() {
         emptyOption.style.display = '';
       }
     });
+    return Array.isArray(data.dictionaries) ? data.dictionaries : [];
   } catch (error) {
     const dictionarySelect = document.getElementById('dictionarySelect');
     if (dictionarySelect) {
       dictionarySelect.innerHTML = `<option>Error: ${error.message}</option>`;
     }
+    return [];
   }
 }

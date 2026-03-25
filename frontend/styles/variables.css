@@ -29,6 +29,7 @@
   --shadow: 0 16px 34px rgba(52, 37, 18, 0.14);
   --font-primary: sans-serif;
   --font-mono: var(--font-primary);
+  --font-column-header: var(--font-primary);
   --font-size-ui: 1.0em;
   --font-size-select: 0.9em;
   --btn-font-size: var(--font-size-ui);

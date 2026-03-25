@@ -18,6 +18,10 @@
   cursor: pointer;
 }
 
+.show-row-btn {
+  white-space: nowrap;
+}
+
 .btn,
 .row-edit-btn {
   border: 1px solid transparent;

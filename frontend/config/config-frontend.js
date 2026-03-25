@@ -11,9 +11,10 @@ window.FRONTEND_CONFIG = {
   typography: {
     primaryFont: '"Space Grotesk", sans-serif',
     monoFont: '"Space Grotesk", sans-serif',
+    columnHeaderFont: '"IBM Plex Sans Condensed", sans-serif',
     preconnectUrls: ["https://fonts.googleapis.com", "https://fonts.gstatic.com"],
     stylesheetUrl:
-      "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
+      "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=Space+Grotesk:wght@400;500;700&display=swap"
   },
   defaults: {
     maxCellChars: 120,

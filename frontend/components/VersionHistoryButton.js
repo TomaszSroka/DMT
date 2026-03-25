@@ -32,8 +32,13 @@ export function setupVersionHistoryButton() {
       const data = await response.json();
       // Show dialog with details
       const { showRecordDetailsDialog } = await import('./RecordDetailsDialog.js');
-      // Find version row by selected version code
-      const versionRow = (data.rows || []).find(row => String(row.DICTIONARY_VERSION_CODE) === String(versionSelect.value));
+      // Match selected version by key first, then by code (backward compatible).
+      const selectedVersion = String(versionSelect.value || '');
+      const versionRow = (data.rows || []).find((row) => {
+        const byKey = String(row && row.DICTIONARY_VERSION_KEY != null ? row.DICTIONARY_VERSION_KEY : '') === selectedVersion;
+        const byCode = String(row && row.DICTIONARY_VERSION_CODE != null ? row.DICTIONARY_VERSION_CODE : '') === selectedVersion;
+        return byKey || byCode;
+      });
       if (!versionRow) throw new Error('Version details not found');
       // Prepare columns
       const columns = Object.keys(versionRow).map(col => ({

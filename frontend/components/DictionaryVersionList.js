@@ -11,7 +11,7 @@ import { fetchJson } from '../services/ApiClient.js';
 
 export async function renderDictionaryVersionList(dictionaryId) {
   const dictionaryVersionSelect = document.getElementById('dictionaryVersionSelect');
-  if (!dictionaryVersionSelect) return;
+  if (!dictionaryVersionSelect) return [];
   dictionaryVersionSelect.innerHTML = '';
   // Add empty start option
   const emptyOption = document.createElement('option');
@@ -20,27 +20,24 @@ export async function renderDictionaryVersionList(dictionaryId) {
   dictionaryVersionSelect.appendChild(emptyOption);
   if (!dictionaryId) {
     dictionaryVersionSelect.disabled = true;
-    return;
+    return [];
   }
   try {
-    const data = await fetchJson(`/api/dictionaries/${encodeURIComponent(dictionaryId)}/version-history`);
-    (data.rows || []).forEach(row => {
+    const data = await fetchJson(`/api/dictionaries/${encodeURIComponent(dictionaryId)}/versions`);
+    const versions = Array.isArray(data.versions) ? data.versions : [];
+
+    versions.forEach((version) => {
       const option = document.createElement('option');
-      option.value = row.DICTIONARY_VERSION_CODE;
-      option.textContent = row.DICTIONARY_VERSION_NAME;
+      option.value = version.id;
+      option.textContent = version.label;
       dictionaryVersionSelect.appendChild(option);
     });
+
     dictionaryVersionSelect.disabled = false;
-    // Hide empty option after selection
-    dictionaryVersionSelect.addEventListener('change', () => {
-      if (dictionaryVersionSelect.value) {
-        emptyOption.style.display = 'none';
-      } else {
-        emptyOption.style.display = '';
-      }
-    });
+    return versions;
   } catch (error) {
     dictionaryVersionSelect.innerHTML = `<option>Error: ${error.message}</option>`;
     dictionaryVersionSelect.disabled = true;
+    return [];
   }
 }

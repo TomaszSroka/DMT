@@ -23,7 +23,7 @@ export const uiTexts = {
   filtersOpen: "Filters",
   previous: "Previous",
   next: "Next",
-  showRowButton: "Details",
+  showRowButton: "Show",
   discardDialogTitle: "Discard changes",
   discardDialogIntro: "Are you sure you want to discard changes?",
   discardDialogKeepEditing: "Keep editing",

@@ -56,7 +56,16 @@
 
   window.FRONTEND_RUNTIME_CONFIG = {
     text: frontendConfig.text || {},
-    typography: frontendConfig.typography || {},
+    typography: {
+      ...(frontendConfig.typography || {}),
+      columnHeaderFont: normalizeString(
+        frontendConfig.typography && frontendConfig.typography.columnHeaderFont,
+        normalizeString(
+          frontendConfig.typography && frontendConfig.typography.primaryFont,
+          'sans-serif'
+        )
+      )
+    },
     defaults: {
       maxCellChars: normalizePositiveInteger(rawDefaults.maxCellChars, fallbackDefaults.maxCellChars),
       pageSize: normalizePositiveInteger(rawDefaults.pageSize, fallbackDefaults.pageSize),
