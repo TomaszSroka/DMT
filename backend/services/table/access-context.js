@@ -24,6 +24,17 @@ const {
 const accessCacheByUser = new Map();
 const userContextCache = new Map();
 
+function resolveRoleNameFromRow(row) {
+  const roleKey = normalizeUserKey(row && row.ROLE_KEY);
+  const mapped = mapRoleKeyToRoleName(roleKey, ROLE_UPDATER_KEY, ROLE_READER_KEY, ROLE_UPDATER, ROLE_READER);
+  if (mapped) {
+    return mapped;
+  }
+
+  const rawRoleName = row && row.ROLE_NAME != null ? String(row.ROLE_NAME).trim() : "";
+  return rawRoleName;
+}
+
 async function getUserAccessRows(userLogin) {
   const normalizedUser = normalizeUserLogin(userLogin);
   if (!normalizedUser) {
@@ -40,9 +51,8 @@ async function getUserAccessRows(userLogin) {
     SELECT *
     FROM ${accessConfigTable}
     WHERE UPPER(TRIM(USER_LOGIN)) = ?
-      AND UPPER(TRIM(ROLE_NAME)) IN (?, ?)
   `;
-  const rows = await runQuery(sqlText, [normalizedUser, ROLE_READER, ROLE_UPDATER]);
+  const rows = await runQuery(sqlText, [normalizedUser]);
 
   const dedupedRows = [];
   const seen = new Set();
@@ -96,12 +106,7 @@ function buildDictionaryPermissions(accessRows) {
       accessRows: []
     };
 
-    if (role === ROLE_UPDATER) {
-      existing.roles.add(ROLE_UPDATER);
-      existing.roles.delete(ROLE_READER);
-    } else if (role === ROLE_READER && !existing.roles.has(ROLE_UPDATER)) {
-      existing.roles.add(ROLE_READER);
-    }
+    existing.roles.add(role);
     existing.canRead = true;
     if (!existing.tableIdentifier && tableIdentifier) {
       existing.tableIdentifier = tableIdentifier;
@@ -120,32 +125,32 @@ function buildDictionaryPermissions(accessRows) {
 }
 
 function buildDictionaryRolePairs(accessRows) {
-  const bestRoleByDictionary = new Map();
+  const pairs = [];
+  const seen = new Set();
 
   accessRows.forEach((row) => {
-    const roleKey = normalizeUserKey(row.ROLE_KEY);
-    if (!allowedRoleKeys.has(roleKey)) {
+    const role = resolveRoleNameFromRow(row);
+    if (!role) {
       return;
     }
 
-    const role = mapRoleKeyToRoleName(roleKey, ROLE_UPDATER_KEY, ROLE_READER_KEY, ROLE_UPDATER, ROLE_READER);
     const dictionaryId = extractDictionaryId(row);
     if (!dictionaryId) {
       return;
     }
 
-    const dictionaryKey = normalizeDictionaryName(dictionaryId);
-    const currentEntry = bestRoleByDictionary.get(dictionaryKey);
-    if (currentEntry && currentEntry.role === ROLE_UPDATER) {
+    const dictionaryLabel = row && row.DICTIONARY_NAME != null
+      ? String(row.DICTIONARY_NAME).trim()
+      : "";
+
+    const key = `${dictionaryId}::${role}`;
+    if (seen.has(key)) {
       return;
     }
 
-    if (role === ROLE_UPDATER || !currentEntry) {
-      bestRoleByDictionary.set(dictionaryKey, { dictionary: dictionaryId, role });
-    }
+    seen.add(key);
+    pairs.push({ dictionary: dictionaryId, dictionaryLabel, role });
   });
-
-  const pairs = Array.from(bestRoleByDictionary.values());
 
   return pairs.sort((a, b) => {
     const dictionaryCmp = a.dictionary.localeCompare(b.dictionary);
@@ -186,7 +191,7 @@ async function getUserDictionaryContext(userLogin) {
   const roles = Array.from(
     new Set(
       accessRows
-        .map((row) => mapRoleKeyToRoleName(row.ROLE_KEY, ROLE_UPDATER_KEY, ROLE_READER_KEY, ROLE_UPDATER, ROLE_READER))
+        .map((row) => resolveRoleNameFromRow(row))
         .filter((role) => role.length > 0)
     )
   ).sort((a, b) => a.localeCompare(b));

@@ -39,7 +39,7 @@ export function setupLoginScreen(onLoginSuccess) {
 
       if (!hasAccess) {
         setCurrentUserKey('');
-        errorEl.textContent = 'Brak uprawnień.\nUżytkownik nie posiada roli DICTIONARY_READER ani DICTIONARY_UPDATER.';
+        errorEl.textContent = 'Access denied.\nUser does not have DICTIONARY_READER or DICTIONARY_UPDATER role.';
         button.disabled = false;
         return;
       }

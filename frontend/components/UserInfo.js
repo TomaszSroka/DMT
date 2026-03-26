@@ -32,7 +32,7 @@ export async function loadUserInfo() {
       }
       (data.dictionaryRoles || []).forEach(role => {
         const li = document.createElement('li');
-        const dictLabel = dictionaryLabelMap[role.dictionary] || role.dictionary;
+        const dictLabel = role.dictionaryLabel || dictionaryLabelMap[role.dictionary] || role.dictionary;
         li.textContent = `${dictLabel} - ${role.role}`;
         rolesList.appendChild(li);
       });
