@@ -23,7 +23,7 @@ import { createMainTableController } from './components/MainTable.js';
 import { createFiltersDialogController } from './components/FiltersDialog.js';
 import { setupLoginScreen } from './components/LoginScreen.js';
 import { setCurrentUserKey } from './services/ApiClient.js';
-import { fetchUserManagers } from './services/UserManagers.js';
+import { createEditController } from './controllers/EditController.js';
 
 function applyTypographyConfig() {
   const runtimeConfig = window.FRONTEND_RUNTIME_CONFIG || {};
@@ -82,74 +82,12 @@ document.addEventListener("DOMContentLoaded", () => {
 function initMainApp() {
   const appTitle = document.getElementById("appTitle");
   if (appTitle) appTitle.textContent = uiTexts.appTitle;
-  const editButton = document.getElementById('editButton');
-  const notImplementedDialog = document.getElementById('notImplementedDialog');
-  const notImplementedCloseButton = document.getElementById('notImplementedCloseButton');
-  const notImplementedMessage = document.getElementById('notImplementedMessage');
-  const notImplementedManagersList = document.getElementById('notImplementedManagersList');
-
-  let userManagersCache = null;
-
-  function setInfoDialogMessage(message, users = []) {
-    if (notImplementedMessage) {
-      notImplementedMessage.innerHTML = message;
-    }
-
-    if (notImplementedManagersList) {
-      notImplementedManagersList.innerHTML = '';
-      users.forEach((user) => {
-        const userName = user && user.userName ? String(user.userName).trim() : '';
-        if (!userName) {
-          return;
-        }
-
-        const email = user && user.email ? String(user.email).trim() : '';
-        const item = document.createElement('li');
-        item.textContent = email ? `${userName} - ${email}` : userName;
-        notImplementedManagersList.appendChild(item);
-      });
-    }
-  }
-
-  function showInfoDialog(message, users = []) {
-    setInfoDialogMessage(message, users);
-    if (notImplementedDialog) {
-      notImplementedDialog.showModal();
-    }
-  }
-
-  async function showReaderNoPermissionDialog() {
-    if (!Array.isArray(userManagersCache)) {
-      try {
-        userManagersCache = await fetchUserManagers();
-      } catch (error) {
-        userManagersCache = [];
-      }
-    }
-
-    const intro = [
-      "The DICTIONARY_READER role doesn't have permissions to edit the Dictionary.",
-      "",
-      "Please contact someone with the USER_MANAGER role to change Your permissions:"
-    ].join('<br>');
-    const users = Array.isArray(userManagersCache) ? userManagersCache : [];
-
-    if (users.length > 0) {
-      showInfoDialog(intro, users);
-      return;
-    }
-
-    showInfoDialog(`${intro}<br>- No USER_MANAGER users found.`, []);
-  }
-
-  if (notImplementedDialog && notImplementedCloseButton) {
-    notImplementedCloseButton.addEventListener('click', () => notImplementedDialog.close());
-  }
 
   // Initialize dialogs
   setupVersionHistoryDialog();
   setupRecordDetailsDialog();
   setupErrorDetailsDialog();
+
   // Assign texts to UI elements
   const assignText = [
     ["accountToggle", "accountButton"],
@@ -212,20 +150,13 @@ function initMainApp() {
   const currentDictionaryInfo = document.getElementById('currentDictionaryInfo');
   const dictionarySelect = document.getElementById('dictionarySelect');
   const dictionaryVersionSelect = document.getElementById('dictionaryVersionSelect');
-  const dictionaryAccessById = new Map();
-  let isUpdaterEditMode = false;
+  const editButton = document.getElementById('editButton');
   let filtersController = null;
+  let editController = null;
 
   const tableController = createMainTableController({
     onDetailsRequested: (row, columns) => {
       const selectedDictionary = dictionarySelect ? String(dictionarySelect.value || '').trim() : '';
-      const dictionaryAccess = dictionaryAccessById.get(selectedDictionary);
-      const canUpdate = dictionaryAccess ? Boolean(dictionaryAccess.canUpdate) : false;
-
-      if (isUpdaterEditMode && canUpdate) {
-        showInfoDialog('This feature is not implemented yet.');
-        return;
-      }
 
       const selectedDictionaryLabel =
         dictionarySelect && dictionarySelect.selectedOptions && dictionarySelect.selectedOptions[0]
@@ -253,7 +184,8 @@ function initMainApp() {
       }
 
       if (editButton) {
-        editButton.disabled = !state.hasLoadedTableData || !state.activeDictionary || !state.selectedDictionaryVersionKey;
+        const isUpdaterEditMode = editController && typeof editController.getIsUpdaterEditMode === 'function' ? editController.getIsUpdaterEditMode() : false;
+        editButton.disabled = isUpdaterEditMode || !state.hasLoadedTableData || !state.activeDictionary || !state.selectedDictionaryVersionKey;
       }
 
       if (!state.hasLoadedTableData) {
@@ -287,69 +219,31 @@ function initMainApp() {
 
   // Render dictionary list
   renderDictionaryList().then((dictionaries) => {
-    dictionaryAccessById.clear();
-    (Array.isArray(dictionaries) ? dictionaries : []).forEach((dict) => {
-      if (!dict || typeof dict.id !== 'string') {
-        return;
-      }
-
-      dictionaryAccessById.set(dict.id, {
-        canUpdate: Boolean(dict.canUpdate),
-        roles: Array.isArray(dict.roles) ? dict.roles : []
-      });
-    });
+    if (editController && typeof editController.setDictionaryAccess === 'function') {
+      editController.setDictionaryAccess(dictionaries);
+    }
   });
 
-  // Render dictionary version list and rows on selection changes
-  if (dictionarySelect) {
-    dictionarySelect.addEventListener('change', async () => {
-      const selectedDictionary = String(dictionarySelect.value || '').trim();
-      tableController.setDictionary(selectedDictionary);
-      isUpdaterEditMode = false;
-      await renderDictionaryVersionList(selectedDictionary);
-    });
-  }
+  // Setup Edit controller for managing edit/checkout workflow
+  editController = createEditController({
+    editButton,
+    saveButton: document.getElementById('saveButton'),
+    publishButton: document.getElementById('publishButton'),
+    discardButton: document.getElementById('discardButton'),
+    notImplementedDialog: document.getElementById('notImplementedDialog'),
+    notImplementedCloseButton: document.getElementById('notImplementedCloseButton'),
+    notImplementedMessage: document.getElementById('notImplementedMessage'),
+    notImplementedManagersList: document.getElementById('notImplementedManagersList'),
+    tableController,
+    dictionarySelect,
+    dictionaryVersionSelect,
+    renderDictionaryVersionList,
+    showErrorDetailsDialog
+  });
 
-  if (dictionaryVersionSelect) {
-    dictionaryVersionSelect.addEventListener('change', () => {
-      tableController.setDictionaryVersion(dictionaryVersionSelect.value);
-    });
-  }
+  window._editController = editController;
+  editController.initialize();
 
   // Setup Version History button
   setupVersionHistoryButton();
-
-  if (editButton) {
-    editButton.addEventListener('click', () => {
-      const selectedDictionary = dictionarySelect ? String(dictionarySelect.value || '').trim() : '';
-      const selectedVersion = dictionaryVersionSelect ? String(dictionaryVersionSelect.value || '').trim() : '';
-      if (!selectedDictionary || !selectedVersion) {
-        return;
-      }
-
-      const dictionaryAccess = dictionaryAccessById.get(selectedDictionary);
-      const canUpdate = dictionaryAccess ? Boolean(dictionaryAccess.canUpdate) : false;
-      const roles = dictionaryAccess && Array.isArray(dictionaryAccess.roles) ? dictionaryAccess.roles : [];
-      const isDictionaryReader = roles.includes('DICTIONARY_READER');
-
-      if (!canUpdate) {
-        isUpdaterEditMode = false;
-        if (isDictionaryReader) {
-          showReaderNoPermissionDialog();
-        } else {
-          showInfoDialog('This feature is not implemented yet.');
-        }
-        return;
-      }
-
-      if (!isUpdaterEditMode) {
-        isUpdaterEditMode = true;
-        tableController.setRowActionLabel(uiTexts.editDictionary || 'Edit');
-        showInfoDialog('This feature is not implemented yet.');
-        return;
-      }
-
-      showInfoDialog('This feature is not implemented yet.');
-    });
-  }
 }

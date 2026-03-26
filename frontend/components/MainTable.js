@@ -51,6 +51,7 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
   const state = {
     activeDictionary: '',
     selectedDictionaryVersionKey: '',
+    checkoutDictionaryLocation: '',
     activeFilters: [],
     currentPage: 1,
     totalPages: 1,
@@ -124,6 +125,10 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
       pageSize: String(PAGE_SIZE),
       dictionaryVersionKey: String(state.selectedDictionaryVersionKey)
     });
+
+    if (state.checkoutDictionaryLocation) {
+      params.set('checkoutDictionaryLocation', state.checkoutDictionaryLocation);
+    }
 
     if (Array.isArray(state.activeFilters) && state.activeFilters.length > 0) {
       params.set('filters', JSON.stringify(state.activeFilters));
@@ -264,6 +269,7 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
   function setDictionary(dictionaryId) {
     state.activeDictionary = String(dictionaryId || '').trim();
     state.selectedDictionaryVersionKey = '';
+    state.checkoutDictionaryLocation = '';
     state.activeFilters = [];
     state.rowActionLabel = uiTexts.showRowButton || 'Show';
     state.currentSortColumn = '';
@@ -286,6 +292,22 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
     }
 
     loadRows(1);
+  }
+
+  function setCheckoutDictionaryLocation(location) {
+    const normalizedLocation = String(location || '').trim();
+    if (state.checkoutDictionaryLocation === normalizedLocation) {
+      return Promise.resolve();
+    }
+
+    state.checkoutDictionaryLocation = normalizedLocation;
+
+    if (!state.activeDictionary || !state.selectedDictionaryVersionKey) {
+      emitState();
+      return Promise.resolve();
+    }
+
+    return loadRows(1);
   }
 
   function normalizeFilters(filters) {
@@ -429,6 +451,7 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
     setDictionaryVersion,
     setFilters,
     clearFilters,
+    setCheckoutDictionaryLocation,
     setRowActionLabel,
     getState
   };

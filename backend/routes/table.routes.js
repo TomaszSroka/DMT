@@ -7,7 +7,8 @@ const {
   getDictionaryVersionHistoryForUser,
   getDictionaryVersionsForUser,
   getUserDictionaryContext,
-  getUsersForRole
+  getUsersForRole,
+  ensureDictionaryCheckOutForUser
 } = require("../services/table.service");
 const { getErrorPayload } = require("../errors/app-error");
 const { getDictionaryColumns } = require("../services/table/dictionary-columns");
@@ -115,6 +116,7 @@ function validateRowsQuery(req) {
     "PAGE_SIZE_INVALID"
   );
   const dictionaryVersionKey = String(req.query.dictionaryVersionKey || "").trim();
+  const checkoutDictionaryLocation = String(req.query.checkoutDictionaryLocation || "").trim();
   const filters = parseFiltersQuery(req.query.filters);
   const sortColumn = String(req.query.sortColumn || "").trim();
   const sortDirection = parseSortDirectionQuery(req.query.sortDirection);
@@ -123,6 +125,7 @@ function validateRowsQuery(req) {
     page,
     pageSize,
     dictionaryVersionKey,
+    checkoutDictionaryLocation,
     filters,
     sortColumn,
     sortDirection
@@ -158,16 +161,42 @@ router.get(
   })
 );
 
+router.post(
+  "/dictionaries/:name/check-out",
+  withApiErrorHandling("Could not check out Dictionary for editing.", "CHECK_OUT_FAILED", async (req, res) => {
+    const dictionaryVersionKey = String(req.body && req.body.dictionaryVersionKey ? req.body.dictionaryVersionKey : "").trim();
+    if (!dictionaryVersionKey) {
+      throw createAppError("Body field 'dictionaryVersionKey' is required.", 400, "DICTIONARY_VERSION_KEY_REQUIRED");
+    }
+
+    const payload = await ensureDictionaryCheckOutForUser(
+      getUserLogin(req.query.userKey),
+      req.params.name,
+      dictionaryVersionKey
+    );
+    res.json(payload);
+  })
+);
+
 router.get(
   "/dictionaries/:name/rows",
   withApiErrorHandling("Snowflake query failed.", "ROWS_QUERY_FAILED", async (req, res) => {
-    const { page, pageSize, dictionaryVersionKey, filters, sortColumn, sortDirection } = validateRowsQuery(req);
+    const {
+      page,
+      pageSize,
+      dictionaryVersionKey,
+      checkoutDictionaryLocation,
+      filters,
+      sortColumn,
+      sortDirection
+    } = validateRowsQuery(req);
     const payload = await getDictionaryRowsPageForUser(
       getUserLogin(req.query.userKey),
       req.params.name,
       page,
       pageSize,
       dictionaryVersionKey,
+      checkoutDictionaryLocation,
       filters,
       sortColumn,
       sortDirection

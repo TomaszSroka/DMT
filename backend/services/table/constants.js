@@ -1,5 +1,6 @@
 const accessConfigTable = "DMT.MET_USER_DICTIONARY_ROLE_DETAILS";
 const dictionaryVersionDetailsView = "DMT.MET_DICTIONARY_VERSION_DETAILS";
+const checkOutDetailsView = "DMT.MET_CHECK_OUT_DETAILS";
 
 const ROLE_READER = "DICTIONARY_READER";
 const ROLE_UPDATER = "DICTIONARY_UPDATER";
@@ -16,6 +17,7 @@ const allowedRoleKeys = new Set([ROLE_READER_KEY, ROLE_UPDATER_KEY]);
 module.exports = {
   accessConfigTable,
   dictionaryVersionDetailsView,
+  checkOutDetailsView,
   ROLE_READER,
   ROLE_UPDATER,
   ROLE_READER_KEY,

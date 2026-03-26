@@ -344,3 +344,45 @@ test("user managers endpoint contract", async () => {
     assert.equal(typeof first.email, "string");
   }
 });
+
+test("dictionary check-out endpoint contract", async (t) => {
+  const metaResponse = await fetch(`${BASE_URL}/api/meta`);
+  assert.equal(metaResponse.status, 200);
+  const metaPayload = await metaResponse.json();
+  const dictionaries = Array.isArray(metaPayload && metaPayload.dictionaries) ? metaPayload.dictionaries : [];
+
+  const updatableDictionary = dictionaries.find((item) => item && item.canUpdate === true);
+  if (!updatableDictionary || !updatableDictionary.id) {
+    t.skip("No updatable dictionary available for check-out contract test.");
+    return;
+  }
+
+  const versionsResponse = await fetch(
+    `${BASE_URL}/api/dictionaries/${encodeURIComponent(updatableDictionary.id)}/versions`
+  );
+  assert.equal(versionsResponse.status, 200);
+  const versionsPayload = await versionsResponse.json();
+  const versions = Array.isArray(versionsPayload && versionsPayload.versions) ? versionsPayload.versions : [];
+
+  if (versions.length === 0 || !versions[0].id) {
+    t.skip("No dictionary versions available for check-out contract test.");
+    return;
+  }
+
+  const checkoutResponse = await fetch(
+    `${BASE_URL}/api/dictionaries/${encodeURIComponent(updatableDictionary.id)}/check-out`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ dictionaryVersionKey: versions[0].id })
+    }
+  );
+
+  assert.equal(checkoutResponse.status, 200);
+  const checkoutPayload = await checkoutResponse.json();
+  assert.equal(typeof checkoutPayload.checkOutDictionaryLocation, "string");
+  assert.equal(typeof checkoutPayload.created, "boolean");
+});

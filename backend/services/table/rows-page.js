@@ -14,6 +14,7 @@ const {
   cloneRows
 } = require("./helpers");
 const { getUserDictionaryContext, resolveDictionaryPermission } = require("./access-context");
+const { getExistingCheckOutLocation } = require("./check-out");
 const {
   getDictionaryVersionDetailsRowsForPermission,
   getDictionarySortOrderFromVersionRows
@@ -25,6 +26,7 @@ async function getDictionaryRowsPageForUser(
   page = 1,
   pageSize = DEFAULT_PAGE_SIZE,
   dictionaryVersionKey = "",
+  checkoutDictionaryLocation = "",
   filtersInput = [],
   sortColumnInput = "",
   sortDirectionInput = "ASC"
@@ -32,7 +34,28 @@ async function getDictionaryRowsPageForUser(
   const context = await getUserDictionaryContext(userLogin);
   const permission = resolveDictionaryPermission(context, dictionaryName);
 
-  if (!isSafeDictionaryIdentifier(permission.tableIdentifier)) {
+  let sourceTableIdentifier = permission.tableIdentifier;
+  const normalizedCheckOutLocation = String(checkoutDictionaryLocation || "").trim();
+  if (normalizedCheckOutLocation) {
+    if (!permission.canUpdate) {
+      throw createAppError("Dictionary check-out table is not allowed for this user.", 403, "CHECK_OUT_TABLE_FORBIDDEN");
+    }
+
+    const dictionaryKeyRaw = permission && permission.metadata ? permission.metadata.DICTIONARY_KEY : "";
+    const dictionaryKey = Number.parseInt(String(dictionaryKeyRaw || "").trim(), 10);
+    if (!Number.isFinite(dictionaryKey) || dictionaryKey < 1) {
+      throw createAppError("Dictionary key is invalid for check-out table usage.", 400, "CHECK_OUT_DICTIONARY_KEY_INVALID");
+    }
+
+    const checkOutDetails = await getExistingCheckOutLocation(dictionaryKey);
+    if (!checkOutDetails.location || checkOutDetails.location !== normalizedCheckOutLocation) {
+      throw createAppError("Check-out table does not match active Dictionary check-out details.", 403, "CHECK_OUT_TABLE_MISMATCH");
+    }
+
+    sourceTableIdentifier = normalizedCheckOutLocation;
+  }
+
+  if (!isSafeDictionaryIdentifier(sourceTableIdentifier)) {
     throw createAppError("Dictionary identifier is invalid.", 400, "DICTIONARY_IDENTIFIER_INVALID");
   }
 
@@ -69,7 +92,7 @@ async function getDictionaryRowsPageForUser(
   function buildDataWithCountSql(targetOffset) {
     return `
       SELECT *, COUNT(*) OVER() AS __TOTAL_COUNT
-      FROM ${permission.tableIdentifier}
+      FROM ${sourceTableIdentifier}
       WHERE DICTIONARY_VERSION_KEY = ?
       ${filterSql}
       ORDER BY ${orderByClause}
@@ -81,7 +104,7 @@ async function getDictionaryRowsPageForUser(
   let totalRows = extractWindowTotalCount(rowsWithCount);
 
   if (rowsWithCount.length === 0 && requestedPage > 1) {
-    const countSql = `SELECT COUNT(*) AS TOTAL_COUNT FROM ${permission.tableIdentifier} WHERE DICTIONARY_VERSION_KEY = ?${filterSql}`;
+    const countSql = `SELECT COUNT(*) AS TOTAL_COUNT FROM ${sourceTableIdentifier} WHERE DICTIONARY_VERSION_KEY = ?${filterSql}`;
     const countRows = await runQuery(countSql, [normalizedVersionKey, ...filterBindings]);
     totalRows = extractCountValue(countRows[0]);
     const totalPages = Math.max(1, Math.ceil(totalRows / safePageSize));

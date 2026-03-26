@@ -27,18 +27,17 @@ export function getCurrentUserKey() {
   return _currentUserKey;
 }
 
-export async function fetchJson(url) {
+function appendUserKey(url) {
   let finalUrl = url;
   if (_currentUserKey) {
     const separator = url.includes('?') ? '&' : '?';
     finalUrl = url + separator + 'userKey=' + encodeURIComponent(_currentUserKey);
   }
 
-  const response = await fetch(finalUrl, {
-    headers: {
-      'Accept': 'application/json'
-    }
-  });
+  return finalUrl;
+}
+
+async function parseJsonResponse(response) {
   const raw = await response.text();
 
   let payload;
@@ -55,4 +54,29 @@ export async function fetchJson(url) {
   }
 
   return payload;
+}
+
+export async function fetchJson(url) {
+  const finalUrl = appendUserKey(url);
+
+  const response = await fetch(finalUrl, {
+    headers: {
+      'Accept': 'application/json'
+    }
+  });
+  return parseJsonResponse(response);
+}
+
+export async function postJson(url, body) {
+  const finalUrl = appendUserKey(url);
+  const response = await fetch(finalUrl, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body || {})
+  });
+
+  return parseJsonResponse(response);
 }
