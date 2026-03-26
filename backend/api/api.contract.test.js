@@ -330,3 +330,17 @@ test("user, dictionary and version query payload structure contract", async (t) 
   assert.equal(typeof rowsPayload.snapshotToken, "string");
   assert.ok(Array.isArray(rowsPayload.lockColumns));
 });
+
+test("user managers endpoint contract", async () => {
+  const response = await fetch(`${BASE_URL}/api/user-managers`);
+  assert.equal(response.status, 200);
+
+  const payload = await response.json();
+  assert.ok(Array.isArray(payload.users));
+
+  if (payload.users.length > 0) {
+    const first = payload.users[0];
+    assert.equal(typeof first.userName, "string");
+    assert.equal(typeof first.email, "string");
+  }
+});

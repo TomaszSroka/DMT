@@ -6,7 +6,8 @@ const {
   getDictionaryRowsPageForUser,
   getDictionaryVersionHistoryForUser,
   getDictionaryVersionsForUser,
-  getUserDictionaryContext
+  getUserDictionaryContext,
+  getUsersForRole
 } = require("../services/table.service");
 const { getErrorPayload } = require("../errors/app-error");
 const { getDictionaryColumns } = require("../services/table/dictionary-columns");
@@ -146,6 +147,14 @@ router.get(
       dictionaryRoles: context.dictionaryRoles,
       dictionaries: context.dictionaries // list of dictionaries with labels
     });
+  })
+);
+
+router.get(
+  "/user-managers",
+  withApiErrorHandling("Could not load users for role USER_MANAGER.", "ROLE_USERS_LOAD_FAILED", async (req, res) => {
+    const users = await getUsersForRole("USER_MANAGER");
+    res.json({ users });
   })
 );
 

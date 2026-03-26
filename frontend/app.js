@@ -23,6 +23,7 @@ import { createMainTableController } from './components/MainTable.js';
 import { createFiltersDialogController } from './components/FiltersDialog.js';
 import { setupLoginScreen } from './components/LoginScreen.js';
 import { setCurrentUserKey } from './services/ApiClient.js';
+import { fetchUserManagers } from './services/UserManagers.js';
 
 function applyTypographyConfig() {
   const runtimeConfig = window.FRONTEND_RUNTIME_CONFIG || {};
@@ -84,6 +85,62 @@ function initMainApp() {
   const editButton = document.getElementById('editButton');
   const notImplementedDialog = document.getElementById('notImplementedDialog');
   const notImplementedCloseButton = document.getElementById('notImplementedCloseButton');
+  const notImplementedMessage = document.getElementById('notImplementedMessage');
+  const notImplementedManagersList = document.getElementById('notImplementedManagersList');
+
+  let userManagersCache = null;
+
+  function setInfoDialogMessage(message, users = []) {
+    if (notImplementedMessage) {
+      notImplementedMessage.innerHTML = message;
+    }
+
+    if (notImplementedManagersList) {
+      notImplementedManagersList.innerHTML = '';
+      users.forEach((user) => {
+        const userName = user && user.userName ? String(user.userName).trim() : '';
+        if (!userName) {
+          return;
+        }
+
+        const email = user && user.email ? String(user.email).trim() : '';
+        const item = document.createElement('li');
+        item.textContent = email ? `${userName} - ${email}` : userName;
+        notImplementedManagersList.appendChild(item);
+      });
+    }
+  }
+
+  function showInfoDialog(message, users = []) {
+    setInfoDialogMessage(message, users);
+    if (notImplementedDialog) {
+      notImplementedDialog.showModal();
+    }
+  }
+
+  async function showReaderNoPermissionDialog() {
+    if (!Array.isArray(userManagersCache)) {
+      try {
+        userManagersCache = await fetchUserManagers();
+      } catch (error) {
+        userManagersCache = [];
+      }
+    }
+
+    const intro = [
+      "The DICTIONARY_READER role doesn't have permissions to edit the Dictionary.",
+      "",
+      "Please contact someone with the USER_MANAGER role to change Your permissions:"
+    ].join('<br>');
+    const users = Array.isArray(userManagersCache) ? userManagersCache : [];
+
+    if (users.length > 0) {
+      showInfoDialog(intro, users);
+      return;
+    }
+
+    showInfoDialog(`${intro}<br>- No USER_MANAGER users found.`, []);
+  }
 
   if (notImplementedDialog && notImplementedCloseButton) {
     notImplementedCloseButton.addEventListener('click', () => notImplementedDialog.close());
@@ -166,9 +223,7 @@ function initMainApp() {
       const canUpdate = dictionaryAccess ? Boolean(dictionaryAccess.canUpdate) : false;
 
       if (isUpdaterEditMode && canUpdate) {
-        if (notImplementedDialog) {
-          notImplementedDialog.showModal();
-        }
+        showInfoDialog('This feature is not implemented yet.');
         return;
       }
 
@@ -239,7 +294,8 @@ function initMainApp() {
       }
 
       dictionaryAccessById.set(dict.id, {
-        canUpdate: Boolean(dict.canUpdate)
+        canUpdate: Boolean(dict.canUpdate),
+        roles: Array.isArray(dict.roles) ? dict.roles : []
       });
     });
   });
@@ -273,11 +329,15 @@ function initMainApp() {
 
       const dictionaryAccess = dictionaryAccessById.get(selectedDictionary);
       const canUpdate = dictionaryAccess ? Boolean(dictionaryAccess.canUpdate) : false;
+      const roles = dictionaryAccess && Array.isArray(dictionaryAccess.roles) ? dictionaryAccess.roles : [];
+      const isDictionaryReader = roles.includes('DICTIONARY_READER');
 
       if (!canUpdate) {
         isUpdaterEditMode = false;
-        if (notImplementedDialog) {
-          notImplementedDialog.showModal();
+        if (isDictionaryReader) {
+          showReaderNoPermissionDialog();
+        } else {
+          showInfoDialog('This feature is not implemented yet.');
         }
         return;
       }
@@ -288,9 +348,7 @@ function initMainApp() {
         return;
       }
 
-      if (notImplementedDialog) {
-        notImplementedDialog.showModal();
-      }
+      showInfoDialog('This feature is not implemented yet.');
     });
   }
 }

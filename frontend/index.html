@@ -216,13 +216,16 @@
     <dialog id="notImplementedDialog" class="error-details-dialog">
       <form id="notImplementedForm" class="error-details-form" method="dialog">
         <div class="edit-header error-details-header">
-          <h3 id="notImplementedTitle">Info</h3>
+          <h3 id="notImplementedTitle">Information</h3>
           <div class="edit-actions">
             <button id="notImplementedCloseButton" type="button" class="btn btn-discard">Close</button>
           </div>
         </div>
         <div class="error-details-content">
-          <p id="notImplementedMessage" class="error-details-message">Not Yet Implemented.</p>
+          <div class="not-implemented-frame">
+            <p id="notImplementedMessage" class="error-details-message">This feature is not implemented yet.</p>
+            <ul id="notImplementedManagersList" class="not-implemented-managers-list"></ul>
+          </div>
         </div>
       </form>
     </dialog>

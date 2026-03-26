@@ -125,6 +125,6 @@ window.FRONTEND_CONFIG = {
     filtersRemoveRule: "Remove",
     filtersEmpty: "No filter rules.",
     filtersNoColumns: "Load Dictionary rows first to choose columns.",
-    notYetImplemented: "Not yet implemented."
+    notYetImplemented: "This feature is not implemented yet."
   }
 };
