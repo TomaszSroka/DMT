@@ -345,6 +345,7 @@ function initMainApp() {
       if (!isUpdaterEditMode) {
         isUpdaterEditMode = true;
         tableController.setRowActionLabel(uiTexts.editDictionary || 'Edit');
+        showInfoDialog('This feature is not implemented yet.');
         return;
       }
 
