@@ -101,6 +101,7 @@ tbody tr:hover {
 .current-dictionary-info {
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   width: fit-content;
   max-width: 100%;
   padding: 6px 10px;
@@ -111,6 +112,57 @@ tbody tr:hover {
   font-family: var(--font-primary);
   font-weight: 600;
   line-height: 1.25;
+}
+
+.current-dictionary-info.is-loading-from-db {
+  border-color: #9bb9d7;
+  background: #eef5ff;
+  color: #2b4f71;
+}
+
+.current-dictionary-info.is-loading-from-db::before {
+  content: "";
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%232b4f71' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cellipse cx='8' cy='3.25' rx='5.2' ry='2.2'/%3E%3Cpath d='M2.8 3.25V7.5C2.8 8.72 5.13 9.7 8 9.7s5.2-.98 5.2-2.2V3.25'/%3E%3Cpath d='M2.8 7.5v4.25c0 1.22 2.33 2.2 5.2 2.2s5.2-.98 5.2-2.2V7.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+  animation: db-icon-pulse 1.2s ease-in-out infinite;
+}
+
+.current-dictionary-info.is-loading-from-db::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.35;
+  animation: db-dot-blink 0.95s ease-in-out infinite;
+}
+
+@keyframes db-icon-pulse {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: translateY(-1px);
+    opacity: 1;
+  }
+}
+
+@keyframes db-dot-blink {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
 .table-header-actions {

@@ -165,6 +165,7 @@ router.post(
   "/dictionaries/:name/check-out",
   withApiErrorHandling("Could not check out Dictionary for editing.", "CHECK_OUT_FAILED", async (req, res) => {
     const dictionaryVersionKey = String(req.body && req.body.dictionaryVersionKey ? req.body.dictionaryVersionKey : "").trim();
+    const mode = String(req.body && req.body.mode ? req.body.mode : "").trim();
     if (!dictionaryVersionKey) {
       throw createAppError("Body field 'dictionaryVersionKey' is required.", 400, "DICTIONARY_VERSION_KEY_REQUIRED");
     }
@@ -172,7 +173,8 @@ router.post(
     const payload = await ensureDictionaryCheckOutForUser(
       getUserLogin(req.query.userKey),
       req.params.name,
-      dictionaryVersionKey
+      dictionaryVersionKey,
+      mode
     );
     res.json(payload);
   })

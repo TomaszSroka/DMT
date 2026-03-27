@@ -121,6 +121,9 @@ function initMainApp() {
     ["errorDetailsTitle", "errorDetailsTitle"],
     ["errorDetailsCopyButton", "errorDetailsCopy"],
     ["errorDetailsCloseButton", "errorDetailsClose"],
+    ["checkOutConfirmTitle", "checkOutConfirmTitle"],
+    ["checkOutConfirmConfirmButton", "checkOutConfirmButton"],
+    ["checkOutConfirmCancelButton", "checkOutCancelButton"],
     ["filtersDialogTitle", "filtersDialogTitle"],
     ["filtersDialogIntro", "filtersDialogIntro"],
     ["filtersAddRuleButton", "filtersAddRule"],
@@ -148,6 +151,7 @@ function initMainApp() {
   loadUserInfo();
 
   const currentDictionaryInfo = document.getElementById('currentDictionaryInfo');
+  const globalLoadingInfo = document.getElementById('globalLoadingInfo');
   const dictionarySelect = document.getElementById('dictionarySelect');
   const dictionaryVersionSelect = document.getElementById('dictionaryVersionSelect');
   const editButton = document.getElementById('editButton');
@@ -162,10 +166,14 @@ function initMainApp() {
         dictionarySelect && dictionarySelect.selectedOptions && dictionarySelect.selectedOptions[0]
           ? dictionarySelect.selectedOptions[0].textContent
           : '';
+      const overrideVersionLabel = editController && typeof editController.getCurrentVersionLabelOverride === 'function'
+        ? String(editController.getCurrentVersionLabelOverride() || '').trim()
+        : '';
       const selectedVersionLabel =
-        dictionaryVersionSelect && dictionaryVersionSelect.selectedOptions && dictionaryVersionSelect.selectedOptions[0]
+        overrideVersionLabel
+        || (dictionaryVersionSelect && dictionaryVersionSelect.selectedOptions && dictionaryVersionSelect.selectedOptions[0]
           ? dictionaryVersionSelect.selectedOptions[0].textContent
-          : '';
+          : '');
 
       showRecordDetailsDialog({
         dictionaryLabel: selectedDictionaryLabel,
@@ -179,10 +187,6 @@ function initMainApp() {
         filtersController.updateFromTableState(state);
       }
 
-      if (!currentDictionaryInfo) {
-        return;
-      }
-
       if (editButton) {
         const isUpdaterEditMode = editController && typeof editController.getIsUpdaterEditMode === 'function' ? editController.getIsUpdaterEditMode() : false;
         editButton.disabled = isUpdaterEditMode || !state.hasLoadedTableData || !state.activeDictionary || !state.selectedDictionaryVersionKey;
@@ -190,10 +194,31 @@ function initMainApp() {
 
       if (!state.hasLoadedTableData) {
         if (state.activeDictionary && state.selectedDictionaryVersionKey) {
-          currentDictionaryInfo.textContent = uiTexts.loadingData;
+          if (globalLoadingInfo) {
+            globalLoadingInfo.textContent = uiTexts.loadingData;
+            globalLoadingInfo.classList.add('is-loading-from-db');
+            globalLoadingInfo.setAttribute('aria-busy', 'true');
+          }
         } else {
-          currentDictionaryInfo.textContent = uiTexts.currentDictionaryNone;
+          if (currentDictionaryInfo) {
+            currentDictionaryInfo.textContent = uiTexts.currentDictionaryNone;
+          }
+          if (globalLoadingInfo) {
+            globalLoadingInfo.textContent = '';
+            globalLoadingInfo.classList.remove('is-loading-from-db');
+            globalLoadingInfo.removeAttribute('aria-busy');
+          }
         }
+        return;
+      }
+
+      if (globalLoadingInfo) {
+        globalLoadingInfo.textContent = '';
+        globalLoadingInfo.classList.remove('is-loading-from-db');
+        globalLoadingInfo.removeAttribute('aria-busy');
+      }
+
+      if (!currentDictionaryInfo) {
         return;
       }
 
@@ -201,10 +226,14 @@ function initMainApp() {
         dictionarySelect && dictionarySelect.selectedOptions && dictionarySelect.selectedOptions[0]
           ? dictionarySelect.selectedOptions[0].textContent
           : state.activeDictionary;
+      const overrideVersionLabel = editController && typeof editController.getCurrentVersionLabelOverride === 'function'
+        ? String(editController.getCurrentVersionLabelOverride() || '').trim()
+        : '';
       const selectedVersionLabel =
-        dictionaryVersionSelect && dictionaryVersionSelect.selectedOptions && dictionaryVersionSelect.selectedOptions[0]
+        overrideVersionLabel
+        || (dictionaryVersionSelect && dictionaryVersionSelect.selectedOptions && dictionaryVersionSelect.selectedOptions[0]
           ? dictionaryVersionSelect.selectedOptions[0].textContent
-          : state.selectedDictionaryVersionKey;
+          : state.selectedDictionaryVersionKey);
 
       currentDictionaryInfo.textContent = `${selectedDictionaryLabel} ${uiTexts.currentDictionaryVersionShort} ${selectedVersionLabel}`;
     },
@@ -234,6 +263,10 @@ function initMainApp() {
     notImplementedCloseButton: document.getElementById('notImplementedCloseButton'),
     notImplementedMessage: document.getElementById('notImplementedMessage'),
     notImplementedManagersList: document.getElementById('notImplementedManagersList'),
+    checkOutConfirmDialog: document.getElementById('checkOutConfirmDialog'),
+    checkOutConfirmMessage: document.getElementById('checkOutConfirmMessage'),
+    checkOutConfirmButton: document.getElementById('checkOutConfirmConfirmButton'),
+    checkOutCancelButton: document.getElementById('checkOutConfirmCancelButton'),
     tableController,
     dictionarySelect,
     dictionaryVersionSelect,

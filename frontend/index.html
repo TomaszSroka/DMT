@@ -20,10 +20,11 @@
         <h1 class="login-title">DMT</h1>
         <p class="login-subtitle">Dictionary Management Tool</p>
         <div class="login-form">
-          <label class="login-label" for="userKeySelect">User:</label>
+          <label class="login-label" for="userKeySelect">Login:</label>
           <select id="userKeySelect" class="login-select">
             <option value="READER@FLSMIDTH.COM" selected>READER@FLSMIDTH.COM</option>
-            <option value="UPDATER@FLSMIDTH.COM">UPDATER@FLSMIDTH.COM</option>
+            <option value="UPDATER_1@FLSMIDTH.COM">UPDATER_1@FLSMIDTH.COM</option>
+            <option value="UPDATER_2@FLSMIDTH.COM">UPDATER_2@FLSMIDTH.COM</option>
             <option value="CREATOR@FLSMIDTH.COM">CREATOR@FLSMIDTH.COM</option>
           </select>
           <button id="loginButton" type="button" class="btn btn-publish login-button">Login</button>
@@ -34,10 +35,12 @@
 
     <div class="app-shell hidden">
       <header class="topbar">
-        <div class="topbar-row">
+        <div class="topbar-row topbar-title-row">
           <div class="brand-wrap">
             <h1 id="appTitle"></h1>
           </div>
+
+          <span id="globalLoadingInfo" class="topbar-loading-info" aria-live="polite"></span>
 
           <div class="account-wrap">
             <button id="accountToggle" class="account-toggle" aria-haspopup="true" aria-expanded="false">
@@ -225,6 +228,23 @@
           <div class="not-implemented-frame">
             <p id="notImplementedMessage" class="error-details-message">This feature is not implemented yet.</p>
             <ul id="notImplementedManagersList" class="not-implemented-managers-list"></ul>
+          </div>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="checkOutConfirmDialog" class="error-details-dialog">
+      <form id="checkOutConfirmForm" class="error-details-form" method="dialog">
+        <div class="edit-header error-details-header">
+          <h3 id="checkOutConfirmTitle">Confirmation</h3>
+          <div class="edit-actions">
+            <button id="checkOutConfirmConfirmButton" type="button" class="btn btn-save">Confirm</button>
+            <button id="checkOutConfirmCancelButton" type="button" class="btn btn-discard">Cancel</button>
+          </div>
+        </div>
+        <div class="error-details-content">
+          <div class="not-implemented-frame">
+            <p id="checkOutConfirmMessage" class="error-details-message"></p>
           </div>
         </div>
       </form>

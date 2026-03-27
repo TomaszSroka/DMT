@@ -383,6 +383,10 @@ test("dictionary check-out endpoint contract", async (t) => {
 
   assert.equal(checkoutResponse.status, 200);
   const checkoutPayload = await checkoutResponse.json();
+  assert.equal(typeof checkoutPayload.mode, "string");
+  assert.equal(typeof checkoutPayload.procedureResult, "string");
+  assert.equal(typeof checkoutPayload.versionName, "string");
+  assert.equal(typeof checkoutPayload.userLogin, "string");
   assert.equal(typeof checkoutPayload.checkOutDictionaryLocation, "string");
   assert.equal(typeof checkoutPayload.created, "boolean");
 });

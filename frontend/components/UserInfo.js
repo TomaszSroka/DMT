@@ -17,6 +17,11 @@ const ROLES_SCROLL_THRESHOLD = (() => {
 export async function loadUserInfo() {
   try {
     const data = await fetchJson('/api/user-context');
+    window.__DMT_USER_CONTEXT = {
+      user: data && data.user ? data.user : '',
+      roles: Array.isArray(data && data.roles) ? data.roles : [],
+      dictionaryRoles: Array.isArray(data && data.dictionaryRoles) ? data.dictionaryRoles : []
+    };
     const userNameField = document.getElementById('userNameField');
     const rolesList = document.getElementById('rolesList');
     if (userNameField) userNameField.textContent = data.user || '';
@@ -44,6 +49,11 @@ export async function loadUserInfo() {
       }
     }
   } catch (error) {
+    window.__DMT_USER_CONTEXT = {
+      user: '',
+      roles: [],
+      dictionaryRoles: []
+    };
     const userNameField = document.getElementById('userNameField');
     const rolesList = document.getElementById('rolesList');
     if (userNameField) userNameField.textContent = 'Error';

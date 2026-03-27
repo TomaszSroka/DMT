@@ -2,8 +2,13 @@ const { runQuery } = require("../../config/snowflake");
 const { createAppError } = require("../../errors/app-error");
 const { checkOutDetailsView } = require("./constants");
 const { getUserDictionaryContext, resolveDictionaryPermission } = require("./access-context");
+const { resolveCheckOutResultFromProcedureResult } = require("./check-out-result-parser");
 
 const CHECK_OUT_PROCEDURE = "DMT.MET_CHECK_OUT_EDIT";
+const CHECK_OUT_MODES = {
+  CHECK: "CHECK",
+  ADD: "ADD"
+};
 
 function parseRequiredInteger(value, fieldName, errorCode) {
   const parsed = Number.parseInt(String(value || "").trim(), 10);
@@ -37,17 +42,6 @@ function resolveCheckOutLocationFromRow(row) {
   return value ? String(value).trim() : "";
 }
 
-function resolveCheckOutLocationFromProcedureResult(rows) {
-  const firstRow = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
-  if (!firstRow || typeof firstRow !== "object") {
-    return "";
-  }
-
-  const values = Object.values(firstRow).map((value) => String(value || "").trim()).filter((value) => value.length > 0);
-  const tableName = values.find((value) => /[A-Za-z0-9_.$"]+/.test(value));
-  return tableName || "";
-}
-
 async function getCheckOutDetailsRows(dictionaryKey) {
   const sqlText = `
     SELECT *
@@ -68,7 +62,20 @@ async function getExistingCheckOutLocation(dictionaryKey) {
   };
 }
 
-async function ensureDictionaryCheckOutForUser(userLogin, dictionaryName, dictionaryVersionKey) {
+function normalizeCheckOutMode(mode) {
+  const normalized = String(mode || "").trim().toUpperCase();
+  if (!normalized) {
+    return CHECK_OUT_MODES.ADD;
+  }
+
+  if (normalized !== CHECK_OUT_MODES.CHECK && normalized !== CHECK_OUT_MODES.ADD) {
+    throw createAppError("Body field 'mode' must be CHECK or ADD.", 400, "CHECK_OUT_MODE_INVALID");
+  }
+
+  return normalized;
+}
+
+async function ensureDictionaryCheckOutForUser(userLogin, dictionaryName, dictionaryVersionKey, mode) {
   const context = await getUserDictionaryContext(userLogin);
   const permission = resolveDictionaryPermission(context, dictionaryName);
 
@@ -89,27 +96,49 @@ async function ensureDictionaryCheckOutForUser(userLogin, dictionaryName, dictio
     throw createAppError("Dictionary source table is missing.", 400, "CHECK_OUT_SOURCE_LOCATION_MISSING");
   }
 
-  const callSql = `CALL ${CHECK_OUT_PROCEDURE}(?, ?, ?, ?)`;
+  const checkOutMode = normalizeCheckOutMode(mode);
+
+  const callSql = `CALL ${CHECK_OUT_PROCEDURE}(?, ?, ?, ?, ?)`;
   const procedureRows = await runQuery(callSql, [
+    checkOutMode,
     userKey,
     dictionaryKey,
     dictionaryVersionKeyNum,
     checkOutSourceLocation
   ]);
 
-  const fromProcedure = resolveCheckOutLocationFromProcedureResult(procedureRows);
-  if (fromProcedure) {
+  const procedureResult = resolveCheckOutResultFromProcedureResult(procedureRows);
+  const isInserted = procedureResult.procedureResult === "RECORD_INSERTED";
+
+  const basePayload = {
+    mode: checkOutMode,
+    procedureResult: procedureResult.procedureResult,
+    versionName: procedureResult.versionName,
+    userLogin: procedureResult.userLogin
+  };
+
+  if (checkOutMode === CHECK_OUT_MODES.CHECK) {
     return {
-      checkOutDictionaryLocation: fromProcedure,
-      created: true
+      ...basePayload,
+      checkOutDictionaryLocation: procedureResult.tableName,
+      created: false
+    };
+  }
+
+  if (procedureResult.tableName) {
+    return {
+      ...basePayload,
+      checkOutDictionaryLocation: procedureResult.tableName,
+      created: isInserted
     };
   }
 
   const refreshed = await getExistingCheckOutLocation(dictionaryKey);
   if (refreshed.location) {
     return {
+      ...basePayload,
       checkOutDictionaryLocation: refreshed.location,
-      created: true
+      created: isInserted
     };
   }
 

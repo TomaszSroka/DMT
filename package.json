@@ -13,7 +13,7 @@
     "local:db:plan": "powershell -ExecutionPolicy Bypass -File scripts/local-recreate-db.ps1 -list",
     "local:test": "powershell -ExecutionPolicy Bypass -File scripts/local-run-tests.ps1",
     "test:api-contract": "node --test backend/api/api.contract.test.js",
-    "test:unit": "node --test backend/services/table.validation.test.js"
+    "test:unit": "node --test backend/services/table.validation.test.js backend/services/table/check-out.test.js"
   },
   "dependencies": {
     "dotenv": "^16.4.7",

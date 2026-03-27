@@ -109,6 +109,54 @@ body {
   align-items: center;
   gap: 14px;
 }
+
+.topbar-title-row {
+  position: relative;
+}
+
+.topbar-loading-info {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  border: 1px solid #9bb9d7;
+  background: #eef5ff;
+  color: #2b4f71;
+  font-family: var(--font-primary);
+  font-size: var(--font-size-ui);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.topbar-loading-info.is-loading-from-db {
+  display: inline-flex;
+}
+
+.topbar-loading-info.is-loading-from-db::before {
+  content: "";
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%232b4f71' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cellipse cx='8' cy='3.25' rx='5.2' ry='2.2'/%3E%3Cpath d='M2.8 3.25V7.5C2.8 8.72 5.13 9.7 8 9.7s5.2-.98 5.2-2.2V3.25'/%3E%3Cpath d='M2.8 7.5v4.25c0 1.22 2.33 2.2 5.2 2.2s5.2-.98 5.2-2.2V7.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+  animation: db-icon-pulse 1.2s ease-in-out infinite;
+}
+
+.topbar-loading-info.is-loading-from-db::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.35;
+  animation: db-dot-blink 0.95s ease-in-out infinite;
+}
 .controls-row {
   justify-content: flex-start;
   gap: 8px;
@@ -129,6 +177,15 @@ body {
   .topbar-row {
     flex-wrap: wrap;
   }
+
+  .topbar-loading-info {
+    position: static;
+    transform: none;
+    margin-left: auto;
+    margin-right: auto;
+    order: 3;
+  }
+
   .brand-wrap {
     width: 100%;
   }

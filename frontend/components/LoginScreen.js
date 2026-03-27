@@ -33,13 +33,18 @@ export function setupLoginScreen(onLoginSuccess) {
 
       const flatRoles = Array.isArray(data.roles) ? data.roles : [];
       const dictionaryRoles = Array.isArray(data.dictionaryRoles) ? data.dictionaryRoles : [];
+      const hasAnyRoleInDb = flatRoles.length > 0 || dictionaryRoles.length > 0;
       const hasAccess =
         flatRoles.some(r => ALLOWED_ROLES.includes(r)) ||
         dictionaryRoles.some(r => ALLOWED_ROLES.includes(r.role));
 
       if (!hasAccess) {
         setCurrentUserKey('');
-        errorEl.textContent = 'Access denied.\nUser does not have DICTIONARY_READER or DICTIONARY_UPDATER role.';
+        if (!hasAnyRoleInDb) {
+          errorEl.textContent = 'Access Denied.\nLogin is not existing.';
+        } else {
+          errorEl.textContent = 'Access denied.\nUser does not have DICTIONARY_READER or DICTIONARY_UPDATER role.';
+        }
         button.disabled = false;
         return;
       }
@@ -47,7 +52,7 @@ export function setupLoginScreen(onLoginSuccess) {
       onLoginSuccess(userKey);
     } catch (err) {
       setCurrentUserKey('');
-      errorEl.textContent = 'Błąd podczas sprawdzania uprawnień: ' + (err.message || 'Nieznany błąd');
+      errorEl.textContent = 'Could not validate login. Please try again.';
       button.disabled = false;
     }
   });

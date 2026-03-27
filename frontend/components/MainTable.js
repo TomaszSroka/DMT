@@ -10,6 +10,7 @@
 import { fetchJson } from '../services/ApiClient.js';
 import { escapeHtml } from '../utils/ui-helpers.js';
 import { uiTexts } from '../config/ui-texts.js';
+import { beginDbLoading } from '../utils/db-loading.js';
 
 const runtimeConfig = window.FRONTEND_RUNTIME_CONFIG || {};
 const defaultsConfig = runtimeConfig.defaults || {};
@@ -239,6 +240,8 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
       return;
     }
 
+    const globalLoadingInfo = document.getElementById('globalLoadingInfo');
+    const endDbLoading = beginDbLoading(globalLoadingInfo);
     state.hasLoadedTableData = false;
     setLoading(uiTexts.loadingData);
     emitState();
@@ -263,6 +266,8 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
       if (typeof onError === 'function') {
         onError(error);
       }
+    } finally {
+      endDbLoading();
     }
   }
 

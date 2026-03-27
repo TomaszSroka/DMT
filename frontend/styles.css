@@ -7,3 +7,8 @@
  */
 
 /* styles.css – space for global, custom styles */
+
+body.db-loading,
+body.db-loading * {
+	cursor: progress !important;
+}

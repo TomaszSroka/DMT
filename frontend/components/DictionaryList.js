@@ -8,17 +8,31 @@
  */
 
 import { fetchJson } from '../services/ApiClient.js';
+import { uiTexts } from '../config/ui-texts.js';
+import { beginDbLoading } from '../utils/db-loading.js';
 
 export async function renderDictionaryList() {
+  const dictionarySelect = document.getElementById('dictionarySelect');
+  const dictionarySelectWrap = dictionarySelect ? dictionarySelect.closest('.dictionary-select-wrap') : null;
+  if (dictionarySelect) {
+    dictionarySelect.disabled = true;
+    dictionarySelect.innerHTML = '';
+    const loadingOption = document.createElement('option');
+    loadingOption.value = '';
+    loadingOption.textContent = `--- ${uiTexts.selectDictionaryOption || 'Select dictionary'} ---`;
+    dictionarySelect.appendChild(loadingOption);
+  }
+  const endDbLoading = beginDbLoading([dictionarySelect, dictionarySelectWrap]);
+
   try {
     const data = await fetchJson('/api/user-context');
-    const dictionarySelect = document.getElementById('dictionarySelect');
     if (!dictionarySelect) return [];
     dictionarySelect.innerHTML = '';
+    dictionarySelect.disabled = false;
     // Add empty start option
     const emptyOption = document.createElement('option');
     emptyOption.value = '';
-    emptyOption.textContent = '--- Select Dictionary ---';
+    emptyOption.textContent = `--- ${uiTexts.selectDictionaryOption || 'Select dictionary'} ---`;
     dictionarySelect.appendChild(emptyOption);
     // Add dictionary options, hidden by default
     (data.dictionaries || []).forEach(dict => {
@@ -49,10 +63,12 @@ export async function renderDictionaryList() {
     });
     return Array.isArray(data.dictionaries) ? data.dictionaries : [];
   } catch (error) {
-    const dictionarySelect = document.getElementById('dictionarySelect');
     if (dictionarySelect) {
       dictionarySelect.innerHTML = `<option>Error: ${error.message}</option>`;
+      dictionarySelect.disabled = true;
     }
     return [];
+  } finally {
+    endDbLoading();
   }
 }
