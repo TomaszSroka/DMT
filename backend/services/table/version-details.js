@@ -4,15 +4,26 @@ const { dictionaryVersionDetailsView } = require("./constants");
 const { normalizeDictionaryName, extractSortOrderPhrase } = require("./helpers");
 const { isSafeOrderByPhrase } = require("../table.validation");
 
-async function getDictionaryVersionDetailsRowsForPermission(permission) {
+async function getDictionaryVersionDetailsRowsForPermission(permission, userKey) {
+  const hasUserKey = userKey !== null && userKey !== undefined && Number.isFinite(Number(userKey));
+
   const sqlText = `
     SELECT *
     FROM ${dictionaryVersionDetailsView}
     WHERE UPPER(TRIM(DICTIONARY_KEY)) = ?
-    ORDER BY DICTIONARY_VERSION_CODE DESC
+      AND (USER_KEY = 0${hasUserKey ? " OR USER_KEY = ?" : ""})
+    ORDER BY
+      DICTIONARY_VERSION_KEY DESC,
+      DICTIONARY_VERSION_CODE,
+      DICTIONARY_VERSION_NAME
   `;
 
-  return runQuery(sqlText, [normalizeDictionaryName(permission.id)]);
+  const params = [normalizeDictionaryName(permission.id)];
+  if (hasUserKey) {
+    params.push(Number(userKey));
+  }
+
+  return runQuery(sqlText, params);
 }
 
 function getDictionarySortOrderFromVersionRows(rows, dictionaryInstanceKey) {

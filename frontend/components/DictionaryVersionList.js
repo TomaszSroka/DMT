@@ -42,6 +42,8 @@ export async function renderDictionaryVersionList(dictionaryId) {
       const option = document.createElement('option');
       option.value = version.id;
       option.textContent = version.label;
+      option.dataset.location = version.location || '';
+      option.dataset.isCheckedOut = version.isCheckedOut ? '1' : '0';
       dictionaryVersionSelect.appendChild(option);
     });
 

@@ -56,6 +56,7 @@ export const uiTexts = {
   checkOutConfirmMessage: "Confirming this action will lock the dictionary for editing by other users.",
   checkOutExistsOtherUserMessage: "Dictionary is currently in edit mode (check out) by user: {userLogin}.<br><br>Please contact this user to confirm when the Edit mode for this Dictionary will be saved or published.",
   checkOutExistsCurrentUserMessage: "You've already edited the Dictionary.<br><br>You can access it by selecting the version: {versionName} from the 'Dictionary Version' list.",
+  returningToCheckoutMessage: "You are returning to change the dictionary you previously edited (checked out).",
   dictionarySelectorAriaLabel: "Select dictionary",
   dictionaryVersionSelectorAriaLabel: "Select dictionary version",
   rowsInitial: "No data",

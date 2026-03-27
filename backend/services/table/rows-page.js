@@ -73,7 +73,7 @@ async function getDictionaryRowsPageForUser(
     .join("");
   const filterBindings = filterRules.map((rule) => rule.pattern);
 
-  const versionRows = await getDictionaryVersionDetailsRowsForPermission(permission);
+  const versionRows = await getDictionaryVersionDetailsRowsForPermission(permission, context.userKey);
   const sortOrderPhrase = getDictionarySortOrderFromVersionRows(versionRows, normalizedVersionKey);
   const selectedSortColumn = String(sortColumnInput || "").trim().toUpperCase();
   const selectedSortDirection = normalizeSortDirection(sortDirectionInput);

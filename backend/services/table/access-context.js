@@ -198,8 +198,13 @@ async function getUserDictionaryContext(userLogin) {
 
   const dictionaryRoles = buildDictionaryRolePairs(accessRows);
 
+  const userKey = accessRows.length > 0 && accessRows[0].USER_KEY != null
+    ? Number(accessRows[0].USER_KEY)
+    : null;
+
   const context = {
     user: normalizedUser,
+    userKey,
     roles,
     dictionaryRoles,
     dictionaries,

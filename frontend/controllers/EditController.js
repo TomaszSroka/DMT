@@ -188,16 +188,35 @@ export function createEditController({
     });
   }
 
-  async function activateUpdaterEditMode(checkOutPayload) {
+  async function activateUpdaterEditMode(checkOutPayload, dictionaryId) {
     if (!checkOutPayload || !checkOutPayload.checkOutDictionaryLocation) {
       throw new Error('Check-out dictionary location was not returned.');
     }
 
     currentVersionLabelOverride = String(checkOutPayload.versionName || '').trim();
-    await tableController.setCheckoutDictionaryLocation(checkOutPayload.checkOutDictionaryLocation);
     tableController.setRowActionLabel(uiTexts.editDictionary || 'Edit');
     isUpdaterEditMode = true;
     setEditorActionButtonsEnabled(true);
+
+    // Clear version key so setCheckoutDictionaryLocation does not trigger an intermediate load.
+    tableController.setDictionaryVersion('');
+    // Set location with empty version key — no load fires, just state update.
+    await tableController.setCheckoutDictionaryLocation(checkOutPayload.checkOutDictionaryLocation);
+
+    if (typeof renderDictionaryVersionList === 'function') {
+      await renderDictionaryVersionList(dictionaryId);
+    }
+
+    if (dictionaryVersionSelect) {
+      const checkedOutOption = Array.from(dictionaryVersionSelect.options).find(
+        (opt) => opt.dataset.isCheckedOut === '1'
+      );
+      if (checkedOutOption) {
+        dictionaryVersionSelect.value = checkedOutOption.value;
+        // Single load: checkout location already set, now set the (negative) version key.
+        tableController.setDictionaryVersion(checkedOutOption.value);
+      }
+    }
   }
 
   function showCheckOutExistsInfo(checkOutPayload) {
@@ -237,12 +256,31 @@ export function createEditController({
 
     if (dictionaryVersionSelect) {
       dictionaryVersionSelect.addEventListener('change', () => {
-        isUpdaterEditMode = false;
-        currentVersionLabelOverride = '';
-        tableController.setCheckoutDictionaryLocation('');
-        tableController.setRowActionLabel(uiTexts.showRowButton || 'Show');
-        setEditorActionButtonsEnabled(false);
-        tableController.setDictionaryVersion(dictionaryVersionSelect.value);
+        const selectedOption = dictionaryVersionSelect.selectedOptions && dictionaryVersionSelect.selectedOptions[0];
+        const isCheckedOut = selectedOption && selectedOption.dataset.isCheckedOut === '1';
+
+        if (isCheckedOut) {
+          const location = selectedOption.dataset.location || '';
+          const label = selectedOption.textContent || '';
+          isUpdaterEditMode = true;
+          currentVersionLabelOverride = label;
+          tableController.setRowActionLabel(uiTexts.editDictionary || 'Edit');
+          setEditorActionButtonsEnabled(true);
+          // Clear version so setCheckoutDictionaryLocation does not fire an intermediate load.
+          tableController.setDictionaryVersion('');
+          // Version is empty — no load fires, just sets location in state.
+          tableController.setCheckoutDictionaryLocation(location);
+          // Single load: checkout location set, now set the (negative) version key.
+          tableController.setDictionaryVersion(dictionaryVersionSelect.value);
+          showInfoDialogWithUsers(uiTexts.returningToCheckoutMessage || 'You are returning to change the dictionary you previously edited (checked out).');
+        } else {
+          isUpdaterEditMode = false;
+          currentVersionLabelOverride = '';
+          tableController.setCheckoutDictionaryLocation('');
+          tableController.setRowActionLabel(uiTexts.showRowButton || 'Show');
+          setEditorActionButtonsEnabled(false);
+          tableController.setDictionaryVersion(dictionaryVersionSelect.value);
+        }
       });
     }
   }
@@ -318,7 +356,7 @@ export function createEditController({
         }
 
         const addResult = await ensureDictionaryCheckOut(selectedDictionary, selectedVersion, 'ADD');
-        await activateUpdaterEditMode(addResult);
+        await activateUpdaterEditMode(addResult, selectedDictionary);
       } catch (error) {
         isUpdaterEditMode = false;
         currentVersionLabelOverride = '';
