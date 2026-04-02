@@ -24,10 +24,11 @@ export function showVersionHistoryDialog(row, columns) {
 	// Fields to hide
 	const hiddenFields = [
 		"DICTIONARY_KEY",
+		"DICTIONARY_LOCATION",
 		"DICTIONARY_SORT_ORDER",
 		"DICTIONARY_VERSION_KEY",
 		"DICTIONARY_VERSION_CODE",
-		"DICTIONARY_LOCATION"
+		"USER_KEY"
 	];
 
 	// Handling multiple versions: row can be an array or an object

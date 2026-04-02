@@ -6,10 +6,23 @@ const { snowflake: snowflakeConfig } = require("./env");
 
 const logsDir = path.resolve(process.cwd(), "logs");
 const snowflakeLogPath = path.join(logsDir, "snowflake.log");
+const snowflakeQueriesLogPath = path.join(logsDir, "snowflake-queries");
 
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
+
+function truncateLogFile(filePath) {
+  try {
+    fs.writeFileSync(filePath, "", "utf8");
+  } catch (error) {
+    console.error("Failed to truncate log file:", filePath, error.message);
+  }
+}
+
+// Temporary safeguard: keep logs small by truncating both files on each app start.
+truncateLogFile(snowflakeLogPath);
+truncateLogFile(snowflakeQueriesLogPath);
 
 // Pre-configure SDK logger before snowflake.configure() so no bootstrap log is written to project root.
 snowflakeLogger.getInstance().configure({
@@ -112,6 +125,48 @@ function createConnection() {
   });
 }
 
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function normalizeMultilineText(value) {
+  return String(value || "")
+    .replace(/\r?\n/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function safeJson(value) {
+  try {
+    return JSON.stringify(value);
+  } catch (error) {
+    return `"<json-serialize-error:${String(error && error.message ? error.message : error)}>"`;
+  }
+}
+
+function appendSnowflakeQueryLog({ status, sqlText, binds, durationMs, errorMessage }) {
+  const sql = normalizeMultilineText(sqlText);
+  const bindsJson = safeJson(Array.isArray(binds) ? binds : []);
+  const lineParts = [
+    `[${nowIso()}]`,
+    String(status || "UNKNOWN"),
+    `durationMs=${Number.isFinite(durationMs) ? durationMs : -1}`,
+    `sql="${sql.replace(/"/g, '\\"')}"`,
+    `binds=${bindsJson}`
+  ];
+
+  if (errorMessage) {
+    lineParts.push(`error="${normalizeMultilineText(errorMessage).replace(/"/g, '\\"')}"`);
+  }
+
+  const logLine = `${lineParts.join(" | ")}\n`;
+  fs.appendFile(snowflakeQueriesLogPath, logLine, (appendError) => {
+    if (appendError) {
+      console.error("Snowflake query log append error:", appendError.message);
+    }
+  });
+}
+
 function isRecoverableConnectionError(error) {
   const message = String((error && error.message) || "").toLowerCase();
   if (!message) {
@@ -163,7 +218,11 @@ function destroyConnection(connection) {
 
     connection.destroy((error) => {
       if (error) {
-        console.error("Snowflake connection destroy error:", error.message);
+        const message = String(error && error.message ? error.message : "").toLowerCase();
+        const isAlreadyDisconnected = message.includes("already disconnected") || message.includes("not connected");
+        if (!isAlreadyDisconnected) {
+          console.error("Snowflake connection destroy error:", error.message);
+        }
       }
       resolve();
     });
@@ -290,6 +349,12 @@ async function runQuery(sqlText, binds = []) {
   try {
     const connection = await ensureSlotConnected(slot);
     const result = await execute(connection, sqlText, binds);
+    appendSnowflakeQueryLog({
+      status: "SUCCESS",
+      sqlText,
+      binds,
+      durationMs: nowMs() - queryStart
+    });
     poolMetrics.executedQueries += 1;
     poolMetrics.totalQueryMs += nowMs() - queryStart;
     return result.rows;
@@ -298,11 +363,25 @@ async function runQuery(sqlText, binds = []) {
       await resetSlot(slot);
       const connection = await ensureSlotConnected(slot);
       const result = await execute(connection, sqlText, binds);
+      appendSnowflakeQueryLog({
+        status: "SUCCESS",
+        sqlText,
+        binds,
+        durationMs: nowMs() - queryStart
+      });
       poolMetrics.retriedQueries += 1;
       poolMetrics.executedQueries += 1;
       poolMetrics.totalQueryMs += nowMs() - queryStart;
       return result.rows;
     }
+
+    appendSnowflakeQueryLog({
+      status: "ERROR",
+      sqlText,
+      binds,
+      durationMs: nowMs() - queryStart,
+      errorMessage: error && error.message ? error.message : String(error)
+    });
 
     poolMetrics.failedQueries += 1;
     throw error;
