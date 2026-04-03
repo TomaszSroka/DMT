@@ -12,6 +12,7 @@ import { fetchUserManagers } from '../services/UserManagers.js';
 import { ensureDictionaryCheckOut } from '../services/CheckOutService.js';
 import { getCurrentUserKey } from '../services/ApiClient.js';
 import { beginDbLoading } from '../utils/db-loading.js';
+import { openDecisionDialog, setInfoDialogContent } from './EditController.dialogs.js';
 
 export function createEditController({
   editButton,
@@ -54,24 +55,12 @@ export function createEditController({
   }
 
   function setInfoDialogMessage(message, users = []) {
-    if (notImplementedMessage) {
-      notImplementedMessage.innerHTML = message;
-    }
-
-    if (notImplementedManagersList) {
-      notImplementedManagersList.innerHTML = '';
-      users.forEach((user) => {
-        const userName = user && user.userName ? String(user.userName).trim() : '';
-        if (!userName) {
-          return;
-        }
-
-        const email = user && user.email ? String(user.email).trim() : '';
-        const item = document.createElement('li');
-        item.textContent = email ? `${userName} - ${email}` : userName;
-        notImplementedManagersList.appendChild(item);
-      });
-    }
+    setInfoDialogContent({
+      messageElement: notImplementedMessage,
+      managersListElement: notImplementedManagersList,
+      message,
+      users
+    });
   }
 
   function showInfoDialogWithUsers(message, users = []) {
@@ -144,50 +133,12 @@ export function createEditController({
     const message = uiTexts.checkOutConfirmMessage
       || 'Confirming the edit will generate a new table with a copy of the Dictionary only for you and the Dictionary will be locked for editing by other Users.';
 
-    if (!checkOutConfirmDialog || !checkOutConfirmButton || !checkOutCancelButton) {
-      return Promise.resolve(window.confirm(message));
-    }
-
-    if (checkOutConfirmMessage) {
-      checkOutConfirmMessage.textContent = message;
-    }
-
-    return new Promise((resolve) => {
-      let finished = false;
-      let dialogResult = false;
-
-      const finish = (result) => {
-        if (finished) {
-          return;
-        }
-
-        finished = true;
-        cleanup();
-        resolve(Boolean(result));
-      };
-
-      const onConfirm = () => {
-        dialogResult = true;
-        checkOutConfirmDialog.close();
-      };
-
-      const onCancel = () => {
-        dialogResult = false;
-        checkOutConfirmDialog.close();
-      };
-
-      const onClose = () => finish(dialogResult);
-
-      const cleanup = () => {
-        checkOutConfirmButton.removeEventListener('click', onConfirm);
-        checkOutCancelButton.removeEventListener('click', onCancel);
-        checkOutConfirmDialog.removeEventListener('close', onClose);
-      };
-
-      checkOutConfirmButton.addEventListener('click', onConfirm);
-      checkOutCancelButton.addEventListener('click', onCancel);
-      checkOutConfirmDialog.addEventListener('close', onClose);
-      checkOutConfirmDialog.showModal();
+    return openDecisionDialog({
+      dialog: checkOutConfirmDialog,
+      messageElement: checkOutConfirmMessage,
+      confirmButton: checkOutConfirmButton,
+      cancelButton: checkOutCancelButton,
+      message
     });
   }
 

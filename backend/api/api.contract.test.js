@@ -7,8 +7,15 @@ const dotenv = require("dotenv");
 
 const TEST_PORT = 3310;
 const BASE_URL = `http://127.0.0.1:${TEST_PORT}`;
+const DEFAULT_USER_KEY = "READER";
 
 let serverProcess;
+
+function withUserKey(url, userKey = DEFAULT_USER_KEY) {
+  const target = new URL(url);
+  target.searchParams.set("userKey", userKey);
+  return target.toString();
+}
 
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
@@ -163,7 +170,7 @@ test("ready endpoint contract", async () => {
 });
 
 test("rows filtering ignores leading and trailing source whitespace", async (t) => {
-  const metaResponse = await fetch(`${BASE_URL}/api/meta`);
+  const metaResponse = await fetch(withUserKey(`${BASE_URL}/api/meta`));
   assert.equal(metaResponse.status, 200);
   const metaPayload = await metaResponse.json();
 
@@ -175,7 +182,7 @@ test("rows filtering ignores leading and trailing source whitespace", async (t) 
 
   const dictionaryId = String(dictionaries[0].id);
 
-  const versionsResponse = await fetch(`${BASE_URL}/api/dictionaries/${encodeURIComponent(dictionaryId)}/versions`);
+  const versionsResponse = await fetch(withUserKey(`${BASE_URL}/api/dictionaries/${encodeURIComponent(dictionaryId)}/versions`));
   assert.equal(versionsResponse.status, 200);
   const versionsPayload = await versionsResponse.json();
   const versions = Array.isArray(versionsPayload && versionsPayload.versions) ? versionsPayload.versions : [];
@@ -189,6 +196,7 @@ test("rows filtering ignores leading and trailing source whitespace", async (t) 
   rowsUrl.searchParams.set("page", "1");
   rowsUrl.searchParams.set("pageSize", "100");
   rowsUrl.searchParams.set("dictionaryVersionKey", dictionaryVersionKey);
+  rowsUrl.searchParams.set("userKey", DEFAULT_USER_KEY);
 
   const rowsResponse = await fetch(rowsUrl);
   assert.equal(rowsResponse.status, 200);
@@ -234,6 +242,7 @@ test("rows filtering ignores leading and trailing source whitespace", async (t) 
   filteredUrl.searchParams.set("pageSize", "100");
   filteredUrl.searchParams.set("dictionaryVersionKey", dictionaryVersionKey);
   filteredUrl.searchParams.set("filters", JSON.stringify([{ column: candidate.column, value: candidate.filterValue }]));
+  filteredUrl.searchParams.set("userKey", DEFAULT_USER_KEY);
 
   const filteredResponse = await fetch(filteredUrl);
   assert.equal(filteredResponse.status, 200);
@@ -261,7 +270,7 @@ test("snowflake connectivity check via ready endpoint", async () => {
 });
 
 test("user, dictionary and version query payload structure contract", async (t) => {
-  const userContextResponse = await fetch(`${BASE_URL}/api/user-context`);
+  const userContextResponse = await fetch(withUserKey(`${BASE_URL}/api/user-context`));
   assert.equal(userContextResponse.status, 200);
   const userContextPayload = await userContextResponse.json();
 
@@ -270,7 +279,7 @@ test("user, dictionary and version query payload structure contract", async (t) 
   assert.ok(Array.isArray(userContextPayload.roles));
   assert.ok(Array.isArray(userContextPayload.dictionaryRoles));
 
-  const metaResponse = await fetch(`${BASE_URL}/api/meta`);
+  const metaResponse = await fetch(withUserKey(`${BASE_URL}/api/meta`));
   assert.equal(metaResponse.status, 200);
   const metaPayload = await metaResponse.json();
 
@@ -291,7 +300,7 @@ test("user, dictionary and version query payload structure contract", async (t) 
   assert.equal(typeof dictionary.canUpdate, "boolean");
 
   const versionsResponse = await fetch(
-    `${BASE_URL}/api/dictionaries/${encodeURIComponent(dictionary.id)}/versions`
+    withUserKey(`${BASE_URL}/api/dictionaries/${encodeURIComponent(dictionary.id)}/versions`)
   );
   assert.equal(versionsResponse.status, 200);
   const versionsPayload = await versionsResponse.json();
@@ -314,6 +323,7 @@ test("user, dictionary and version query payload structure contract", async (t) 
   rowsUrl.searchParams.set("page", "1");
   rowsUrl.searchParams.set("pageSize", "1");
   rowsUrl.searchParams.set("dictionaryVersionKey", version.id);
+  rowsUrl.searchParams.set("userKey", DEFAULT_USER_KEY);
 
   const rowsResponse = await fetch(rowsUrl);
   assert.equal(rowsResponse.status, 200);
@@ -332,7 +342,7 @@ test("user, dictionary and version query payload structure contract", async (t) 
 });
 
 test("user managers endpoint contract", async () => {
-  const response = await fetch(`${BASE_URL}/api/user-managers`);
+  const response = await fetch(withUserKey(`${BASE_URL}/api/user-managers`));
   assert.equal(response.status, 200);
 
   const payload = await response.json();
@@ -346,7 +356,7 @@ test("user managers endpoint contract", async () => {
 });
 
 test("unknown userKey is rejected in mock auth mode", async () => {
-  const response = await fetch(`${BASE_URL}/api/meta?userKey=NOT_ALLOWED_USER`);
+  const response = await fetch(withUserKey(`${BASE_URL}/api/meta`, "NOT_ALLOWED_USER"));
   assert.equal(response.status, 401);
 
   const payload = await response.json();
@@ -354,8 +364,17 @@ test("unknown userKey is rejected in mock auth mode", async () => {
   assert.equal(payload.errorCode, "AUTH_USER_KEY_INVALID");
 });
 
+test("missing userKey is rejected in mock auth mode", async () => {
+  const response = await fetch(`${BASE_URL}/api/meta`);
+  assert.equal(response.status, 401);
+
+  const payload = await response.json();
+  assert.equal(typeof payload.error, "string");
+  assert.equal(payload.errorCode, "AUTH_USER_KEY_REQUIRED");
+});
+
 test("dictionary check-out endpoint contract", async (t) => {
-  const metaResponse = await fetch(`${BASE_URL}/api/meta`);
+  const metaResponse = await fetch(withUserKey(`${BASE_URL}/api/meta`));
   assert.equal(metaResponse.status, 200);
   const metaPayload = await metaResponse.json();
   const dictionaries = Array.isArray(metaPayload && metaPayload.dictionaries) ? metaPayload.dictionaries : [];
@@ -367,7 +386,7 @@ test("dictionary check-out endpoint contract", async (t) => {
   }
 
   const versionsResponse = await fetch(
-    `${BASE_URL}/api/dictionaries/${encodeURIComponent(updatableDictionary.id)}/versions`
+    withUserKey(`${BASE_URL}/api/dictionaries/${encodeURIComponent(updatableDictionary.id)}/versions`)
   );
   assert.equal(versionsResponse.status, 200);
   const versionsPayload = await versionsResponse.json();
@@ -379,7 +398,7 @@ test("dictionary check-out endpoint contract", async (t) => {
   }
 
   const checkoutResponse = await fetch(
-    `${BASE_URL}/api/dictionaries/${encodeURIComponent(updatableDictionary.id)}/check-out`,
+    withUserKey(`${BASE_URL}/api/dictionaries/${encodeURIComponent(updatableDictionary.id)}/check-out`),
     {
       method: "POST",
       headers: {
@@ -401,7 +420,7 @@ test("dictionary check-out endpoint contract", async (t) => {
 });
 
 test("dictionary row insert endpoint validation contract", async (t) => {
-  const metaResponse = await fetch(`${BASE_URL}/api/meta`);
+  const metaResponse = await fetch(withUserKey(`${BASE_URL}/api/meta`));
   assert.equal(metaResponse.status, 200);
   const metaPayload = await metaResponse.json();
   const dictionaries = Array.isArray(metaPayload && metaPayload.dictionaries) ? metaPayload.dictionaries : [];
@@ -413,7 +432,7 @@ test("dictionary row insert endpoint validation contract", async (t) => {
   }
 
   const versionsResponse = await fetch(
-    `${BASE_URL}/api/dictionaries/${encodeURIComponent(updatableDictionary.id)}/versions`
+    withUserKey(`${BASE_URL}/api/dictionaries/${encodeURIComponent(updatableDictionary.id)}/versions`)
   );
   assert.equal(versionsResponse.status, 200);
   const versionsPayload = await versionsResponse.json();
@@ -427,7 +446,7 @@ test("dictionary row insert endpoint validation contract", async (t) => {
   const dictionaryVersionKey = String(versions[0].id);
 
   const missingVersionResponse = await fetch(
-    `${BASE_URL}/api/dictionaries/${encodeURIComponent(updatableDictionary.id)}/rows/insert`,
+    withUserKey(`${BASE_URL}/api/dictionaries/${encodeURIComponent(updatableDictionary.id)}/rows/insert`),
     {
       method: "POST",
       headers: {
@@ -443,7 +462,7 @@ test("dictionary row insert endpoint validation contract", async (t) => {
   assert.equal(missingVersionPayload.errorCode, "DICTIONARY_VERSION_KEY_REQUIRED");
 
   const emptyRowResponse = await fetch(
-    `${BASE_URL}/api/dictionaries/${encodeURIComponent(updatableDictionary.id)}/rows/insert`,
+    withUserKey(`${BASE_URL}/api/dictionaries/${encodeURIComponent(updatableDictionary.id)}/rows/insert`),
     {
       method: "POST",
       headers: {

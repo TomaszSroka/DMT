@@ -32,7 +32,7 @@ export function setupLoginScreen(onLoginSuccess) {
   if (button) button.textContent = uiTexts.loginButton || 'Login';
 
   button.addEventListener('click', async () => {
-    const userKey = select.value;
+    const userKey = String(select.value || '').trim();
     errorEl.textContent = '';
     button.disabled = true;
 

@@ -15,6 +15,7 @@ import {
   getChangedEntriesForRows
 } from './RecordDetailsEditDialog.helpers.js';
 import { openConfirmDialog } from './RecordDetailsDialog.confirm.js';
+import { persistRecordRow } from './RecordDetailsEditDialog.persistence.js';
 
 let recordDetailsDialog;
 let recordDetailsTitle;
@@ -319,20 +320,14 @@ function openDiscardConfirmation(changes, introText) {
 }
 
 async function persistCurrentRow() {
-  if (currentContext.isNewRecord) {
-    await postJson(`/api/dictionaries/${encodeURIComponent(currentContext.dictionaryName)}/rows/insert`, {
-      dictionaryVersionKey: currentContext.dictionaryVersionKey,
-      checkoutDictionaryLocation: currentContext.checkoutDictionaryLocation,
-      newRow: currentContext.currentRow
-    });
-    return;
-  }
-
-  await postJson(`/api/dictionaries/${encodeURIComponent(currentContext.dictionaryName)}/rows/save`, {
+  await persistRecordRow({
+    postJson,
+    dictionaryName: currentContext.dictionaryName,
     dictionaryVersionKey: currentContext.dictionaryVersionKey,
     checkoutDictionaryLocation: currentContext.checkoutDictionaryLocation,
+    isNewRecord: currentContext.isNewRecord,
     originalRow: currentContext.originalRow,
-    updatedRow: currentContext.currentRow
+    currentRow: currentContext.currentRow
   });
 }
 

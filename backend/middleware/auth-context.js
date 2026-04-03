@@ -2,23 +2,31 @@ const { authMode, staticUser, userReader, userUpdater, userCreator } = require("
 const { createAppError } = require("../errors/app-error");
 
 const USER_KEY_TO_LOGIN = new Map([
-  ["READER", userReader || staticUser],
-  ["UPDATER", userUpdater || staticUser],
-  ["CREATOR", userCreator || staticUser]
+  ["READER", userReader || "READER@FLSMIDTH.COM"],
+  ["UPDATER", userUpdater || "UPDATER_1@FLSMIDTH.COM"],
+  ["CREATOR", userCreator || "CREATOR@FLSMIDTH.COM"]
 ]);
 
-function isEmailLikeUserKey(value) {
-  const raw = String(value || "").trim();
-  return raw.includes("@") && raw.includes(".");
-}
+const ALLOWED_MOCK_LOGINS = new Map(
+  [
+    staticUser,
+    userReader,
+    userUpdater,
+    userCreator,
+    "READER@FLSMIDTH.COM",
+    "UPDATER_1@FLSMIDTH.COM",
+    "UPDATER_2@FLSMIDTH.COM",
+    "CREATOR@FLSMIDTH.COM"
+  ]
+    .map((value) => String(value || "").trim())
+    .filter((value) => value.length > 0)
+    .map((value) => [value.toUpperCase(), value])
+);
 
 function resolveMockLoginFromUserKey(userKey) {
   const rawValue = String(userKey || "").trim();
   if (!rawValue) {
-    return {
-      login: staticUser,
-      source: "mock-default"
-    };
+    throw createAppError("Query param 'userKey' is required in mock auth mode.", 401, "AUTH_USER_KEY_REQUIRED");
   }
 
   const mapped = USER_KEY_TO_LOGIN.get(rawValue.toUpperCase());
@@ -29,15 +37,16 @@ function resolveMockLoginFromUserKey(userKey) {
     };
   }
 
-  if (isEmailLikeUserKey(rawValue)) {
+  const allowedLogin = ALLOWED_MOCK_LOGINS.get(rawValue.toUpperCase());
+  if (allowedLogin) {
     return {
-      login: rawValue,
-      source: "mock-email"
+      login: allowedLogin,
+      source: "mock-login"
     };
   }
 
   throw createAppError(
-    "Query param 'userKey' must be one of: READER, UPDATER, CREATOR, or an email-like login.",
+    "Query param 'userKey' must be one of: READER, UPDATER, CREATOR, or an allowed mock login.",
     401,
     "AUTH_USER_KEY_INVALID"
   );
