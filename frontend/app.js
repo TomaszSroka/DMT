@@ -18,6 +18,7 @@ import { renderDictionaryVersionList } from './components/DictionaryVersionList.
 import { setupVersionHistoryButton } from './components/VersionHistoryButton.js';
 import { setupVersionHistoryDialog } from './components/VersionHistoryDialog.js';
 import { setupRecordDetailsShowDialog, showRecordDetailsShowDialog } from './components/RecordDetailsShowDialog.js';
+import { setupRecordDetailsEditDialog, showRecordDetailsEditDialog } from './components/RecordDetailsEditDialog.js';
 import { setupErrorDetailsDialog, showErrorDetailsDialog } from './components/ErrorDetailsDialog.js';
 import { createMainTableController } from './components/MainTable.js';
 import { createFiltersDialogController } from './components/FiltersDialog.js';
@@ -86,6 +87,7 @@ function initMainApp() {
   // Initialize dialogs
   setupVersionHistoryDialog();
   setupRecordDetailsShowDialog();
+  setupRecordDetailsEditDialog({ showErrorDetailsDialog });
   setupErrorDetailsDialog();
 
   // Assign texts to UI elements
@@ -174,6 +176,32 @@ function initMainApp() {
         || (dictionaryVersionSelect && dictionaryVersionSelect.selectedOptions && dictionaryVersionSelect.selectedOptions[0]
           ? dictionaryVersionSelect.selectedOptions[0].textContent
           : '');
+
+      const userContext = window.__DMT_USER_CONTEXT || {};
+      const dictionaryRoles = Array.isArray(userContext.dictionaryRoles) ? userContext.dictionaryRoles : [];
+      const canUpdateSelectedDictionary = dictionaryRoles.some((item) => {
+        const dictionaryId = item && item.dictionary ? String(item.dictionary).trim().toUpperCase() : '';
+        const role = item && item.role ? String(item.role).trim().toUpperCase() : '';
+        return dictionaryId === String(selectedDictionary || '').trim().toUpperCase() && role === 'DICTIONARY_UPDATER';
+      });
+      const isUpdaterEditMode = editController && typeof editController.getIsUpdaterEditMode === 'function'
+        ? editController.getIsUpdaterEditMode()
+        : false;
+
+      if (canUpdateSelectedDictionary && isUpdaterEditMode) {
+        const state = tableController.getState();
+        showRecordDetailsEditDialog({
+          dictionaryName: selectedDictionary,
+          dictionaryLabel: selectedDictionaryLabel,
+          versionLabel: selectedVersionLabel,
+          dictionaryVersionKey: state.selectedDictionaryVersionKey,
+          checkoutDictionaryLocation: state.checkoutDictionaryLocation,
+          row,
+          columns,
+          onAfterSave: () => tableController.setDictionaryVersion(state.selectedDictionaryVersionKey)
+        });
+        return;
+      }
 
       showRecordDetailsShowDialog({
         dictionaryLabel: selectedDictionaryLabel,

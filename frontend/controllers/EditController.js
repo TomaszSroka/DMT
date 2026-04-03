@@ -247,7 +247,18 @@ export function createEditController({
         currentVersionLabelOverride = '';
         setEditorActionButtonsEnabled(false);
         tableController.setCheckoutDictionaryLocation('');
-        tableController.setRowActionLabel(uiTexts.showRowButton || 'Show');
+        
+        // Set row action button label based on user role (Edit for UPDATER, Show for others)
+        const userContext = window.__DMT_USER_CONTEXT || {};
+        const dictionaryRoles = Array.isArray(userContext.dictionaryRoles) ? userContext.dictionaryRoles : [];
+        const canUpdateThisDictionary = dictionaryRoles.some((item) => {
+          const dictionaryId = item && item.dictionary ? String(item.dictionary).trim().toUpperCase() : '';
+          const role = item && item.role ? String(item.role).trim().toUpperCase() : '';
+          return dictionaryId === String(selectedDictionary || '').trim().toUpperCase() && role === 'DICTIONARY_UPDATER';
+        });
+        const newLabel = canUpdateThisDictionary ? (uiTexts.editDictionary || 'Edit') : (uiTexts.showRowButton || 'Show');
+        tableController.setRowActionLabel(newLabel);
+        
         if (typeof renderDictionaryVersionList === 'function') {
           await renderDictionaryVersionList(selectedDictionary);
         }

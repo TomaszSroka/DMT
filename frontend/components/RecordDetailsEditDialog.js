@@ -1,35 +1,103 @@
 /**
  * RecordDetailsEditDialog.js
  *
- * Placeholder clone for edit-mode record details dialog.
- * No references are wired yet.
+ * Editable record dialog used for DICTIONARY_UPDATER role.
  */
+
+import { postJson } from '../services/ApiClient.js';
+import { uiTexts } from '../config/ui-texts.js';
 
 let recordDetailsDialog;
 let recordDetailsTitle;
 let recordDetailsCloseButton;
 let recordDetailsContent;
-let isDblClickHandlerBound = false;
+let showErrorDetailsDialog = null;
+let saveActionButton = null;
+let discardActionButton = null;
+
+let currentContext = {
+  dictionaryName: '',
+  dictionaryVersionKey: '',
+  checkoutDictionaryLocation: '',
+  columns: [],
+  originalRow: {},
+  currentRow: {},
+  onAfterSave: null
+};
+
 const MAX_VISIBLE_FIELDS = 20;
 
-export function setupRecordDetailsEditDialog() {
+export function setupRecordDetailsEditDialog({ showErrorDetailsDialog: showErrorDialog } = {}) {
+  showErrorDetailsDialog = typeof showErrorDialog === 'function' ? showErrorDialog : null;
+
   recordDetailsDialog = document.getElementById('showRecordDialog');
   recordDetailsTitle = document.getElementById('showRecordTitle');
   recordDetailsCloseButton = document.getElementById('showRecordCloseButton');
   recordDetailsContent = document.getElementById('showRecordContent');
 
-  if (recordDetailsCloseButton && recordDetailsDialog) {
-    recordDetailsCloseButton.addEventListener('click', () => recordDetailsDialog.close());
+  ensureActionButtons();
+}
+
+function ensureInitialized() {
+  if (recordDetailsDialog && recordDetailsTitle && recordDetailsCloseButton && recordDetailsContent) {
+    return true;
   }
 
-  if (recordDetailsContent && !isDblClickHandlerBound) {
-    recordDetailsContent.addEventListener('dblclick', handleFieldDblClick);
-    isDblClickHandlerBound = true;
+  setupRecordDetailsEditDialog();
+  return Boolean(recordDetailsDialog && recordDetailsTitle && recordDetailsCloseButton && recordDetailsContent);
+}
+
+function ensureActionButtons() {
+  if (!recordDetailsDialog) {
+    return;
+  }
+
+  const actionsContainer = recordDetailsDialog.querySelector('.show-record-actions');
+  if (!actionsContainer) {
+    return;
+  }
+
+  if (!saveActionButton) {
+    saveActionButton = document.createElement('button');
+    saveActionButton.type = 'button';
+    saveActionButton.className = 'btn btn-save';
+    saveActionButton.textContent = uiTexts.save || 'Save';
+    saveActionButton.disabled = true;
+    saveActionButton.addEventListener('click', onSaveClick);
+    actionsContainer.insertBefore(saveActionButton, recordDetailsCloseButton || null);
+  }
+
+  if (!discardActionButton) {
+    discardActionButton = document.createElement('button');
+    discardActionButton.type = 'button';
+    discardActionButton.className = 'btn btn-discard';
+    discardActionButton.textContent = uiTexts.discard || 'Discard';
+    discardActionButton.disabled = true;
+    discardActionButton.addEventListener('click', onDiscardClick);
+    actionsContainer.insertBefore(discardActionButton, recordDetailsCloseButton || null);
+  }
+
+  if (recordDetailsCloseButton) {
+    recordDetailsCloseButton.onclick = onCloseClick;
+  }
+
+  if (recordDetailsContent) {
+    recordDetailsContent.ondblclick = handleFieldDblClick;
+    recordDetailsContent.oninput = onFieldInput;
   }
 }
 
-export function showRecordDetailsEditDialog({ dictionaryLabel = '', versionLabel = '', row = {}, columns = [] } = {}) {
-  if (!recordDetailsDialog || !recordDetailsTitle || !recordDetailsContent) {
+export function showRecordDetailsEditDialog({
+  dictionaryName = '',
+  dictionaryLabel = '',
+  versionLabel = '',
+  dictionaryVersionKey = '',
+  checkoutDictionaryLocation = '',
+  row = {},
+  columns = [],
+  onAfterSave = null
+} = {}) {
+  if (!ensureInitialized()) {
     return;
   }
 
@@ -37,12 +105,27 @@ export function showRecordDetailsEditDialog({ dictionaryLabel = '', versionLabel
   const safeVersion = String(versionLabel || '').trim();
   const titleSuffix = [safeDictionary, safeVersion ? `ver. ${safeVersion}` : ''].filter(Boolean).join(' ');
 
+  currentContext = {
+    dictionaryName: String(dictionaryName || '').trim(),
+    dictionaryVersionKey: String(dictionaryVersionKey || '').trim(),
+    checkoutDictionaryLocation: String(checkoutDictionaryLocation || '').trim(),
+    columns: Array.isArray(columns) ? columns : [],
+    originalRow: cloneRow(row),
+    currentRow: cloneRow(row),
+    onAfterSave: typeof onAfterSave === 'function' ? onAfterSave : null
+  };
+
   recordDetailsTitle.textContent = `Record for: ${titleSuffix}`;
-  recordDetailsContent.innerHTML = buildReadGrid(row, columns);
+  renderEditGrid();
+  updateActionButtonsState();
   recordDetailsDialog.showModal();
 }
 
-function buildReadGrid(row, columns) {
+function renderEditGrid() {
+  recordDetailsContent.innerHTML = buildEditGrid(currentContext.currentRow, currentContext.columns);
+}
+
+function buildEditGrid(row, columns) {
   const safeRow = row && typeof row === 'object' ? row : {};
   const orderedFields = Array.isArray(columns) && columns.length > 0
     ? columns
@@ -64,19 +147,276 @@ function buildReadGrid(row, columns) {
         .filter(Boolean)
     : Object.keys(safeRow).map((key) => ({ technical: key, business: key }));
 
-  const limitedFields = orderedFields.slice(0, MAX_VISIBLE_FIELDS);
-  if (limitedFields.length === 0) {
+  // Separate KEY column (always last, readonly)
+  const keyField = orderedFields.find((f) => f.technical === 'KEY');
+  const regularFields = orderedFields.filter((f) => f.technical !== 'KEY');
+  const limitedRegularFields = regularFields.slice(0, MAX_VISIBLE_FIELDS);
+  const fieldsToDisplay = [...limitedRegularFields, ...(keyField ? [keyField] : [])];
+
+  if (fieldsToDisplay.length === 0) {
     return '<div class="show-record-empty">No fields to display.</div>';
   }
 
-  const fieldCards = limitedFields
+  const changedMap = getChangedMap();
+  const fieldCards = fieldsToDisplay
     .map((field) => {
-      const rawValue = safeRow[field.technical] == null ? '' : String(safeRow[field.technical]);
-      return `<label class="show-record-card"><span class="show-record-label">${escapeHtml(field.business)}</span><textarea class="show-record-control" rows="2" readonly title="${escapeHtml(rawValue)}">${escapeHtml(rawValue)}</textarea></label>`;
+      const technical = String(field.technical || '').trim();
+      const rawValue = safeRow[technical] == null ? '' : String(safeRow[technical]);
+      const isKeyField = technical === 'KEY';
+      const changedClass = !isKeyField && changedMap.has(technical) ? ' show-record-card-changed' : '';
+      const readonlyAttr = isKeyField ? ' readonly' : '';
+      return `<label class="show-record-card${changedClass}"><span class="show-record-label">${escapeHtml(field.business)}</span><textarea class="show-record-control" rows="2" data-column="${escapeHtml(technical)}" title="${escapeHtml(rawValue)}"${readonlyAttr}>${escapeHtml(rawValue)}</textarea></label>`;
     })
     .join('');
 
   return `<div class="show-record-grid">${fieldCards}</div>`;
+}
+
+function getChangedEntries() {
+  const entries = [];
+  const original = currentContext.originalRow || {};
+  const current = currentContext.currentRow || {};
+
+  Object.keys(current).forEach((key) => {
+    // KEY column is never editable, skip from change tracking
+    if (key === 'KEY') {
+      return;
+    }
+
+    const before = normalizeComparableValue(original[key]);
+    const after = normalizeComparableValue(current[key]);
+    if (before !== after) {
+      entries.push({
+        column: key,
+        from: original[key],
+        to: current[key]
+      });
+    }
+  });
+
+  return entries;
+}
+
+function getChangedMap() {
+  return new Set(getChangedEntries().map((item) => item.column));
+}
+
+function normalizeComparableValue(value) {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  return String(value);
+}
+
+function onFieldInput(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLTextAreaElement)) {
+    return;
+  }
+
+  const technical = String(target.dataset.column || '').trim();
+  if (!technical) {
+    return;
+  }
+
+  // KEY column is readonly, prevent any changes
+  if (technical === 'KEY') {
+    target.value = currentContext.originalRow[technical] || '';
+    return;
+  }
+
+  currentContext.currentRow[technical] = target.value;
+  target.title = target.value;
+  updateActionButtonsState();
+  renderDirtyHighlight();
+}
+
+function renderDirtyHighlight() {
+  const changedMap = getChangedMap();
+  const cards = Array.from(recordDetailsContent.querySelectorAll('.show-record-card'));
+  cards.forEach((card) => {
+    const textarea = card.querySelector('textarea[data-column]');
+    const technical = textarea ? String(textarea.dataset.column || '').trim() : '';
+    card.classList.toggle('show-record-card-changed', Boolean(technical && changedMap.has(technical)));
+  });
+}
+
+function updateActionButtonsState() {
+  const hasChanges = getChangedEntries().length > 0;
+  if (saveActionButton) {
+    saveActionButton.disabled = !hasChanges;
+  }
+  if (discardActionButton) {
+    discardActionButton.disabled = !hasChanges;
+  }
+}
+
+function formatChangeValue(value) {
+  if (value === null || value === undefined || String(value).length === 0) {
+    return uiTexts.emptyValue || '(empty)';
+  }
+  return String(value);
+}
+
+function buildChangesListHtml(changes) {
+  return changes
+    .map((change) => {
+      const from = escapeHtml(formatChangeValue(change.from));
+      const to = escapeHtml(formatChangeValue(change.to));
+      return `<li><strong>${escapeHtml(change.column)}</strong>: ${from} -> ${to}</li>`;
+    })
+    .join('');
+}
+
+function openSaveConfirmation(changes) {
+  const dialog = document.getElementById('saveDialog');
+  const intro = document.getElementById('saveDialogIntro');
+  const list = document.getElementById('saveChangesList');
+  const confirmButton = document.getElementById('saveConfirmButton');
+  const cancelButton = document.getElementById('saveStayButton');
+
+  if (!dialog || !intro || !list || !confirmButton || !cancelButton) {
+    return Promise.resolve(window.confirm(uiTexts.saveDialogIntro || 'Are you sure you want to save changes?'));
+  }
+
+  intro.textContent = uiTexts.saveDialogIntro || 'Are you sure you want to save changes?';
+  list.innerHTML = buildChangesListHtml(changes);
+
+  return openConfirmDialog(dialog, confirmButton, cancelButton);
+}
+
+function openDiscardConfirmation(changes, introText) {
+  const dialog = document.getElementById('discardDialog');
+  const intro = document.getElementById('discardDialogIntro');
+  const list = document.getElementById('discardChangesList');
+  const confirmButton = document.getElementById('discardConfirmButton');
+  const cancelButton = document.getElementById('discardStayButton');
+
+  if (!dialog || !intro || !list || !confirmButton || !cancelButton) {
+    return Promise.resolve(window.confirm(introText || uiTexts.discardDialogIntro || 'Are you sure you want to discard changes?'));
+  }
+
+  intro.textContent = introText || uiTexts.discardDialogIntro || 'Are you sure you want to discard changes?';
+  list.innerHTML = buildChangesListHtml(changes);
+
+  return openConfirmDialog(dialog, confirmButton, cancelButton);
+}
+
+function openConfirmDialog(dialog, confirmButton, cancelButton) {
+  return new Promise((resolve) => {
+    let finished = false;
+    let confirmed = false;
+
+    const finish = (result) => {
+      if (finished) {
+        return;
+      }
+      finished = true;
+      cleanup();
+      resolve(Boolean(result));
+    };
+
+    const onConfirm = () => {
+      confirmed = true;
+      dialog.close();
+    };
+
+    const onCancel = () => {
+      confirmed = false;
+      dialog.close();
+    };
+
+    const onClose = () => finish(confirmed);
+
+    const cleanup = () => {
+      confirmButton.removeEventListener('click', onConfirm);
+      cancelButton.removeEventListener('click', onCancel);
+      dialog.removeEventListener('close', onClose);
+    };
+
+    confirmButton.addEventListener('click', onConfirm);
+    cancelButton.addEventListener('click', onCancel);
+    dialog.addEventListener('close', onClose);
+    dialog.showModal();
+  });
+}
+
+async function onSaveClick() {
+  const changes = getChangedEntries();
+  if (changes.length === 0) {
+    return;
+  }
+
+  const confirmed = await openSaveConfirmation(changes);
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await postJson(`/api/dictionaries/${encodeURIComponent(currentContext.dictionaryName)}/rows/save`, {
+      dictionaryVersionKey: currentContext.dictionaryVersionKey,
+      checkoutDictionaryLocation: currentContext.checkoutDictionaryLocation,
+      originalRow: currentContext.originalRow,
+      updatedRow: currentContext.currentRow
+    });
+
+    currentContext.originalRow = cloneRow(currentContext.currentRow);
+    updateActionButtonsState();
+    renderDirtyHighlight();
+
+    if (typeof currentContext.onAfterSave === 'function') {
+      await currentContext.onAfterSave();
+    }
+  } catch (error) {
+    const message = error && error.message ? error.message : String(error);
+    const details = error && error.details ? error.details : '';
+    if (showErrorDetailsDialog) {
+      showErrorDetailsDialog(message, details);
+    } else {
+      window.alert(message);
+    }
+  }
+}
+
+async function onDiscardClick() {
+  const changes = getChangedEntries();
+  if (changes.length === 0) {
+    return;
+  }
+
+  const confirmed = await openDiscardConfirmation(changes, uiTexts.discardDialogIntro || 'Are you sure you want to discard changes?');
+  if (!confirmed) {
+    return;
+  }
+
+  currentContext.currentRow = cloneRow(currentContext.originalRow);
+  renderEditGrid();
+  updateActionButtonsState();
+}
+
+async function onCloseClick() {
+  const changes = getChangedEntries();
+  if (changes.length === 0) {
+    recordDetailsDialog.close();
+    return;
+  }
+
+  const confirmed = await openDiscardConfirmation(
+    changes,
+    'Unsaved changes were detected. Are you sure you want to discard these changes?'
+  );
+  if (!confirmed) {
+    return;
+  }
+
+  currentContext.currentRow = cloneRow(currentContext.originalRow);
+  renderEditGrid();
+  updateActionButtonsState();
+  recordDetailsDialog.close();
+}
+
+function cloneRow(row) {
+  return JSON.parse(JSON.stringify(row && typeof row === 'object' ? row : {}));
 }
 
 function escapeHtml(value) {
@@ -96,12 +436,12 @@ function handleFieldDblClick(event) {
   if (!target.classList.contains('show-record-control')) {
     return;
   }
+
   const isExpanded = target.classList.toggle('show-record-control-expanded');
   if (isExpanded) {
     requestAnimationFrame(() => {
       scrollFieldIntoDialogView(target);
     });
-    // Run once more after the expand transition starts so final position is corrected.
     window.setTimeout(() => {
       scrollFieldIntoDialogView(target);
     }, 140);

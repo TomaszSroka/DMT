@@ -8,7 +8,8 @@ const {
   getDictionaryVersionsForUser,
   getUserDictionaryContext,
   getUsersForRole,
-  ensureDictionaryCheckOutForUser
+  ensureDictionaryCheckOutForUser,
+  saveDictionaryRowForUser
 } = require("../services/table.service");
 const { getErrorPayload } = require("../errors/app-error");
 const { getDictionaryColumns } = require("../services/table/dictionary-columns");
@@ -162,6 +163,18 @@ router.get(
 );
 
 router.post(
+  "/dictionaries/:name/rows/save",
+  withApiErrorHandling("Could not save Dictionary row.", "ROW_SAVE_FAILED", async (req, res) => {
+    const payload = await saveDictionaryRowForUser(
+      getUserLogin(req.query.userKey),
+      req.params.name,
+      req.body || {}
+    );
+    res.json(payload);
+  })
+);
+
+router.post(
   "/dictionaries/:name/check-out",
   withApiErrorHandling("Could not check out Dictionary for editing.", "CHECK_OUT_FAILED", async (req, res) => {
     const dictionaryVersionKey = String(req.body && req.body.dictionaryVersionKey ? req.body.dictionaryVersionKey : "").trim();
@@ -233,6 +246,7 @@ router.get(
       throw createAppError("Query param 'dictionaryVersionKey' is required.", 400, "DICTIONARY_VERSION_KEY_REQUIRED");
     }
     const columns = await getDictionaryColumns(dictionaryKey, dictionaryVersionKey);
+
     res.json({ columns });
   })
 );

@@ -10,6 +10,7 @@ const { getDictionaryVersionsForUser } = require("./table/versions");
 const { getDictionaryVersionHistoryForUser } = require("./table/version-history");
 const { getUsersForRole } = require("./table/user-managers");
 const { ensureDictionaryCheckOutForUser } = require("./table/check-out");
+const { saveDictionaryRowForUser } = require("./table/row-edit");
 const {
   normalizeFilterRules,
   normalizeSortDirection,
@@ -27,6 +28,7 @@ module.exports = {
   getDictionaryVersionHistoryForUser,
   getUsersForRole,
   ensureDictionaryCheckOutForUser,
+  saveDictionaryRowForUser,
   __test: {
     normalizeFilterRules,
     normalizeSortDirection,

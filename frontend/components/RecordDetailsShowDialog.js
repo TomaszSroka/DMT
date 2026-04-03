@@ -8,7 +8,6 @@ let recordDetailsDialog;
 let recordDetailsTitle;
 let recordDetailsCloseButton;
 let recordDetailsContent;
-let isDblClickHandlerBound = false;
 const MAX_VISIBLE_FIELDS = 20;
 
 export function setupRecordDetailsShowDialog() {
@@ -16,15 +15,6 @@ export function setupRecordDetailsShowDialog() {
   recordDetailsTitle = document.getElementById('showRecordTitle');
   recordDetailsCloseButton = document.getElementById('showRecordCloseButton');
   recordDetailsContent = document.getElementById('showRecordContent');
-
-  if (recordDetailsCloseButton && recordDetailsDialog) {
-    recordDetailsCloseButton.addEventListener('click', () => recordDetailsDialog.close());
-  }
-
-  if (recordDetailsContent && !isDblClickHandlerBound) {
-    recordDetailsContent.addEventListener('dblclick', handleFieldDblClick);
-    isDblClickHandlerBound = true;
-  }
 }
 
 export function showRecordDetailsShowDialog({ dictionaryLabel = '', versionLabel = '', row = {}, columns = [] } = {}) {
@@ -35,6 +25,26 @@ export function showRecordDetailsShowDialog({ dictionaryLabel = '', versionLabel
   const safeDictionary = String(dictionaryLabel || '').trim();
   const safeVersion = String(versionLabel || '').trim();
   const titleSuffix = [safeDictionary, safeVersion ? `ver. ${safeVersion}` : ''].filter(Boolean).join(' ');
+
+  // Remove Save and Discard buttons (left over from Edit Dialog)
+  const actionsContainer = recordDetailsDialog.querySelector('.show-record-actions');
+  if (actionsContainer) {
+    const saveButton = actionsContainer.querySelector('.btn-save');
+    const discardButton = actionsContainer.querySelector('.btn-discard:not(#showRecordCloseButton)');
+    if (saveButton) {
+      saveButton.remove();
+    }
+    if (discardButton) {
+      discardButton.remove();
+    }
+  }
+
+  if (recordDetailsCloseButton && recordDetailsDialog) {
+    recordDetailsCloseButton.onclick = () => recordDetailsDialog.close();
+  }
+  if (recordDetailsContent) {
+    recordDetailsContent.ondblclick = handleFieldDblClick;
+  }
 
   recordDetailsTitle.textContent = `Record for: ${titleSuffix}`;
   recordDetailsContent.innerHTML = buildReadGrid(row, columns);
@@ -63,12 +73,17 @@ function buildReadGrid(row, columns) {
         .filter(Boolean)
     : Object.keys(safeRow).map((key) => ({ technical: key, business: key }));
 
-  const limitedFields = orderedFields.slice(0, MAX_VISIBLE_FIELDS);
-  if (limitedFields.length === 0) {
+  // Separate KEY column (always last for consistent UI)
+  const keyField = orderedFields.find((f) => f.technical === 'KEY');
+  const regularFields = orderedFields.filter((f) => f.technical !== 'KEY');
+  const limitedRegularFields = regularFields.slice(0, MAX_VISIBLE_FIELDS);
+  const fieldsToDisplay = [...limitedRegularFields, ...(keyField ? [keyField] : [])];
+
+  if (fieldsToDisplay.length === 0) {
     return '<div class="show-record-empty">No fields to display.</div>';
   }
 
-  const fieldCards = limitedFields
+  const fieldCards = fieldsToDisplay
     .map((field) => {
       const rawValue = safeRow[field.technical] == null ? '' : String(safeRow[field.technical]);
       return `<label class="show-record-card"><span class="show-record-label">${escapeHtml(field.business)}</span><textarea class="show-record-control" rows="2" readonly title="${escapeHtml(rawValue)}">${escapeHtml(rawValue)}</textarea></label>`;

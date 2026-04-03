@@ -307,6 +307,11 @@ body {
   background: #fffdf9;
 }
 
+.show-record-card.show-record-card-changed {
+  border-color: #c98a41;
+  background: #fff6eb;
+}
+
 .show-record-label {
   font-size: 0.9rem;
   color: var(--muted);
