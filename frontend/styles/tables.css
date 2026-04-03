@@ -53,6 +53,12 @@ th {
   white-space: nowrap;
 }
 
+th.table-action-header,
+td.table-action-cell {
+  width: 1%;
+  white-space: nowrap;
+}
+
 .th-sort-btn {
   all: unset;
   cursor: pointer;
@@ -90,6 +96,58 @@ tbody tr:hover {
 
 .row-edit-btn:hover {
   background: #d8e5f2;
+}
+
+.inline-add-row {
+  background: #fff7ec;
+}
+
+.inline-add-row:hover {
+  background: #fff2df;
+}
+
+.inline-add-actions-cell {
+  min-width: 0;
+  vertical-align: top;
+  text-align: left;
+}
+
+.inline-add-actions {
+  display: flex;
+  gap: var(--btn-gap);
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.inline-add-actions .btn {
+  min-width: 9.5ch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inline-add-control {
+  width: 100%;
+  min-width: 120px;
+  border: 1px solid #d7bda0;
+  border-radius: 8px;
+  padding: 7px 9px;
+  background: #ffffff;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-ui);
+  box-sizing: border-box;
+}
+
+.inline-add-control:disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+  background: #f7f1e8;
+  color: var(--muted);
+}
+
+.inline-add-control--nowrap {
+  white-space: nowrap;
 }
 
 .table-header-layout {

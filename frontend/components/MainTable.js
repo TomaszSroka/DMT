@@ -42,7 +42,13 @@ function formatRowsMeta(visibleRowsCount, allRowsCount) {
   return `${uiTexts.rowsLabel || 'Rows'}: ${visibleRowsCount}/${allRowsCount}`;
 }
 
-export function createMainTableController({ onStateChange, onDetailsRequested, onError } = {}) {
+function getColumnTechnicalName(columnDef) {
+  return columnDef && typeof columnDef.DICTIONARY_COLUMN_TECHNICAL === 'string'
+    ? String(columnDef.DICTIONARY_COLUMN_TECHNICAL).trim().toUpperCase()
+    : '';
+}
+
+export function createMainTableController({ onStateChange, onDetailsRequested, onAddRequested, onError } = {}) {
   const tableContainer = document.getElementById('tableContainer');
   const tableMeta = document.getElementById('tableMeta');
   const pageInfo = document.getElementById('pageInfo');
@@ -62,8 +68,35 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
     rowActionLabel: uiTexts.showRowButton || 'Show',
     hasLoadedTableData: false,
     currentSortColumn: '',
-    currentSortDirection: DEFAULT_SORT_DIRECTION
+    currentSortDirection: DEFAULT_SORT_DIRECTION,
+    inlineCreateEnabled: false
   };
+
+  function hasInlineCreateRow() {
+    return state.inlineCreateEnabled && Array.isArray(state.columns) && state.columns.length > 0;
+  }
+
+  function buildInlineCreateRowHtml(technicalColumns) {
+    const actionCell = `
+      <td class="table-action-cell inline-add-actions-cell">
+        <div class="inline-add-actions">
+          <button type="button" class="btn btn-discard show-row-btn" data-inline-add-open>${escapeHtml(uiTexts.addRowSave || 'Add')}</button>
+        </div>
+      </td>
+    `;
+
+    const cells = technicalColumns
+      .map((columnName) => {
+        if (columnName === 'KEY') {
+          return `<td><input type="text" class="inline-add-control" value="${escapeHtml(uiTexts.addRowAutoValue || 'Auto')}" disabled /></td>`;
+        }
+
+        return `<td><input type="text" class="inline-add-control" value="" disabled /></td>`;
+      })
+      .join('');
+
+    return `<tr class="inline-add-row">${actionCell}${cells}</tr>`;
+  }
 
   function emitState() {
     if (typeof onStateChange === 'function') {
@@ -167,7 +200,7 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
   }
 
   function renderTable() {
-    if (!Array.isArray(state.rows) || state.rows.length === 0) {
+    if ((!Array.isArray(state.rows) || state.rows.length === 0) && !hasInlineCreateRow()) {
       if (tableContainer) {
         tableContainer.innerHTML = `<div class="empty-state">${escapeHtml(uiTexts.noRowsReturned)}</div>`;
       }
@@ -190,7 +223,7 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
       )
     );
 
-    const head = `<th>${escapeHtml(uiTexts.tableActionHeader || 'Action')}</th>${businessHeaders
+    const head = `<th class="table-action-header">${escapeHtml(uiTexts.tableActionHeader || 'Action')}</th>${businessHeaders
       .map((header, idx) => {
         const sortColumn = String(technicalColumns[idx] || '').toUpperCase();
         const isActiveSort = state.currentSortColumn === sortColumn;
@@ -201,9 +234,11 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
       })
       .join('')}`;
 
-    const body = state.rows
+    const inlineCreateRowHtml = hasInlineCreateRow() ? buildInlineCreateRowHtml(technicalColumns) : '';
+
+    const body = `${inlineCreateRowHtml}${state.rows
       .map((row, rowIndex) => {
-        const actionCell = `<td><button type="button" class="btn btn-discard show-row-btn" data-row-index="${rowIndex}">${escapeHtml(
+        const actionCell = `<td class="table-action-cell"><button type="button" class="btn btn-discard show-row-btn" data-row-index="${rowIndex}">${escapeHtml(
           state.rowActionLabel || uiTexts.showRowButton || 'Show'
         )}</button></td>`;
         const cells = technicalColumns
@@ -221,7 +256,7 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
           .join('');
         return `<tr>${actionCell}${cells}</tr>`;
       })
-      .join('');
+      .join('')}`;
 
     if (tableContainer) {
       tableContainer.innerHTML = `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
@@ -279,6 +314,7 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
     state.rowActionLabel = uiTexts.showRowButton || 'Show';
     state.currentSortColumn = '';
     state.currentSortDirection = DEFAULT_SORT_DIRECTION;
+    state.inlineCreateEnabled = false;
 
     if (!state.activeDictionary) {
       setTablePrompt('');
@@ -371,6 +407,14 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
 
     if (tableContainer) {
       tableContainer.addEventListener('click', (event) => {
+        const inlineAddOpenButton = getClosestFromEventTarget(event.target, '[data-inline-add-open]');
+        if (inlineAddOpenButton) {
+          if (typeof onAddRequested === 'function') {
+            onAddRequested(state.columns);
+          }
+          return;
+        }
+
         const detailsButton = getClosestFromEventTarget(event.target, '[data-row-index]');
         if (detailsButton) {
           const rowIndex = Number.parseInt(detailsButton.getAttribute('data-row-index') || '', 10);
@@ -450,6 +494,17 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
     }
   }
 
+  function setInlineCreateRowEnabled(enabled) {
+    const nextEnabled = Boolean(enabled);
+    state.inlineCreateEnabled = nextEnabled;
+
+    if (state.hasLoadedTableData) {
+      renderTable();
+    } else {
+      emitState();
+    }
+  }
+
   return {
     initialize,
     setDictionary,
@@ -458,6 +513,7 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
     clearFilters,
     setCheckoutDictionaryLocation,
     setRowActionLabel,
+    setInlineCreateRowEnabled,
     getState
   };
 }

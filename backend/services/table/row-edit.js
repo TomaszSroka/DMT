@@ -6,6 +6,7 @@ const { getExistingCheckOutLocation } = require("./check-out");
 const { isSafeDictionaryIdentifier, isSafeColumnIdentifier } = require("./helpers");
 
 const KEY_COLUMN = "KEY";
+const DICTIONARY_VERSION_KEY_COLUMN = "DICTIONARY_VERSION_KEY";
 
 function normalizeObject(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
@@ -25,6 +26,36 @@ function buildWherePredicate(columnName, value, binds) {
 
   binds.push(value);
   return `"${columnName}" = ?`;
+}
+
+function getAllowedColumnsByVersion(columnDefs) {
+  return new Set(
+    (Array.isArray(columnDefs) ? columnDefs : [])
+      .map((col) => String(col && col.DICTIONARY_COLUMN_TECHNICAL ? col.DICTIONARY_COLUMN_TECHNICAL : "").trim().toUpperCase())
+      .filter((col) => col.length > 0 && isSafeColumnIdentifier(col))
+  );
+}
+
+function getInsertableColumns(allowedColumns, newRow) {
+  const normalizedRow = normalizeObject(newRow);
+  const insertableColumns = [];
+
+  allowedColumns.forEach((columnName) => {
+    if (columnName === KEY_COLUMN || columnName === DICTIONARY_VERSION_KEY_COLUMN) {
+      return;
+    }
+
+    if (!Object.prototype.hasOwnProperty.call(normalizedRow, columnName)) {
+      return;
+    }
+
+    insertableColumns.push({
+      columnName,
+      value: normalizedRow[columnName]
+    });
+  });
+
+  return insertableColumns;
 }
 
 async function resolveSaveContext(permission, checkoutDictionaryLocation) {
@@ -79,12 +110,7 @@ async function saveDictionaryRowForUser(userLogin, dictionaryName, payload = {})
   const updatedRow = normalizeObject(payload.updatedRow);
   const columnsVersionKey = saveContext.columnsDictionaryVersionKey || dictionaryVersionKey;
   const columnDefs = await getDictionaryColumns(permission.id, columnsVersionKey);
-
-  const allowedColumns = new Set(
-    (Array.isArray(columnDefs) ? columnDefs : [])
-      .map((col) => String(col && col.DICTIONARY_COLUMN_TECHNICAL ? col.DICTIONARY_COLUMN_TECHNICAL : "").trim().toUpperCase())
-      .filter((col) => col.length > 0 && isSafeColumnIdentifier(col))
-  );
+  const allowedColumns = getAllowedColumnsByVersion(columnDefs);
 
   if (allowedColumns.size === 0) {
     throw createAppError("No editable columns found for selected dictionary version.", 400, "ROW_UPDATE_COLUMNS_EMPTY");
@@ -168,6 +194,70 @@ async function saveDictionaryRowForUser(userLogin, dictionaryName, payload = {})
   };
 }
 
+async function insertDictionaryRowForUser(userLogin, dictionaryName, payload = {}) {
+  const context = await getUserDictionaryContext(userLogin);
+  const permission = resolveDictionaryPermission(context, dictionaryName);
+
+  if (!permission.canUpdate) {
+    throw createAppError("Dictionary is not editable for this user.", 403, "DICTIONARY_NOT_EDITABLE");
+  }
+
+  const dictionaryVersionKey = String(payload.dictionaryVersionKey || "").trim();
+  if (!dictionaryVersionKey) {
+    throw createAppError("Field 'dictionaryVersionKey' is required.", 400, "DICTIONARY_VERSION_KEY_REQUIRED");
+  }
+
+  const saveContext = await resolveSaveContext(permission, payload.checkoutDictionaryLocation);
+  if (!isSafeDictionaryIdentifier(saveContext.sourceTableIdentifier)) {
+    throw createAppError("Dictionary identifier is invalid.", 400, "DICTIONARY_IDENTIFIER_INVALID");
+  }
+
+  const newRow = normalizeObject(payload.newRow);
+  const columnsVersionKey = saveContext.columnsDictionaryVersionKey || dictionaryVersionKey;
+  const columnDefs = await getDictionaryColumns(permission.id, columnsVersionKey);
+  const allowedColumns = getAllowedColumnsByVersion(columnDefs);
+
+  if (allowedColumns.size === 0) {
+    throw createAppError("No editable columns found for selected dictionary version.", 400, "ROW_INSERT_COLUMNS_EMPTY");
+  }
+
+  const insertableColumns = getInsertableColumns(allowedColumns, newRow);
+  if (insertableColumns.length === 0) {
+    throw createAppError("At least one editable field is required to add a new row.", 400, "ROW_INSERT_EMPTY");
+  }
+
+  const insertColumns = [];
+
+  if (allowedColumns.has(KEY_COLUMN)) {
+    insertColumns.push({ columnName: KEY_COLUMN, useExpression: true, expressionSql: "DMT.DIC_SEQ.nextval" });
+  }
+
+  insertColumns.push({ columnName: DICTIONARY_VERSION_KEY_COLUMN, useExpression: true, expressionSql: "?" });
+
+  insertableColumns.forEach((item) => {
+    insertColumns.push({ ...item, useExpression: false });
+  });
+
+  const columnsSql = insertColumns.map((item) => `"${item.columnName}"`).join(", ");
+  const valuesSql = insertColumns
+    .map((item) => (item.useExpression ? item.expressionSql : "?"))
+    .join(", ");
+  const binds = [dictionaryVersionKey, ...insertableColumns.map((item) => item.value)];
+
+  const insertSql = `
+    INSERT INTO ${saveContext.sourceTableIdentifier} (${columnsSql})
+    VALUES (${valuesSql})
+  `;
+
+  await runQuery(insertSql, binds);
+
+  return {
+    inserted: true,
+    insertedColumns: insertableColumns.map((item) => item.columnName)
+  };
+}
+
 module.exports = {
-  saveDictionaryRowForUser
+  saveDictionaryRowForUser,
+  insertDictionaryRowForUser
 };

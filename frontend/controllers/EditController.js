@@ -39,6 +39,9 @@ export function createEditController({
 
   function setEditorActionButtonsEnabled(enabled) {
     const isEnabled = Boolean(enabled);
+    if (tableController && typeof tableController.setInlineCreateRowEnabled === 'function') {
+      tableController.setInlineCreateRowEnabled(isEnabled);
+    }
     if (saveButton) {
       saveButton.disabled = !isEnabled;
     }

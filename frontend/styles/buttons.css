@@ -20,6 +20,10 @@
 
 .show-row-btn {
   white-space: nowrap;
+  min-width: 9.5ch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn,

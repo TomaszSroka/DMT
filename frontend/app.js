@@ -165,6 +165,20 @@ function initMainApp() {
   let filtersController = null;
   let editController = null;
 
+  function buildEmptyRowFromColumns(columns) {
+    const row = {};
+    (Array.isArray(columns) ? columns : []).forEach((columnDef) => {
+      const technicalName = columnDef && typeof columnDef.DICTIONARY_COLUMN_TECHNICAL === 'string'
+        ? String(columnDef.DICTIONARY_COLUMN_TECHNICAL).trim()
+        : '';
+      if (!technicalName) {
+        return;
+      }
+      row[technicalName] = '';
+    });
+    return row;
+  }
+
   const tableController = createMainTableController({
     onDetailsRequested: (row, columns) => {
       const selectedDictionary = dictionarySelect ? String(dictionarySelect.value || '').trim() : '';
@@ -213,6 +227,34 @@ function initMainApp() {
         versionLabel: selectedVersionLabel,
         row,
         columns
+      });
+    },
+    onAddRequested: (columns) => {
+      const selectedDictionary = dictionarySelect ? String(dictionarySelect.value || '').trim() : '';
+      const selectedDictionaryLabel =
+        dictionarySelect && dictionarySelect.selectedOptions && dictionarySelect.selectedOptions[0]
+          ? dictionarySelect.selectedOptions[0].textContent
+          : '';
+      const overrideVersionLabel = editController && typeof editController.getCurrentVersionLabelOverride === 'function'
+        ? String(editController.getCurrentVersionLabelOverride() || '').trim()
+        : '';
+      const selectedVersionLabel =
+        overrideVersionLabel
+        || (dictionaryVersionSelect && dictionaryVersionSelect.selectedOptions && dictionaryVersionSelect.selectedOptions[0]
+          ? dictionaryVersionSelect.selectedOptions[0].textContent
+          : '');
+      const state = tableController.getState();
+
+      showRecordDetailsEditDialog({
+        dictionaryName: selectedDictionary,
+        dictionaryLabel: selectedDictionaryLabel,
+        versionLabel: selectedVersionLabel,
+        dictionaryVersionKey: state.selectedDictionaryVersionKey,
+        checkoutDictionaryLocation: state.checkoutDictionaryLocation,
+        row: buildEmptyRowFromColumns(columns),
+        columns,
+        isNewRecord: true,
+        onAfterSave: () => tableController.setDictionaryVersion(state.selectedDictionaryVersionKey)
       });
     },
     onStateChange: (state) => {

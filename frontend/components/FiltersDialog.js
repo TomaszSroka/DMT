@@ -266,6 +266,26 @@ export function createFiltersDialogController({ tableController } = {}) {
     return JSON.stringify(normalizedActive) !== JSON.stringify(normalizedDraft);
   }
 
+  function setApplyButtonsEnabled(enabled) {
+    const shouldEnable = Boolean(enabled);
+    if (filtersApplyButton) {
+      filtersApplyButton.disabled = !shouldEnable;
+    }
+    if (filtersApplyCloseButton) {
+      filtersApplyCloseButton.disabled = !shouldEnable;
+    }
+  }
+
+  function updateApplyButtonsState() {
+    const isDialogOpen = Boolean(filtersDialog && filtersDialog.open);
+    if (!isDialogOpen) {
+      setApplyButtonsEnabled(false);
+      return;
+    }
+
+    setApplyButtonsEnabled(isFiltersDraftDirty());
+  }
+
   function getFiltersDraftSummaryLines() {
     const rows = collectFiltersDraftRaw()
       .map((item) => ({
@@ -379,6 +399,7 @@ export function createFiltersDialogController({ tableController } = {}) {
       : [];
 
     renderFiltersDraft();
+    updateApplyButtonsState();
     filtersDialog.showModal();
   }
 
@@ -388,6 +409,9 @@ export function createFiltersDialogController({ tableController } = {}) {
       tableController.setFilters(filters);
     }
 
+    latestTableState.activeFilters = filters;
+    updateApplyButtonsState();
+
     if (closeAfterApply && filtersDialog) {
       filtersDialog.close();
     }
@@ -396,10 +420,7 @@ export function createFiltersDialogController({ tableController } = {}) {
   function clearFilters() {
     filtersDraft = [];
     renderFiltersDraft();
-
-    if (tableController && typeof tableController.clearFilters === 'function') {
-      tableController.clearFilters();
-    }
+    updateApplyButtonsState();
   }
 
   function bindEvents() {
@@ -414,6 +435,7 @@ export function createFiltersDialogController({ tableController } = {}) {
         const nextColumn = getNextFilterColumn(lastRule && lastRule.column);
         filtersDraft.push(nextColumn ? { column: nextColumn, value: '' } : createEmptyFilterRule());
         renderFiltersDraft();
+        updateApplyButtonsState();
       });
     }
 
@@ -433,7 +455,16 @@ export function createFiltersDialogController({ tableController } = {}) {
 
         filtersDraft.splice(index, 1);
         renderFiltersDraft();
+        updateApplyButtonsState();
       });
+
+      const onDraftChanged = () => {
+        syncFiltersDraftFromUi();
+        updateApplyButtonsState();
+      };
+
+      filtersRulesList.addEventListener('input', onDraftChanged);
+      filtersRulesList.addEventListener('change', onDraftChanged);
     }
 
     if (filtersApplyButton) {
@@ -459,6 +490,10 @@ export function createFiltersDialogController({ tableController } = {}) {
         event.preventDefault();
         closeFiltersDialog();
       });
+
+      filtersDialog.addEventListener('close', () => {
+        setApplyButtonsEnabled(false);
+      });
     }
   }
 
@@ -474,6 +509,7 @@ export function createFiltersDialogController({ tableController } = {}) {
     }
 
     updateSummaryFromState();
+    updateApplyButtonsState();
   }
 
   function initialize() {
@@ -482,6 +518,7 @@ export function createFiltersDialogController({ tableController } = {}) {
     if (openFiltersButton) {
       openFiltersButton.disabled = true;
     }
+    setApplyButtonsEnabled(false);
   }
 
   return {

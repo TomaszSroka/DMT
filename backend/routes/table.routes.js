@@ -9,7 +9,8 @@ const {
   getUserDictionaryContext,
   getUsersForRole,
   ensureDictionaryCheckOutForUser,
-  saveDictionaryRowForUser
+  saveDictionaryRowForUser,
+  insertDictionaryRowForUser
 } = require("../services/table.service");
 const { getErrorPayload } = require("../errors/app-error");
 const { getDictionaryColumns } = require("../services/table/dictionary-columns");
@@ -166,6 +167,18 @@ router.post(
   "/dictionaries/:name/rows/save",
   withApiErrorHandling("Could not save Dictionary row.", "ROW_SAVE_FAILED", async (req, res) => {
     const payload = await saveDictionaryRowForUser(
+      getUserLogin(req.query.userKey),
+      req.params.name,
+      req.body || {}
+    );
+    res.json(payload);
+  })
+);
+
+router.post(
+  "/dictionaries/:name/rows/insert",
+  withApiErrorHandling("Could not insert Dictionary row.", "ROW_INSERT_FAILED", async (req, res) => {
+    const payload = await insertDictionaryRowForUser(
       getUserLogin(req.query.userKey),
       req.params.name,
       req.body || {}

@@ -109,5 +109,12 @@ export const uiTexts = {
   readerNoPermissionLine1: "The DICTIONARY_READER role doesn't have permissions to edit the Dictionary.",
   readerNoPermissionUserManagerLine3: "You have USER_MANAGER role, so you can change Your permissions.",
   readerNoPermissionNonManagerLine3: "Please contact someone with the USER_MANAGER role to change Your permissions:",
-  noUserManagersFound: "- No USER_MANAGER users found."
+  noUserManagersFound: "- No USER_MANAGER users found.",
+  addRowSave: "Add",
+  addRowSaveAndClose: "Add & Close",
+  addRowClear: "Clear",
+  addRowAutoValue: "Auto",
+  addRowEmptyError: "At least one editable field is required to add a new row.",
+  addRowSaveDialogIntro: "Are you sure you want to add this row?",
+  newRecordDialogTitlePrefix: "Add record for: "
 };

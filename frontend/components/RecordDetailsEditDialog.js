@@ -23,6 +23,7 @@ let currentContext = {
   columns: [],
   originalRow: {},
   currentRow: {},
+  isNewRecord: false,
   onAfterSave: null
 };
 
@@ -119,6 +120,7 @@ export function showRecordDetailsEditDialog({
   checkoutDictionaryLocation = '',
   row = {},
   columns = [],
+  isNewRecord = false,
   onAfterSave = null
 } = {}) {
   if (!ensureInitialized()) {
@@ -131,6 +133,7 @@ export function showRecordDetailsEditDialog({
   const safeVersion = String(versionLabel || '').trim();
   const versionPrefix = uiTexts.recordDialogVersionPrefix || 'ver.';
   const titleSuffix = [safeDictionary, safeVersion ? `${versionPrefix} ${safeVersion}` : ''].filter(Boolean).join(' ');
+  const normalizedIsNewRecord = Boolean(isNewRecord);
 
   currentContext = {
     dictionaryName: String(dictionaryName || '').trim(),
@@ -139,13 +142,29 @@ export function showRecordDetailsEditDialog({
     columns: Array.isArray(columns) ? columns : [],
     originalRow: cloneRow(row),
     currentRow: cloneRow(row),
+    isNewRecord: normalizedIsNewRecord,
     onAfterSave: typeof onAfterSave === 'function' ? onAfterSave : null
   };
 
-  recordDetailsTitle.textContent = `${uiTexts.recordDialogTitlePrefix || 'Record for: '}${titleSuffix}`;
+  recordDetailsTitle.textContent = `${normalizedIsNewRecord ? (uiTexts.newRecordDialogTitlePrefix || 'Add record for: ') : (uiTexts.recordDialogTitlePrefix || 'Record for: ')}${titleSuffix}`;
+  syncActionButtonsLabels();
   renderEditGrid();
   updateActionButtonsState();
   recordDetailsDialog.showModal();
+}
+
+function syncActionButtonsLabels() {
+  if (saveActionButton) {
+    saveActionButton.textContent = currentContext.isNewRecord ? (uiTexts.addRowSave || 'Add') : (uiTexts.save || 'Save');
+  }
+
+  if (saveAndCloseActionButton) {
+    saveAndCloseActionButton.textContent = currentContext.isNewRecord ? (uiTexts.addRowSaveAndClose || 'Add & Close') : (uiTexts.saveAndClose || 'Save & Close');
+  }
+
+  if (discardActionButton) {
+    discardActionButton.textContent = uiTexts.discard || 'Discard';
+  }
 }
 
 function renderEditGrid() {
@@ -305,11 +324,15 @@ function openSaveConfirmation(changes) {
   const confirmButton = document.getElementById('saveConfirmButton');
   const cancelButton = document.getElementById('saveStayButton');
 
+  const saveIntro = currentContext.isNewRecord
+    ? (uiTexts.addRowSaveDialogIntro || 'Are you sure you want to add this row?')
+    : (uiTexts.saveDialogIntro || 'Are you sure you want to save changes?');
+
   if (!dialog || !intro || !list || !confirmButton || !cancelButton) {
-    return Promise.resolve(window.confirm(uiTexts.saveDialogIntro || 'Are you sure you want to save changes?'));
+    return Promise.resolve(window.confirm(saveIntro));
   }
 
-  intro.textContent = uiTexts.saveDialogIntro || 'Are you sure you want to save changes?';
+  intro.textContent = saveIntro;
   list.innerHTML = buildChangesListHtml(changes);
 
   return openConfirmDialog(dialog, confirmButton, cancelButton);
@@ -371,6 +394,24 @@ function openConfirmDialog(dialog, confirmButton, cancelButton) {
   });
 }
 
+async function persistCurrentRow() {
+  if (currentContext.isNewRecord) {
+    await postJson(`/api/dictionaries/${encodeURIComponent(currentContext.dictionaryName)}/rows/insert`, {
+      dictionaryVersionKey: currentContext.dictionaryVersionKey,
+      checkoutDictionaryLocation: currentContext.checkoutDictionaryLocation,
+      newRow: currentContext.currentRow
+    });
+    return;
+  }
+
+  await postJson(`/api/dictionaries/${encodeURIComponent(currentContext.dictionaryName)}/rows/save`, {
+    dictionaryVersionKey: currentContext.dictionaryVersionKey,
+    checkoutDictionaryLocation: currentContext.checkoutDictionaryLocation,
+    originalRow: currentContext.originalRow,
+    updatedRow: currentContext.currentRow
+  });
+}
+
 async function onSaveClick() {
   const changes = getChangedEntries();
   if (changes.length === 0) {
@@ -383,20 +424,20 @@ async function onSaveClick() {
   }
 
   try {
-    await postJson(`/api/dictionaries/${encodeURIComponent(currentContext.dictionaryName)}/rows/save`, {
-      dictionaryVersionKey: currentContext.dictionaryVersionKey,
-      checkoutDictionaryLocation: currentContext.checkoutDictionaryLocation,
-      originalRow: currentContext.originalRow,
-      updatedRow: currentContext.currentRow
-    });
-
-    currentContext.originalRow = cloneRow(currentContext.currentRow);
-    updateActionButtonsState();
-    renderDirtyHighlight();
+    await persistCurrentRow();
 
     if (typeof currentContext.onAfterSave === 'function') {
       await currentContext.onAfterSave();
     }
+
+    if (currentContext.isNewRecord) {
+      recordDetailsDialog.close();
+      return;
+    }
+
+    currentContext.originalRow = cloneRow(currentContext.currentRow);
+    updateActionButtonsState();
+    renderDirtyHighlight();
   } catch (error) {
     const message = error && error.message ? error.message : String(error);
     const details = error && error.details ? error.details : '';
@@ -421,12 +462,7 @@ async function onSaveAndCloseClick() {
   }
 
   try {
-    await postJson(`/api/dictionaries/${encodeURIComponent(currentContext.dictionaryName)}/rows/save`, {
-      dictionaryVersionKey: currentContext.dictionaryVersionKey,
-      checkoutDictionaryLocation: currentContext.checkoutDictionaryLocation,
-      originalRow: currentContext.originalRow,
-      updatedRow: currentContext.currentRow
-    });
+    await persistCurrentRow();
 
     if (typeof currentContext.onAfterSave === 'function') {
       await currentContext.onAfterSave();
