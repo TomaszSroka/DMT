@@ -1,7 +1,8 @@
 /**
- * RecordDetailsDialog.js
+ * RecordDetailsEditDialog.js
  *
- * Dedicated read-mode dialog opened from the Show action in MainTable.
+ * Placeholder clone for edit-mode record details dialog.
+ * No references are wired yet.
  */
 
 let recordDetailsDialog;
@@ -11,7 +12,7 @@ let recordDetailsContent;
 let isDblClickHandlerBound = false;
 const MAX_VISIBLE_FIELDS = 20;
 
-export function setupRecordDetailsDialog() {
+export function setupRecordDetailsEditDialog() {
   recordDetailsDialog = document.getElementById('showRecordDialog');
   recordDetailsTitle = document.getElementById('showRecordTitle');
   recordDetailsCloseButton = document.getElementById('showRecordCloseButton');
@@ -27,7 +28,7 @@ export function setupRecordDetailsDialog() {
   }
 }
 
-export function showRecordDetailsDialog({ dictionaryLabel = '', versionLabel = '', row = {}, columns = [] } = {}) {
+export function showRecordDetailsEditDialog({ dictionaryLabel = '', versionLabel = '', row = {}, columns = [] } = {}) {
   if (!recordDetailsDialog || !recordDetailsTitle || !recordDetailsContent) {
     return;
   }

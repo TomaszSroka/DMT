@@ -17,7 +17,7 @@ import { renderDictionaryList } from './components/DictionaryList.js';
 import { renderDictionaryVersionList } from './components/DictionaryVersionList.js';
 import { setupVersionHistoryButton } from './components/VersionHistoryButton.js';
 import { setupVersionHistoryDialog } from './components/VersionHistoryDialog.js';
-import { setupRecordDetailsDialog, showRecordDetailsDialog } from './components/RecordDetailsDialog.js';
+import { setupRecordDetailsShowDialog, showRecordDetailsShowDialog } from './components/RecordDetailsShowDialog.js';
 import { setupErrorDetailsDialog, showErrorDetailsDialog } from './components/ErrorDetailsDialog.js';
 import { createMainTableController } from './components/MainTable.js';
 import { createFiltersDialogController } from './components/FiltersDialog.js';
@@ -85,7 +85,7 @@ function initMainApp() {
 
   // Initialize dialogs
   setupVersionHistoryDialog();
-  setupRecordDetailsDialog();
+  setupRecordDetailsShowDialog();
   setupErrorDetailsDialog();
 
   // Assign texts to UI elements
@@ -175,7 +175,7 @@ function initMainApp() {
           ? dictionaryVersionSelect.selectedOptions[0].textContent
           : '');
 
-      showRecordDetailsDialog({
+      showRecordDetailsShowDialog({
         dictionaryLabel: selectedDictionaryLabel,
         versionLabel: selectedVersionLabel,
         row,
