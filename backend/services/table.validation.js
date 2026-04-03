@@ -85,7 +85,9 @@ function isSafeOrderByPhrase(orderByPhrase) {
     return false;
   }
 
-  const pattern = /^([A-Za-z0-9_$"]+\.)*[A-Za-z0-9_$"]+(\s+(ASC|DESC))?(\s+NULLS\s+(FIRST|LAST))?$/i;
+  const identifier = '(?:"[A-Za-z_][A-Za-z0-9_]*"|[A-Za-z_][A-Za-z0-9_]*)';
+  const qualifiedIdentifier = `(?:${identifier})(?:\\.${identifier})*`;
+  const pattern = new RegExp(`^${qualifiedIdentifier}(?:\\s+(?:ASC|DESC))?(?:\\s+NULLS\\s+(?:FIRST|LAST))?$`, 'i');
   return parts.every((part) => pattern.test(part));
 }
 

@@ -11,8 +11,10 @@ import { fetchJson } from '../services/ApiClient.js';
 import { escapeHtml } from '../utils/ui-helpers.js';
 import { uiTexts } from '../config/ui-texts.js';
 import { beginDbLoading } from '../utils/db-loading.js';
+import { buildInlineCreateRowHtml, buildTableHead, buildTableBody } from './MainTable.render.js';
+import { getRuntimeConfig } from '../config/runtime-config.js';
 
-const runtimeConfig = window.FRONTEND_RUNTIME_CONFIG || {};
+const runtimeConfig = getRuntimeConfig();
 const defaultsConfig = runtimeConfig.defaults || {};
 const behaviorConfig = runtimeConfig.uiBehavior || {};
 
@@ -48,7 +50,8 @@ function getColumnTechnicalName(columnDef) {
     : '';
 }
 
-export function createMainTableController({ onStateChange, onDetailsRequested, onAddRequested, onError } = {}) {
+export function createMainTableController({ onStateChange, onDetailsRequested, onAddRequested, onError, apiClient } = {}) {
+  const resolvedApiClient = apiClient && typeof apiClient.fetchJson === 'function' ? apiClient : { fetchJson };
   const tableContainer = document.getElementById('tableContainer');
   const tableMeta = document.getElementById('tableMeta');
   const pageInfo = document.getElementById('pageInfo');
@@ -74,28 +77,6 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
 
   function hasInlineCreateRow() {
     return state.inlineCreateEnabled && Array.isArray(state.columns) && state.columns.length > 0;
-  }
-
-  function buildInlineCreateRowHtml(technicalColumns) {
-    const actionCell = `
-      <td class="table-action-cell inline-add-actions-cell">
-        <div class="inline-add-actions">
-          <button type="button" class="btn btn-discard show-row-btn" data-inline-add-open>${escapeHtml(uiTexts.addRowSave || 'Add')}</button>
-        </div>
-      </td>
-    `;
-
-    const cells = technicalColumns
-      .map((columnName) => {
-        if (columnName === 'KEY') {
-          return `<td><input type="text" class="inline-add-control" value="${escapeHtml(uiTexts.addRowAutoValue || 'Auto')}" disabled /></td>`;
-        }
-
-        return `<td><input type="text" class="inline-add-control" value="" disabled /></td>`;
-      })
-      .join('');
-
-    return `<tr class="inline-add-row">${actionCell}${cells}</tr>`;
   }
 
   function emitState() {
@@ -223,40 +204,30 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
       )
     );
 
-    const head = `<th class="table-action-header">${escapeHtml(uiTexts.tableActionHeader || 'Action')}</th>${businessHeaders
-      .map((header, idx) => {
-        const sortColumn = String(technicalColumns[idx] || '').toUpperCase();
-        const isActiveSort = state.currentSortColumn === sortColumn;
-        const sortMark = isActiveSort ? (state.currentSortDirection === 'DESC' ? ' ▼' : ' ▲') : '';
-        return `<th><button type="button" class="th-sort-btn" data-sort-column="${escapeHtml(sortColumn)}">${escapeHtml(
-          header
-        )}${sortMark}</button></th>`;
-      })
-      .join('')}`;
+    const head = buildTableHead({
+      technicalColumns,
+      businessHeaders,
+      currentSortColumn: state.currentSortColumn,
+      currentSortDirection: state.currentSortDirection,
+      uiTexts,
+      escapeHtml
+    });
 
-    const inlineCreateRowHtml = hasInlineCreateRow() ? buildInlineCreateRowHtml(technicalColumns) : '';
+    const inlineCreateRowHtml = hasInlineCreateRow()
+      ? buildInlineCreateRowHtml(technicalColumns, uiTexts, escapeHtml)
+      : '';
 
-    const body = `${inlineCreateRowHtml}${state.rows
-      .map((row, rowIndex) => {
-        const actionCell = `<td class="table-action-cell"><button type="button" class="btn btn-discard show-row-btn" data-row-index="${rowIndex}">${escapeHtml(
-          state.rowActionLabel || uiTexts.showRowButton || 'Show'
-        )}</button></td>`;
-        const cells = technicalColumns
-          .map((columnName) => {
-            const fullValue = row[columnName] == null ? '' : String(row[columnName]);
-            const shortValue = truncateValueWithoutEllipsis(fullValue, MAX_CELL_CHARS);
-            const classNames = [];
-            if (noWrapColumns.has(columnName)) {
-              classNames.push('col-nowrap-short');
-            }
-
-            const classAttr = classNames.length > 0 ? ` class="${classNames.join(' ')}"` : '';
-            return `<td${classAttr}>${escapeHtml(shortValue)}</td>`;
-          })
-          .join('');
-        return `<tr>${actionCell}${cells}</tr>`;
-      })
-      .join('')}`;
+    const body = buildTableBody({
+      rows: state.rows,
+      technicalColumns,
+      noWrapColumns,
+      rowActionLabel: state.rowActionLabel,
+      uiTexts,
+      escapeHtml,
+      inlineCreateRowHtml,
+      truncateValueWithoutEllipsis,
+      maxCellChars: MAX_CELL_CHARS
+    });
 
     if (tableContainer) {
       tableContainer.innerHTML = `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
@@ -282,7 +253,7 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
     emitState();
 
     try {
-      const payload = await fetchJson(buildRowsUrl(requestedPage));
+      const payload = await resolvedApiClient.fetchJson(buildRowsUrl(requestedPage));
       state.rows = Array.isArray(payload.rows) ? payload.rows : [];
       state.columns = getColumnsFromPayload(state.rows, payload.columns);
       state.currentPage = Number.isFinite(Number(payload.page)) ? Number(payload.page) : 1;

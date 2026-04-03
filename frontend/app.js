@@ -25,9 +25,10 @@ import { createFiltersDialogController } from './components/FiltersDialog.js';
 import { setupLoginScreen } from './components/LoginScreen.js';
 import { setCurrentUserKey } from './services/ApiClient.js';
 import { createEditController } from './controllers/EditController.js';
+import { getRuntimeConfig } from './config/runtime-config.js';
 
 function applyTypographyConfig() {
-  const runtimeConfig = window.FRONTEND_RUNTIME_CONFIG || {};
+  const runtimeConfig = getRuntimeConfig();
   const typography = runtimeConfig.typography || {};
 
   if (Array.isArray(typography.preconnectUrls)) {

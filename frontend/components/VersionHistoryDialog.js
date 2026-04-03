@@ -8,17 +8,31 @@
  */
 
 import { uiTexts } from '../config/ui-texts.js';
+import { escapeHtml } from '../utils/ui-helpers.js';
 
-let recordDetailsDialog, recordDetailsFields, recordDetailsCloseButton;
+function getDialogRefs() {
+	const dialog = document.getElementById("recordDetailsDialog");
+	const fields = document.getElementById("recordDetailsFields");
+	const closeButton = document.getElementById("recordDetailsCloseButton");
+	const title = document.getElementById("recordDetailsTitle");
+
+	return {
+		dialog,
+		fields,
+		closeButton,
+		title
+	};
+}
 
 export function setupVersionHistoryDialog() {
-	recordDetailsDialog = document.getElementById("recordDetailsDialog");
-	recordDetailsFields = document.getElementById("recordDetailsFields");
-	recordDetailsCloseButton = document.getElementById("recordDetailsCloseButton");
-	const recordDetailsTitle = document.getElementById("recordDetailsTitle");
-	if (recordDetailsTitle) recordDetailsTitle.textContent = uiTexts.showVersionDetails || 'Versions';
-	if (recordDetailsCloseButton && recordDetailsDialog) {
-		recordDetailsCloseButton.addEventListener("click", () => recordDetailsDialog.close());
+	const { dialog, closeButton, title } = getDialogRefs();
+	if (title) {
+		title.textContent = uiTexts.showVersionDetails || 'Versions';
+	}
+
+	if (closeButton && dialog && closeButton.dataset.vhBound !== '1') {
+		closeButton.addEventListener("click", () => dialog.close());
+		closeButton.dataset.vhBound = '1';
 	}
 }
 
@@ -36,6 +50,11 @@ export function showVersionHistoryDialog(row, columns) {
 	// Handling multiple versions: row can be an array or an object
 	const rows = Array.isArray(row) ? row : [row];
 	if (!rows.length || !Array.isArray(columns)) return;
+
+	const { dialog, fields, title } = getDialogRefs();
+	if (!dialog || !fields) {
+		return;
+	}
 
 	const businessHeaders = columns.map(colObj =>
 		typeof colObj === "object" && colObj !== null && typeof colObj.DICTIONARY_COLUMN_BUSINESS === "string"
@@ -69,19 +88,10 @@ export function showVersionHistoryDialog(row, columns) {
 		tableHtml += '</tr>';
 	});
 	tableHtml += '</tbody></table>';
-	recordDetailsFields.innerHTML = tableHtml;
-	const recordDetailsTitle = document.getElementById("recordDetailsTitle");
-	if (recordDetailsTitle) {
-		recordDetailsTitle.style.textAlign = "left";
-		recordDetailsTitle.style.justifySelf = "start";
+	fields.innerHTML = tableHtml;
+	if (title) {
+		title.style.textAlign = "left";
+		title.style.justifySelf = "start";
 	}
-	recordDetailsDialog.showModal();
-}
-function escapeHtml(str) {
-	return String(str)
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;")
-		.replace(/'/g, "&#39;");
+	dialog.showModal();
 }

@@ -15,6 +15,7 @@ let showErrorDetailsDialog = null;
 let saveActionButton = null;
 let saveAndCloseActionButton = null;
 let discardActionButton = null;
+let isHandlersBound = false;
 
 let currentContext = {
   dictionaryName: '',
@@ -102,14 +103,24 @@ function ensureActionButtons() {
   }
   discardActionButton.style.display = '';
 
+  bindDialogHandlers();
+}
+
+function bindDialogHandlers() {
+  if (isHandlersBound) {
+    return;
+  }
+
   if (recordDetailsCloseButton) {
-    recordDetailsCloseButton.onclick = onCloseClick;
+    recordDetailsCloseButton.addEventListener('click', onCloseClick);
   }
 
   if (recordDetailsContent) {
-    recordDetailsContent.ondblclick = handleFieldDblClick;
-    recordDetailsContent.oninput = onFieldInput;
+    recordDetailsContent.addEventListener('dblclick', handleFieldDblClick);
+    recordDetailsContent.addEventListener('input', onFieldInput);
   }
+
+  isHandlersBound = true;
 }
 
 export function showRecordDetailsEditDialog({

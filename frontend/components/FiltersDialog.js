@@ -6,8 +6,9 @@
 
 import { uiTexts } from '../config/ui-texts.js';
 import { escapeHtml, fillTemplate } from '../utils/ui-helpers.js';
+import { getRuntimeConfig } from '../config/runtime-config.js';
 
-const runtimeConfig = window.FRONTEND_RUNTIME_CONFIG || {};
+const runtimeConfig = getRuntimeConfig();
 const behaviorConfig = runtimeConfig.uiBehavior || {};
 
 const FILTERS_SUMMARY_TEMPLATE = String(behaviorConfig.filtersSummaryTemplate || '{column} IN "{value}"');

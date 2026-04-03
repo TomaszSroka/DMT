@@ -41,6 +41,9 @@ test("normalizeSortDirection supports DESC and defaults to ASC", () => {
 
 test("isSafeOrderByPhrase accepts safe clauses and rejects suspicious input", () => {
   assert.equal(isSafeOrderByPhrase('"COL_A" DESC, "COL_B" ASC NULLS LAST'), true);
+  assert.equal(isSafeOrderByPhrase('COL_A DESC, COL_B ASC'), true);
   assert.equal(isSafeOrderByPhrase("COL_A; DROP TABLE X"), false);
+  assert.equal(isSafeOrderByPhrase('"COL_A DESC'), false);
+  assert.equal(isSafeOrderByPhrase('COL_A() DESC'), false);
   assert.equal(isSafeOrderByPhrase(""), false);
 });

@@ -390,3 +390,62 @@ test("dictionary check-out endpoint contract", async (t) => {
   assert.equal(typeof checkoutPayload.checkOutDictionaryLocation, "string");
   assert.equal(typeof checkoutPayload.created, "boolean");
 });
+
+test("dictionary row insert endpoint validation contract", async (t) => {
+  const metaResponse = await fetch(`${BASE_URL}/api/meta`);
+  assert.equal(metaResponse.status, 200);
+  const metaPayload = await metaResponse.json();
+  const dictionaries = Array.isArray(metaPayload && metaPayload.dictionaries) ? metaPayload.dictionaries : [];
+
+  const updatableDictionary = dictionaries.find((item) => item && item.canUpdate === true);
+  if (!updatableDictionary || !updatableDictionary.id) {
+    t.skip("No updatable dictionary available for insert contract test.");
+    return;
+  }
+
+  const versionsResponse = await fetch(
+    `${BASE_URL}/api/dictionaries/${encodeURIComponent(updatableDictionary.id)}/versions`
+  );
+  assert.equal(versionsResponse.status, 200);
+  const versionsPayload = await versionsResponse.json();
+  const versions = Array.isArray(versionsPayload && versionsPayload.versions) ? versionsPayload.versions : [];
+
+  if (versions.length === 0 || !versions[0].id) {
+    t.skip("No dictionary versions available for insert contract test.");
+    return;
+  }
+
+  const dictionaryVersionKey = String(versions[0].id);
+
+  const missingVersionResponse = await fetch(
+    `${BASE_URL}/api/dictionaries/${encodeURIComponent(updatableDictionary.id)}/rows/insert`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ newRow: { SOME_COLUMN: "x" } })
+    }
+  );
+
+  assert.equal(missingVersionResponse.status, 400);
+  const missingVersionPayload = await missingVersionResponse.json();
+  assert.equal(missingVersionPayload.errorCode, "DICTIONARY_VERSION_KEY_REQUIRED");
+
+  const emptyRowResponse = await fetch(
+    `${BASE_URL}/api/dictionaries/${encodeURIComponent(updatableDictionary.id)}/rows/insert`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ dictionaryVersionKey, newRow: {} })
+    }
+  );
+
+  assert.equal(emptyRowResponse.status, 400);
+  const emptyRowPayload = await emptyRowResponse.json();
+  assert.equal(emptyRowPayload.errorCode, "ROW_INSERT_EMPTY");
+});
