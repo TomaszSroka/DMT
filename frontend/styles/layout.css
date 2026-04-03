@@ -276,6 +276,14 @@ body {
   background: var(--panel-bg);
 }
 
+.show-record-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 18px;
+  width: 100%;
+}
+
 .show-record-title {
   margin: 0;
   font-size: clamp(1rem, 1.3vw, 1.15rem);
@@ -283,6 +291,22 @@ body {
   font-family: var(--font-primary);
   font-weight: 600;
   color: var(--text);
+}
+
+.show-record-title-shell {
+  margin-right: auto;
+  text-align: left;
+  border: 1px solid #d8b891;
+  border-radius: 10px;
+  background: #fff7ea;
+  padding: 8px 12px;
+}
+
+.show-record-actions-shell {
+  border: 1px solid #d7bda0;
+  border-radius: 10px;
+  background: #f7efe4;
+  padding: 6px 8px;
 }
 
 .show-record-content {

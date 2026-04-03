@@ -73,7 +73,7 @@ function ensureActionButtons() {
     saveActionButton = document.createElement('button');
     saveActionButton.type = 'button';
     saveActionButton.className = 'btn btn-save';
-    saveActionButton.textContent = uiTexts.save || 'Save';
+    saveActionButton.textContent = uiTexts.save || 'Complete';
     saveActionButton.disabled = true;
     saveActionButton.addEventListener('click', onSaveClick);
     actionsContainer.insertBefore(saveActionButton, recordDetailsCloseButton || null);
@@ -84,7 +84,7 @@ function ensureActionButtons() {
     saveAndCloseActionButton = document.createElement('button');
     saveAndCloseActionButton.type = 'button';
     saveAndCloseActionButton.className = 'btn btn-save';
-    saveAndCloseActionButton.textContent = uiTexts.saveAndClose || 'Save & Close';
+    saveAndCloseActionButton.textContent = uiTexts.saveAndClose || 'Complete & Close';
     saveAndCloseActionButton.disabled = true;
     saveAndCloseActionButton.addEventListener('click', onSaveAndCloseClick);
     actionsContainer.insertBefore(saveAndCloseActionButton, recordDetailsCloseButton || null);
@@ -155,11 +155,11 @@ export function showRecordDetailsEditDialog({
 
 function syncActionButtonsLabels() {
   if (saveActionButton) {
-    saveActionButton.textContent = currentContext.isNewRecord ? (uiTexts.addRowSave || 'Add') : (uiTexts.save || 'Save');
+    saveActionButton.textContent = currentContext.isNewRecord ? (uiTexts.addRowSave || 'Add') : (uiTexts.save || 'Complete');
   }
 
   if (saveAndCloseActionButton) {
-    saveAndCloseActionButton.textContent = currentContext.isNewRecord ? (uiTexts.addRowSaveAndClose || 'Add & Close') : (uiTexts.saveAndClose || 'Save & Close');
+    saveAndCloseActionButton.textContent = currentContext.isNewRecord ? (uiTexts.addRowSaveAndClose || 'Add & Close') : (uiTexts.saveAndClose || 'Complete & Close');
   }
 
   if (discardActionButton) {
@@ -326,7 +326,7 @@ function openSaveConfirmation(changes) {
 
   const saveIntro = currentContext.isNewRecord
     ? (uiTexts.addRowSaveDialogIntro || 'Are you sure you want to add this row?')
-    : (uiTexts.saveDialogIntro || 'Are you sure you want to save changes?');
+    : (uiTexts.saveDialogIntro || 'Are you sure you want to complete changes?');
 
   if (!dialog || !intro || !list || !confirmButton || !cancelButton) {
     return Promise.resolve(window.confirm(saveIntro));
