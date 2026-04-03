@@ -13,6 +13,14 @@ import { uiTexts } from '../config/ui-texts.js';
 import { beginDbLoading } from '../utils/db-loading.js';
 import { buildInlineCreateRowHtml, buildTableHead, buildTableBody } from './MainTable.render.js';
 import { getRuntimeConfig } from '../config/runtime-config.js';
+import {
+  buildRowsUrl,
+  createHiddenColumnsSet,
+  formatPagesMeta,
+  formatRowsMeta,
+  getColumnsFromPayload,
+  normalizeFilters
+} from './MainTable.data.js';
 
 const runtimeConfig = getRuntimeConfig();
 const defaultsConfig = runtimeConfig.defaults || {};
@@ -24,31 +32,13 @@ const PAGE_SIZE = Number.isFinite(Number(defaultsConfig.pageSize))
 const MAX_CELL_CHARS = Number.isFinite(Number(defaultsConfig.maxCellChars))
   ? Number(defaultsConfig.maxCellChars)
   : 120;
-const HIDDEN_COLUMNS = new Set(
-  Array.isArray(defaultsConfig.hiddenColumns)
-    ? defaultsConfig.hiddenColumns.map((c) => String(c || '').trim().toUpperCase())
-    : ['DICTIONARY_VERSION_KEY']
-);
+const HIDDEN_COLUMNS = createHiddenColumnsSet(defaultsConfig.hiddenColumns);
 const DEFAULT_SORT_DIRECTION = String(behaviorConfig.defaultSortDirection || 'ASC').toUpperCase() === 'DESC'
   ? 'DESC'
   : 'ASC';
 const NO_WRAP_VALUE_MAX_LENGTH = Number.isFinite(Number(behaviorConfig.noWrapValueMaxLength))
   ? Number(behaviorConfig.noWrapValueMaxLength)
   : 15;
-
-function formatPagesMeta(page, pages) {
-  return `${uiTexts.pageLabel || 'Page'}: ${page}/${pages}`;
-}
-
-function formatRowsMeta(visibleRowsCount, allRowsCount) {
-  return `${uiTexts.rowsLabel || 'Rows'}: ${visibleRowsCount}/${allRowsCount}`;
-}
-
-function getColumnTechnicalName(columnDef) {
-  return columnDef && typeof columnDef.DICTIONARY_COLUMN_TECHNICAL === 'string'
-    ? String(columnDef.DICTIONARY_COLUMN_TECHNICAL).trim().toUpperCase()
-    : '';
-}
 
 export function createMainTableController({ onStateChange, onDetailsRequested, onAddRequested, onError, apiClient } = {}) {
   const resolvedApiClient = apiClient && typeof apiClient.fetchJson === 'function' ? apiClient : { fetchJson };
@@ -94,7 +84,7 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
     const pages = hasSelection ? state.totalPages : 0;
 
     if (pageInfo) {
-      pageInfo.textContent = formatPagesMeta(page, pages);
+      pageInfo.textContent = formatPagesMeta(uiTexts, page, pages);
     }
     if (prevPageButton) {
       prevPageButton.disabled = !hasSelection || state.currentPage <= 1;
@@ -127,57 +117,11 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
       }
     }
     if (tableMeta) {
-      tableMeta.textContent = formatRowsMeta(0, 0);
+      tableMeta.textContent = formatRowsMeta(uiTexts, 0, 0);
     }
 
     updatePaginationControls();
     emitState();
-  }
-
-  function buildRowsUrl(requestedPage) {
-    const params = new URLSearchParams({
-      page: String(requestedPage),
-      pageSize: String(PAGE_SIZE),
-      dictionaryVersionKey: String(state.selectedDictionaryVersionKey)
-    });
-
-    if (state.checkoutDictionaryLocation) {
-      params.set('checkoutDictionaryLocation', state.checkoutDictionaryLocation);
-    }
-
-    if (Array.isArray(state.activeFilters) && state.activeFilters.length > 0) {
-      params.set('filters', JSON.stringify(state.activeFilters));
-    }
-
-    if (state.currentSortColumn) {
-      params.set('sortColumn', state.currentSortColumn);
-      params.set('sortDirection', state.currentSortDirection);
-    }
-
-    return `/api/dictionaries/${encodeURIComponent(state.activeDictionary)}/rows?${params.toString()}`;
-  }
-
-  function isHiddenColumn(columnName) {
-    return HIDDEN_COLUMNS.has(String(columnName || '').trim().toUpperCase());
-  }
-
-  function getColumnsFromPayload(rows, payloadColumns) {
-    if (Array.isArray(payloadColumns) && payloadColumns.length > 0) {
-      return payloadColumns.filter(
-        (colObj) => colObj && typeof colObj.DICTIONARY_COLUMN_TECHNICAL === 'string' && !isHiddenColumn(colObj.DICTIONARY_COLUMN_TECHNICAL)
-      );
-    }
-
-    if (!Array.isArray(rows) || rows.length === 0) {
-      return [];
-    }
-
-    return Object.keys(rows[0])
-      .filter((col) => !isHiddenColumn(col))
-      .map((col) => ({
-        DICTIONARY_COLUMN_TECHNICAL: col,
-        DICTIONARY_COLUMN_BUSINESS: col
-      }));
   }
 
   function renderTable() {
@@ -186,7 +130,7 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
         tableContainer.innerHTML = `<div class="empty-state">${escapeHtml(uiTexts.noRowsReturned)}</div>`;
       }
       if (tableMeta) {
-        tableMeta.textContent = formatRowsMeta(0, state.totalRows);
+        tableMeta.textContent = formatRowsMeta(uiTexts, 0, state.totalRows);
       }
       updatePaginationControls();
       emitState();
@@ -233,7 +177,7 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
       tableContainer.innerHTML = `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
     }
     if (tableMeta) {
-      tableMeta.textContent = formatRowsMeta(state.rows.length, state.totalRows);
+      tableMeta.textContent = formatRowsMeta(uiTexts, state.rows.length, state.totalRows);
     }
 
     updatePaginationControls();
@@ -253,9 +197,20 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
     emitState();
 
     try {
-      const payload = await resolvedApiClient.fetchJson(buildRowsUrl(requestedPage));
+      const payload = await resolvedApiClient.fetchJson(
+        buildRowsUrl({
+          activeDictionary: state.activeDictionary,
+          selectedDictionaryVersionKey: state.selectedDictionaryVersionKey,
+          checkoutDictionaryLocation: state.checkoutDictionaryLocation,
+          activeFilters: state.activeFilters,
+          currentSortColumn: state.currentSortColumn,
+          currentSortDirection: state.currentSortDirection,
+          pageSize: PAGE_SIZE,
+          requestedPage
+        })
+      );
       state.rows = Array.isArray(payload.rows) ? payload.rows : [];
-      state.columns = getColumnsFromPayload(state.rows, payload.columns);
+      state.columns = getColumnsFromPayload(state.rows, payload.columns, HIDDEN_COLUMNS);
       state.currentPage = Number.isFinite(Number(payload.page)) ? Number(payload.page) : 1;
       state.totalPages = Number.isFinite(Number(payload.totalPages)) ? Number(payload.totalPages) : 1;
       state.totalRows = Number.isFinite(Number(payload.totalRows)) ? Number(payload.totalRows) : 0;
@@ -320,19 +275,6 @@ export function createMainTableController({ onStateChange, onDetailsRequested, o
     }
 
     return loadRows(1);
-  }
-
-  function normalizeFilters(filters) {
-    if (!Array.isArray(filters)) {
-      return [];
-    }
-
-    return filters
-      .map((item) => ({
-        column: String(item && item.column != null ? item.column : '').trim(),
-        value: String(item && item.value != null ? item.value : '').trim()
-      }))
-      .filter((item) => item.column.length > 0 && item.value.length > 0);
   }
 
   function setFilters(filters) {

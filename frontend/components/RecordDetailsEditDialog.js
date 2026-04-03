@@ -6,6 +6,15 @@
 
 import { postJson } from '../services/ApiClient.js';
 import { uiTexts } from '../config/ui-texts.js';
+import { escapeHtml } from '../utils/ui-helpers.js';
+import { getOrderedRecordFields, getVisibleRecordFields, KEY_COLUMN_NAME } from './RecordDetailsDialog.fields.js';
+import {
+  buildChangesListHtml,
+  cloneRecordRow,
+  getChangedColumnsSet,
+  getChangedEntriesForRows
+} from './RecordDetailsEditDialog.helpers.js';
+import { openConfirmDialog } from './RecordDetailsDialog.confirm.js';
 
 let recordDetailsDialog;
 let recordDetailsTitle;
@@ -151,8 +160,8 @@ export function showRecordDetailsEditDialog({
     dictionaryVersionKey: String(dictionaryVersionKey || '').trim(),
     checkoutDictionaryLocation: String(checkoutDictionaryLocation || '').trim(),
     columns: Array.isArray(columns) ? columns : [],
-    originalRow: cloneRow(row),
-    currentRow: cloneRow(row),
+    originalRow: cloneRecordRow(row),
+    currentRow: cloneRecordRow(row),
     isNewRecord: normalizedIsNewRecord,
     onAfterSave: typeof onAfterSave === 'function' ? onAfterSave : null
   };
@@ -184,31 +193,8 @@ function renderEditGrid() {
 
 function buildEditGrid(row, columns) {
   const safeRow = row && typeof row === 'object' ? row : {};
-  const orderedFields = Array.isArray(columns) && columns.length > 0
-    ? columns
-        .map((columnDef) => {
-          const technical = columnDef && typeof columnDef.DICTIONARY_COLUMN_TECHNICAL === 'string'
-            ? columnDef.DICTIONARY_COLUMN_TECHNICAL
-            : '';
-          if (!technical) {
-            return null;
-          }
-          return {
-            technical,
-            business:
-              columnDef && typeof columnDef.DICTIONARY_COLUMN_BUSINESS === 'string' && columnDef.DICTIONARY_COLUMN_BUSINESS.trim().length > 0
-                ? columnDef.DICTIONARY_COLUMN_BUSINESS
-                : technical
-          };
-        })
-        .filter(Boolean)
-    : Object.keys(safeRow).map((key) => ({ technical: key, business: key }));
-
-  // Separate KEY column (always last, readonly)
-  const keyField = orderedFields.find((f) => f.technical === 'KEY');
-  const regularFields = orderedFields.filter((f) => f.technical !== 'KEY');
-  const limitedRegularFields = regularFields.slice(0, MAX_VISIBLE_FIELDS);
-  const fieldsToDisplay = [...limitedRegularFields, ...(keyField ? [keyField] : [])];
+  const orderedFields = getOrderedRecordFields(safeRow, columns);
+  const fieldsToDisplay = getVisibleRecordFields(orderedFields, MAX_VISIBLE_FIELDS);
 
   if (fieldsToDisplay.length === 0) {
     return `<div class="show-record-empty">${uiTexts.recordNoFields || 'No fields to display.'}</div>`;
@@ -219,7 +205,7 @@ function buildEditGrid(row, columns) {
     .map((field) => {
       const technical = String(field.technical || '').trim();
       const rawValue = safeRow[technical] == null ? '' : String(safeRow[technical]);
-      const isKeyField = technical === 'KEY';
+      const isKeyField = technical === KEY_COLUMN_NAME;
       const changedClass = !isKeyField && changedMap.has(technical) ? ' show-record-card-changed' : '';
       const readonlyAttr = isKeyField ? ' readonly' : '';
       return `<label class="show-record-card${changedClass}"><span class="show-record-label">${escapeHtml(field.business)}</span><textarea class="show-record-control" rows="2" data-column="${escapeHtml(technical)}" title="${escapeHtml(rawValue)}"${readonlyAttr}>${escapeHtml(rawValue)}</textarea></label>`;
@@ -230,39 +216,15 @@ function buildEditGrid(row, columns) {
 }
 
 function getChangedEntries() {
-  const entries = [];
-  const original = currentContext.originalRow || {};
-  const current = currentContext.currentRow || {};
-
-  Object.keys(current).forEach((key) => {
-    // KEY column is never editable, skip from change tracking
-    if (key === 'KEY') {
-      return;
-    }
-
-    const before = normalizeComparableValue(original[key]);
-    const after = normalizeComparableValue(current[key]);
-    if (before !== after) {
-      entries.push({
-        column: key,
-        from: original[key],
-        to: current[key]
-      });
-    }
-  });
-
-  return entries;
+  return getChangedEntriesForRows(
+    currentContext.originalRow,
+    currentContext.currentRow,
+    KEY_COLUMN_NAME
+  );
 }
 
 function getChangedMap() {
-  return new Set(getChangedEntries().map((item) => item.column));
-}
-
-function normalizeComparableValue(value) {
-  if (value === null || value === undefined) {
-    return '';
-  }
-  return String(value);
+  return getChangedColumnsSet(getChangedEntries());
 }
 
 function onFieldInput(event) {
@@ -277,7 +239,7 @@ function onFieldInput(event) {
   }
 
   // KEY column is readonly, prevent any changes
-  if (technical === 'KEY') {
+  if (technical === KEY_COLUMN_NAME) {
     target.value = currentContext.originalRow[technical] || '';
     return;
   }
@@ -311,21 +273,11 @@ function updateActionButtonsState() {
   }
 }
 
-function formatChangeValue(value) {
-  if (value === null || value === undefined || String(value).length === 0) {
-    return uiTexts.emptyValue || '(empty)';
-  }
-  return String(value);
-}
-
-function buildChangesListHtml(changes) {
-  return changes
-    .map((change) => {
-      const from = escapeHtml(formatChangeValue(change.from));
-      const to = escapeHtml(formatChangeValue(change.to));
-      return `<li><strong>${escapeHtml(change.column)}</strong>: ${from} -> ${to}</li>`;
-    })
-    .join('');
+function buildChangeList(changes) {
+  return buildChangesListHtml(changes, {
+    escapeHtml,
+    emptyValueLabel: uiTexts.emptyValue || '(empty)'
+  });
 }
 
 function openSaveConfirmation(changes) {
@@ -344,7 +296,7 @@ function openSaveConfirmation(changes) {
   }
 
   intro.textContent = saveIntro;
-  list.innerHTML = buildChangesListHtml(changes);
+  list.innerHTML = buildChangeList(changes);
 
   return openConfirmDialog(dialog, confirmButton, cancelButton);
 }
@@ -361,48 +313,9 @@ function openDiscardConfirmation(changes, introText) {
   }
 
   intro.textContent = introText || uiTexts.discardDialogIntro || 'Are you sure you want to discard changes?';
-  list.innerHTML = buildChangesListHtml(changes);
+  list.innerHTML = buildChangeList(changes);
 
   return openConfirmDialog(dialog, confirmButton, cancelButton);
-}
-
-function openConfirmDialog(dialog, confirmButton, cancelButton) {
-  return new Promise((resolve) => {
-    let finished = false;
-    let confirmed = false;
-
-    const finish = (result) => {
-      if (finished) {
-        return;
-      }
-      finished = true;
-      cleanup();
-      resolve(Boolean(result));
-    };
-
-    const onConfirm = () => {
-      confirmed = true;
-      dialog.close();
-    };
-
-    const onCancel = () => {
-      confirmed = false;
-      dialog.close();
-    };
-
-    const onClose = () => finish(confirmed);
-
-    const cleanup = () => {
-      confirmButton.removeEventListener('click', onConfirm);
-      cancelButton.removeEventListener('click', onCancel);
-      dialog.removeEventListener('close', onClose);
-    };
-
-    confirmButton.addEventListener('click', onConfirm);
-    cancelButton.addEventListener('click', onCancel);
-    dialog.addEventListener('close', onClose);
-    dialog.showModal();
-  });
 }
 
 async function persistCurrentRow() {
@@ -446,7 +359,7 @@ async function onSaveClick() {
       return;
     }
 
-    currentContext.originalRow = cloneRow(currentContext.currentRow);
+    currentContext.originalRow = cloneRecordRow(currentContext.currentRow);
     updateActionButtonsState();
     renderDirtyHighlight();
   } catch (error) {
@@ -502,7 +415,7 @@ async function onDiscardClick() {
     return;
   }
 
-  currentContext.currentRow = cloneRow(currentContext.originalRow);
+  currentContext.currentRow = cloneRecordRow(currentContext.originalRow);
   renderEditGrid();
   updateActionButtonsState();
 }
@@ -522,23 +435,10 @@ async function onCloseClick() {
     return;
   }
 
-  currentContext.currentRow = cloneRow(currentContext.originalRow);
+  currentContext.currentRow = cloneRecordRow(currentContext.originalRow);
   renderEditGrid();
   updateActionButtonsState();
   recordDetailsDialog.close();
-}
-
-function cloneRow(row) {
-  return JSON.parse(JSON.stringify(row && typeof row === 'object' ? row : {}));
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
 }
 
 function handleFieldDblClick(event) {

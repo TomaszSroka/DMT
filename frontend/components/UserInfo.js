@@ -58,6 +58,12 @@ export async function loadUserInfo() {
     const userNameField = document.getElementById('userNameField');
     const rolesList = document.getElementById('rolesList');
     if (userNameField) userNameField.textContent = uiTexts.userLoadError || 'Error';
-    if (rolesList) rolesList.innerHTML = `<li>${error.message}</li>`;
+    if (rolesList) {
+      rolesList.innerHTML = '';
+      const item = document.createElement('li');
+      const message = error && error.message ? String(error.message) : String(error);
+      item.textContent = message;
+      rolesList.appendChild(item);
+    }
   }
 }

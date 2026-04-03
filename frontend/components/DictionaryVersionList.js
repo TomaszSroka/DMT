@@ -50,7 +50,11 @@ export async function renderDictionaryVersionList(dictionaryId) {
     dictionaryVersionSelect.disabled = false;
     return versions;
   } catch (error) {
-    dictionaryVersionSelect.innerHTML = `<option>${uiTexts.loadError || 'Error'}: ${error.message}</option>`;
+    dictionaryVersionSelect.innerHTML = '';
+    const errorOption = document.createElement('option');
+    const message = error && error.message ? String(error.message) : String(error);
+    errorOption.textContent = `${uiTexts.loadError || 'Error'}: ${message}`;
+    dictionaryVersionSelect.appendChild(errorOption);
     dictionaryVersionSelect.disabled = true;
     return [];
   } finally {

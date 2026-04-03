@@ -5,8 +5,14 @@
  */
 
 import { uiTexts } from '../config/ui-texts.js';
-import { escapeHtml, fillTemplate } from '../utils/ui-helpers.js';
+import { escapeHtml } from '../utils/ui-helpers.js';
 import { getRuntimeConfig } from '../config/runtime-config.js';
+import {
+  areFilterRowsEqual,
+  formatFiltersSummary,
+  getFiltersDraftSummaryLines as getDraftSummaryLines,
+  sanitizeFilterRows
+} from './FiltersDialog.helpers.js';
 
 const runtimeConfig = getRuntimeConfig();
 const behaviorConfig = runtimeConfig.uiBehavior || {};
@@ -47,64 +53,16 @@ export function createFiltersDialogController({ tableController } = {}) {
     }
   }
 
-  function sanitizeFilterRows(rows) {
-    if (!Array.isArray(rows)) {
-      return [];
-    }
-
-    return rows
-      .map((item) => ({
-        column: String(item && item.column != null ? item.column : '').trim(),
-        value: String(item && item.value != null ? item.value : '').trim()
-      }))
-      .filter((item) => item.column.length > 0 && item.value.length > 0);
-  }
-
-  function getBusinessMap(columns) {
-    const map = {};
-    if (!Array.isArray(columns)) {
-      return map;
-    }
-
-    columns.forEach((columnDef) => {
-      const technical =
-        columnDef && typeof columnDef.DICTIONARY_COLUMN_TECHNICAL === 'string'
-          ? columnDef.DICTIONARY_COLUMN_TECHNICAL
-          : '';
-      if (!technical) {
-        return;
-      }
-      const business =
-        columnDef && typeof columnDef.DICTIONARY_COLUMN_BUSINESS === 'string' && columnDef.DICTIONARY_COLUMN_BUSINESS.trim().length > 0
-          ? columnDef.DICTIONARY_COLUMN_BUSINESS
-          : technical;
-      map[technical] = business;
-    });
-
-    return map;
-  }
-
-  function formatFiltersSummary(activeFilters, columns) {
-    const normalized = sanitizeFilterRows(activeFilters);
-    if (normalized.length === 0) {
-      return uiTexts.filtersSummaryNone;
-    }
-
-    const businessMap = getBusinessMap(columns);
-    const parts = normalized.map((item) => {
-      const businessLabel = businessMap[item.column] || item.column;
-      return fillTemplate(FILTERS_SUMMARY_TEMPLATE, {
-        column: businessLabel,
-        value: item.value
-      });
-    });
-
-    const normalizedJoinerCore = String(FILTERS_SUMMARY_JOINER || '').trim() || 'AND';
-    return parts.join(` ${normalizedJoinerCore} `);
-  }
-
   function updateSummaryFromState() {
-    setSummary(formatFiltersSummary(latestTableState.activeFilters, latestTableState.columns));
+    setSummary(
+      formatFiltersSummary(
+        latestTableState.activeFilters,
+        latestTableState.columns,
+        FILTERS_SUMMARY_TEMPLATE,
+        FILTERS_SUMMARY_JOINER,
+        uiTexts.filtersSummaryNone
+      )
+    );
   }
 
   function createEmptyFilterRule() {
@@ -248,23 +206,8 @@ export function createFiltersDialogController({ tableController } = {}) {
     });
   }
 
-  function normalizeFilterRowsForComparison(rows) {
-    if (!Array.isArray(rows)) {
-      return [];
-    }
-
-    return rows
-      .map((item) => ({
-        column: String(item && item.column != null ? item.column : '').trim(),
-        value: String(item && item.value != null ? item.value : '').trim()
-      }))
-      .filter((item) => item.column.length > 0 || item.value.length > 0);
-  }
-
   function isFiltersDraftDirty() {
-    const normalizedActive = normalizeFilterRowsForComparison(latestTableState.activeFilters);
-    const normalizedDraft = normalizeFilterRowsForComparison(collectFiltersDraftRaw());
-    return JSON.stringify(normalizedActive) !== JSON.stringify(normalizedDraft);
+    return !areFilterRowsEqual(latestTableState.activeFilters, collectFiltersDraftRaw());
   }
 
   function setApplyButtonsEnabled(enabled) {
@@ -287,24 +230,11 @@ export function createFiltersDialogController({ tableController } = {}) {
     setApplyButtonsEnabled(isFiltersDraftDirty());
   }
 
-  function getFiltersDraftSummaryLines() {
-    const rows = collectFiltersDraftRaw()
-      .map((item) => ({
-        column: String(item && item.column != null ? item.column : '').trim(),
-        value: String(item && item.value != null ? item.value : '').trim()
-      }))
-      .filter((item) => item.column.length > 0 || item.value.length > 0);
-
-    const emptyValue = uiTexts.emptyValue;
-    if (rows.length === 0) {
-      return [fillTemplate(FILTER_DRAFT_ROW_TEMPLATE, { column: emptyValue, value: emptyValue })];
-    }
-
-    return rows.map((item) =>
-      fillTemplate(FILTER_DRAFT_ROW_TEMPLATE, {
-        column: item.column.length > 0 ? item.column : emptyValue,
-        value: item.value.length > 0 ? item.value : emptyValue
-      })
+  function buildFiltersDraftSummaryLines() {
+    return getDraftSummaryLines(
+      collectFiltersDraftRaw(),
+      FILTER_DRAFT_ROW_TEMPLATE,
+      uiTexts.emptyValue
     );
   }
 
@@ -324,6 +254,7 @@ export function createFiltersDialogController({ tableController } = {}) {
     const previousIntro = discardDialogIntro.textContent;
     const previousStay = discardStayButton.textContent;
     const previousConfirm = discardConfirmButton.textContent;
+    const previousListHidden = discardChangesList.hidden;
 
     discardDialogTitle.textContent = uiTexts.filtersDiscardDialogTitle;
     discardDialogIntro.textContent = uiTexts.filtersDiscardDialogIntro;
@@ -367,7 +298,7 @@ export function createFiltersDialogController({ tableController } = {}) {
     discardDialogIntro.textContent = previousIntro;
     discardStayButton.textContent = previousStay;
     discardConfirmButton.textContent = previousConfirm;
-    discardChangesList.hidden = false;
+    discardChangesList.hidden = previousListHidden;
     return shouldDiscard;
   }
 
@@ -381,7 +312,7 @@ export function createFiltersDialogController({ tableController } = {}) {
       return;
     }
 
-    const shouldDiscard = await askDiscardFiltersWithChanges(getFiltersDraftSummaryLines());
+    const shouldDiscard = await askDiscardFiltersWithChanges(buildFiltersDraftSummaryLines());
     if (shouldDiscard) {
       filtersDialog.close();
     }

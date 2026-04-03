@@ -5,11 +5,14 @@
  */
 
 import { uiTexts } from '../config/ui-texts.js';
+import { escapeHtml } from '../utils/ui-helpers.js';
+import { getOrderedRecordFields, getVisibleRecordFields } from './RecordDetailsDialog.fields.js';
 
 let recordDetailsDialog;
 let recordDetailsTitle;
 let recordDetailsCloseButton;
 let recordDetailsContent;
+let isHandlersBound = false;
 const MAX_VISIBLE_FIELDS = 20;
 
 export function setupRecordDetailsShowDialog() {
@@ -17,6 +20,7 @@ export function setupRecordDetailsShowDialog() {
   recordDetailsTitle = document.getElementById('showRecordTitle');
   recordDetailsCloseButton = document.getElementById('showRecordCloseButton');
   recordDetailsContent = document.getElementById('showRecordContent');
+  bindHandlers();
 }
 
 export function showRecordDetailsShowDialog({ dictionaryLabel = '', versionLabel = '', row = {}, columns = [] } = {}) {
@@ -29,45 +33,33 @@ export function showRecordDetailsShowDialog({ dictionaryLabel = '', versionLabel
   const versionPrefix = uiTexts.recordDialogVersionPrefix || 'ver.';
   const titleSuffix = [safeDictionary, safeVersion ? `${versionPrefix} ${safeVersion}` : ''].filter(Boolean).join(' ');
 
-  if (recordDetailsCloseButton && recordDetailsDialog) {
-    recordDetailsCloseButton.onclick = () => recordDetailsDialog.close();
-  }
-  if (recordDetailsContent) {
-    recordDetailsContent.ondblclick = handleFieldDblClick;
-  }
-
   recordDetailsTitle.textContent = `${uiTexts.recordDialogTitlePrefix || 'Record for: '}${titleSuffix}`;
   recordDetailsContent.innerHTML = buildReadGrid(row, columns);
   recordDetailsDialog.showModal();
 }
 
+function bindHandlers() {
+  if (isHandlersBound) {
+    return;
+  }
+
+  if (recordDetailsCloseButton && recordDetailsDialog) {
+    recordDetailsCloseButton.addEventListener('click', () => {
+      recordDetailsDialog.close();
+    });
+  }
+
+  if (recordDetailsContent) {
+    recordDetailsContent.addEventListener('dblclick', handleFieldDblClick);
+  }
+
+  isHandlersBound = true;
+}
+
 function buildReadGrid(row, columns) {
   const safeRow = row && typeof row === 'object' ? row : {};
-  const orderedFields = Array.isArray(columns) && columns.length > 0
-    ? columns
-        .map((columnDef) => {
-          const technical = columnDef && typeof columnDef.DICTIONARY_COLUMN_TECHNICAL === 'string'
-            ? columnDef.DICTIONARY_COLUMN_TECHNICAL
-            : '';
-          if (!technical) {
-            return null;
-          }
-          return {
-            technical,
-            business:
-              columnDef && typeof columnDef.DICTIONARY_COLUMN_BUSINESS === 'string' && columnDef.DICTIONARY_COLUMN_BUSINESS.trim().length > 0
-                ? columnDef.DICTIONARY_COLUMN_BUSINESS
-                : technical
-          };
-        })
-        .filter(Boolean)
-    : Object.keys(safeRow).map((key) => ({ technical: key, business: key }));
-
-  // Separate KEY column (always last for consistent UI)
-  const keyField = orderedFields.find((f) => f.technical === 'KEY');
-  const regularFields = orderedFields.filter((f) => f.technical !== 'KEY');
-  const limitedRegularFields = regularFields.slice(0, MAX_VISIBLE_FIELDS);
-  const fieldsToDisplay = [...limitedRegularFields, ...(keyField ? [keyField] : [])];
+  const orderedFields = getOrderedRecordFields(safeRow, columns);
+  const fieldsToDisplay = getVisibleRecordFields(orderedFields, MAX_VISIBLE_FIELDS);
 
   if (fieldsToDisplay.length === 0) {
     return `<div class="show-record-empty">${uiTexts.recordNoFields || 'No fields to display.'}</div>`;
@@ -81,15 +73,6 @@ function buildReadGrid(row, columns) {
     .join('');
 
   return `<div class="show-record-grid">${fieldCards}</div>`;
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
 }
 
 function handleFieldDblClick(event) {
