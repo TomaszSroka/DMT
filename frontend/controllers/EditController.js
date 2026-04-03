@@ -13,6 +13,8 @@ import { ensureDictionaryCheckOut } from '../services/CheckOutService.js';
 import { getCurrentUserKey } from '../services/ApiClient.js';
 import { beginDbLoading } from '../utils/db-loading.js';
 import { openDecisionDialog, setInfoDialogContent } from './EditController.dialogs.js';
+import { currentUserHasRole, canUpdateDictionaryByUserContext } from './EditController.roles.js';
+import { setEditorActionButtonsEnabled, switchToReadOnlyMode, updateEditButtonDisabledState } from './EditController.mode.js';
 
 export function createEditController({
   editButton,
@@ -38,20 +40,13 @@ export function createEditController({
   let dictionaryAccessById = new Map();
   let currentVersionLabelOverride = '';
 
-  function setEditorActionButtonsEnabled(enabled) {
-    const isEnabled = Boolean(enabled);
-    if (tableController && typeof tableController.setInlineCreateRowEnabled === 'function') {
-      tableController.setInlineCreateRowEnabled(isEnabled);
-    }
-    if (saveButton) {
-      saveButton.disabled = !isEnabled;
-    }
-    if (publishButton) {
-      publishButton.disabled = !isEnabled;
-    }
-    if (discardButton) {
-      discardButton.disabled = !isEnabled;
-    }
+  function setActionButtonsEnabled(enabled) {
+    setEditorActionButtonsEnabled({
+      tableController,
+      saveButton,
+      publishButton,
+      discardButton
+    }, enabled);
   }
 
   function setInfoDialogMessage(message, users = []) {
@@ -70,11 +65,18 @@ export function createEditController({
     }
   }
 
-  function currentUserHasRole(roleName) {
-    const expectedRole = String(roleName || '').trim().toUpperCase();
-    const userContext = window.__DMT_USER_CONTEXT || {};
-    const flatRoles = Array.isArray(userContext.roles) ? userContext.roles : [];
-    return flatRoles.some((role) => String(role || '').trim().toUpperCase() === expectedRole);
+  function setReadOnlyMode() {
+    switchToReadOnlyMode({
+      tableController,
+      setIsUpdaterEditMode: (value) => {
+        isUpdaterEditMode = Boolean(value);
+      },
+      setCurrentVersionLabelOverride: (value) => {
+        currentVersionLabelOverride = String(value || '');
+      },
+      setEditorActionButtonsEnabled: setActionButtonsEnabled,
+      showLabel: uiTexts.showRowButton || 'Show'
+    });
   }
 
   async function showReaderNoPermissionDialog() {
@@ -126,7 +128,7 @@ export function createEditController({
       });
     });
 
-    setEditorActionButtonsEnabled(false);
+    setActionButtonsEnabled(false);
   }
 
   function requestCheckOutConfirmation() {
@@ -150,7 +152,7 @@ export function createEditController({
     currentVersionLabelOverride = String(checkOutPayload.versionName || '').trim();
     tableController.setRowActionLabel(uiTexts.editDictionary || 'Edit');
     isUpdaterEditMode = true;
-    setEditorActionButtonsEnabled(true);
+    setActionButtonsEnabled(true);
 
     // Clear version key so setCheckoutDictionaryLocation does not trigger an intermediate load.
     tableController.setDictionaryVersion('');
@@ -197,22 +199,13 @@ export function createEditController({
       dictionarySelect.addEventListener('change', async () => {
         const selectedDictionary = String(dictionarySelect.value || '').trim();
         tableController.setDictionary(selectedDictionary);
-        isUpdaterEditMode = false;
-        currentVersionLabelOverride = '';
-        setEditorActionButtonsEnabled(false);
-        tableController.setCheckoutDictionaryLocation('');
-        
+        setReadOnlyMode();
+
         // Set row action button label based on user role (Edit for UPDATER, Show for others)
-        const userContext = window.__DMT_USER_CONTEXT || {};
-        const dictionaryRoles = Array.isArray(userContext.dictionaryRoles) ? userContext.dictionaryRoles : [];
-        const canUpdateThisDictionary = dictionaryRoles.some((item) => {
-          const dictionaryId = item && item.dictionary ? String(item.dictionary).trim().toUpperCase() : '';
-          const role = item && item.role ? String(item.role).trim().toUpperCase() : '';
-          return dictionaryId === String(selectedDictionary || '').trim().toUpperCase() && role === 'DICTIONARY_UPDATER';
-        });
+        const canUpdateThisDictionary = canUpdateDictionaryByUserContext(selectedDictionary);
         const newLabel = canUpdateThisDictionary ? (uiTexts.editDictionary || 'Edit') : (uiTexts.showRowButton || 'Show');
         tableController.setRowActionLabel(newLabel);
-        
+
         if (typeof renderDictionaryVersionList === 'function') {
           await renderDictionaryVersionList(selectedDictionary);
         }
@@ -230,7 +223,7 @@ export function createEditController({
           isUpdaterEditMode = true;
           currentVersionLabelOverride = label;
           tableController.setRowActionLabel(uiTexts.editDictionary || 'Edit');
-          setEditorActionButtonsEnabled(true);
+          setActionButtonsEnabled(true);
           // Clear version so setCheckoutDictionaryLocation does not fire an intermediate load.
           tableController.setDictionaryVersion('');
           // Version is empty — no load fires, just sets location in state.
@@ -239,11 +232,7 @@ export function createEditController({
           tableController.setDictionaryVersion(dictionaryVersionSelect.value);
           showInfoDialogWithUsers(uiTexts.returningToCheckoutMessage || 'You are returning to change the dictionary you previously edited (checked out).');
         } else {
-          isUpdaterEditMode = false;
-          currentVersionLabelOverride = '';
-          tableController.setCheckoutDictionaryLocation('');
-          tableController.setRowActionLabel(uiTexts.showRowButton || 'Show');
-          setEditorActionButtonsEnabled(false);
+          setReadOnlyMode();
           tableController.setDictionaryVersion(dictionaryVersionSelect.value);
         }
       });
@@ -268,10 +257,7 @@ export function createEditController({
       const isDictionaryReader = roles.includes('DICTIONARY_READER');
 
       if (!canUpdate) {
-        isUpdaterEditMode = false;
-        tableController.setCheckoutDictionaryLocation('');
-        tableController.setRowActionLabel(uiTexts.showRowButton || 'Show');
-        setEditorActionButtonsEnabled(false);
+        setReadOnlyMode();
         if (isDictionaryReader) {
           showReaderNoPermissionDialog();
         } else {
@@ -297,11 +283,7 @@ export function createEditController({
         const procedureResult = String(checkResult && checkResult.procedureResult ? checkResult.procedureResult : '').toUpperCase();
 
         if (procedureResult === 'RECORD_EXISTS') {
-          isUpdaterEditMode = false;
-          currentVersionLabelOverride = '';
-          tableController.setCheckoutDictionaryLocation('');
-          tableController.setRowActionLabel(uiTexts.showRowButton || 'Show');
-          setEditorActionButtonsEnabled(false);
+          setReadOnlyMode();
           showCheckOutExistsInfo(checkResult);
           return;
         }
@@ -312,22 +294,14 @@ export function createEditController({
 
         const confirmed = await requestCheckOutConfirmation();
         if (!confirmed) {
-          isUpdaterEditMode = false;
-          currentVersionLabelOverride = '';
-          tableController.setCheckoutDictionaryLocation('');
-          tableController.setRowActionLabel(uiTexts.showRowButton || 'Show');
-          setEditorActionButtonsEnabled(false);
+          setReadOnlyMode();
           return;
         }
 
         const addResult = await ensureDictionaryCheckOut(selectedDictionary, selectedVersion, 'ADD');
         await activateUpdaterEditMode(addResult, selectedDictionary);
       } catch (error) {
-        isUpdaterEditMode = false;
-        currentVersionLabelOverride = '';
-        tableController.setCheckoutDictionaryLocation('');
-        tableController.setRowActionLabel(uiTexts.showRowButton || 'Show');
-        setEditorActionButtonsEnabled(false);
+        setReadOnlyMode();
 
         const dbMessage = error && error.details ? String(error.details) : (error && error.message ? String(error.message) : String(error));
         showInfoDialogWithUsers(dbMessage);
@@ -338,12 +312,11 @@ export function createEditController({
           globalLoadingInfo.textContent = previousLoadingInfoText;
         }
 
-        if (isUpdaterEditMode) {
-          editButton.disabled = true;
-        } else {
-          const currentState = tableController.getState();
-          editButton.disabled = !currentState.hasLoadedTableData || !currentState.activeDictionary || !currentState.selectedDictionaryVersionKey;
-        }
+        updateEditButtonDisabledState({
+          editButton,
+          tableController,
+          isUpdaterEditMode
+        });
       }
     });
   }
