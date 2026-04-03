@@ -345,6 +345,15 @@ test("user managers endpoint contract", async () => {
   }
 });
 
+test("unknown userKey is rejected in mock auth mode", async () => {
+  const response = await fetch(`${BASE_URL}/api/meta?userKey=NOT_ALLOWED_USER`);
+  assert.equal(response.status, 401);
+
+  const payload = await response.json();
+  assert.equal(typeof payload.error, "string");
+  assert.equal(payload.errorCode, "AUTH_USER_KEY_INVALID");
+});
+
 test("dictionary check-out endpoint contract", async (t) => {
   const metaResponse = await fetch(`${BASE_URL}/api/meta`);
   assert.equal(metaResponse.status, 200);

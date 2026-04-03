@@ -1,7 +1,7 @@
 const express = require("express");
-const { staticUser, userReader, userUpdater, userCreator } = require("../config/env");
 const { asyncHandler } = require("../utils/async-handler");
 const { createAppError } = require("../errors/app-error");
+const { resolveAuthContext } = require("../middleware/auth-context");
 const {
   getDictionaryRowsPageForUser,
   getDictionaryVersionHistoryForUser,
@@ -17,21 +17,10 @@ const { getDictionaryColumns } = require("../services/table/dictionary-columns")
 
 const router = express.Router();
 
-const USER_KEY_TO_LOGIN = new Map([
-  ["READER", userReader || staticUser],
-  ["UPDATER", userUpdater || staticUser],
-  ["CREATOR", userCreator || staticUser]
-]);
-
-function getUserLogin(userKey) {
-  const rawValue = String(userKey || "").trim();
-  if (!rawValue) {
-    return staticUser;
-  }
-
-  const key = rawValue.toUpperCase();
-  return USER_KEY_TO_LOGIN.get(key) || rawValue;
-}
+router.use(resolveAuthContext);
+router.use((error, req, res, next) => {
+  sendApiError(res, error, "Authentication failed.", "AUTH_FAILED");
+});
 
 function sendApiError(res, error, fallbackMessage, fallbackCode) {
   const { status, message, errorCode, details } = getErrorPayload(error, fallbackMessage, fallbackCode);
@@ -57,7 +46,7 @@ function withApiErrorHandling(fallbackMessage, fallbackCode, handler) {
 // Return full object (id, label, canUpdate, roles)
 
 async function getDynamicUserContext(req) {
-  return getUserDictionaryContext(getUserLogin(req.query.userKey));
+  return getUserDictionaryContext(req.user.login);
 }
 
 function hasQueryValue(value) {
@@ -167,7 +156,7 @@ router.post(
   "/dictionaries/:name/rows/save",
   withApiErrorHandling("Could not save Dictionary row.", "ROW_SAVE_FAILED", async (req, res) => {
     const payload = await saveDictionaryRowForUser(
-      getUserLogin(req.query.userKey),
+      req.user.login,
       req.params.name,
       req.body || {}
     );
@@ -179,7 +168,7 @@ router.post(
   "/dictionaries/:name/rows/insert",
   withApiErrorHandling("Could not insert Dictionary row.", "ROW_INSERT_FAILED", async (req, res) => {
     const payload = await insertDictionaryRowForUser(
-      getUserLogin(req.query.userKey),
+      req.user.login,
       req.params.name,
       req.body || {}
     );
@@ -197,7 +186,7 @@ router.post(
     }
 
     const payload = await ensureDictionaryCheckOutForUser(
-      getUserLogin(req.query.userKey),
+      req.user.login,
       req.params.name,
       dictionaryVersionKey,
       mode
@@ -219,7 +208,7 @@ router.get(
       sortDirection
     } = validateRowsQuery(req);
     const payload = await getDictionaryRowsPageForUser(
-      getUserLogin(req.query.userKey),
+      req.user.login,
       req.params.name,
       page,
       pageSize,
@@ -236,7 +225,7 @@ router.get(
 router.get(
   "/dictionaries/:name/versions",
   withApiErrorHandling("Could not load Dictionary versions.", "VERSIONS_LOAD_FAILED", async (req, res) => {
-    const payload = await getDictionaryVersionsForUser(getUserLogin(req.query.userKey), req.params.name);
+    const payload = await getDictionaryVersionsForUser(req.user.login, req.params.name);
     res.json(payload);
   })
 );
@@ -244,7 +233,7 @@ router.get(
 router.get(
   "/dictionaries/:name/version-history",
   withApiErrorHandling("Could not load Dictionary version details.", "VERSION_HISTORY_LOAD_FAILED", async (req, res) => {
-    const payload = await getDictionaryVersionHistoryForUser(getUserLogin(req.query.userKey), req.params.name);
+    const payload = await getDictionaryVersionHistoryForUser(req.user.login, req.params.name);
     res.json(payload);
   })
 );

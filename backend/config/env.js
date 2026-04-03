@@ -71,6 +71,11 @@ function toBoolean(value, fallbackValue) {
   return String(value).toLowerCase() === "true";
 }
 
+function toAuthMode(value, fallbackValue) {
+  const normalized = String(value || fallbackValue || "mock").trim().toLowerCase();
+  return normalized === "sso" ? "sso" : "mock";
+}
+
 const required = [
   "SNOWFLAKE_ACCOUNT",
   "SNOWFLAKE_USER",
@@ -90,6 +95,7 @@ if (missing.length > 0) {
 module.exports = {
   port: toNumber(getRawValue("DMT_PORT", 3000), 3000),
   readinessCacheMs: toInteger(getRawValue("READINESS_CACHE_MS", 5000), 5000),
+  authMode: toAuthMode(getRawValue("AUTH_MODE", "mock"), "mock"),
   snowflake: {
     account: getRawValue("SNOWFLAKE_ACCOUNT"),
     username: getRawValue("SNOWFLAKE_USER"),
