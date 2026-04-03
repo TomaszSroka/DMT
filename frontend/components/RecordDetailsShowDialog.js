@@ -4,6 +4,8 @@
  * Dedicated read-mode dialog opened from the Show action in MainTable.
  */
 
+import { uiTexts } from '../config/ui-texts.js';
+
 let recordDetailsDialog;
 let recordDetailsTitle;
 let recordDetailsCloseButton;
@@ -24,20 +26,8 @@ export function showRecordDetailsShowDialog({ dictionaryLabel = '', versionLabel
 
   const safeDictionary = String(dictionaryLabel || '').trim();
   const safeVersion = String(versionLabel || '').trim();
-  const titleSuffix = [safeDictionary, safeVersion ? `ver. ${safeVersion}` : ''].filter(Boolean).join(' ');
-
-  // Remove Save and Discard buttons (left over from Edit Dialog)
-  const actionsContainer = recordDetailsDialog.querySelector('.show-record-actions');
-  if (actionsContainer) {
-    const saveButton = actionsContainer.querySelector('.btn-save');
-    const discardButton = actionsContainer.querySelector('.btn-discard:not(#showRecordCloseButton)');
-    if (saveButton) {
-      saveButton.remove();
-    }
-    if (discardButton) {
-      discardButton.remove();
-    }
-  }
+  const versionPrefix = uiTexts.recordDialogVersionPrefix || 'ver.';
+  const titleSuffix = [safeDictionary, safeVersion ? `${versionPrefix} ${safeVersion}` : ''].filter(Boolean).join(' ');
 
   if (recordDetailsCloseButton && recordDetailsDialog) {
     recordDetailsCloseButton.onclick = () => recordDetailsDialog.close();
@@ -46,7 +36,7 @@ export function showRecordDetailsShowDialog({ dictionaryLabel = '', versionLabel
     recordDetailsContent.ondblclick = handleFieldDblClick;
   }
 
-  recordDetailsTitle.textContent = `Record for: ${titleSuffix}`;
+  recordDetailsTitle.textContent = `${uiTexts.recordDialogTitlePrefix || 'Record for: '}${titleSuffix}`;
   recordDetailsContent.innerHTML = buildReadGrid(row, columns);
   recordDetailsDialog.showModal();
 }
@@ -80,7 +70,7 @@ function buildReadGrid(row, columns) {
   const fieldsToDisplay = [...limitedRegularFields, ...(keyField ? [keyField] : [])];
 
   if (fieldsToDisplay.length === 0) {
-    return '<div class="show-record-empty">No fields to display.</div>';
+    return `<div class="show-record-empty">${uiTexts.recordNoFields || 'No fields to display.'}</div>`;
   }
 
   const fieldCards = fieldsToDisplay

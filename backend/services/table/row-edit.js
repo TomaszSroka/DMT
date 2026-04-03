@@ -27,10 +27,13 @@ function buildWherePredicate(columnName, value, binds) {
   return `"${columnName}" = ?`;
 }
 
-async function resolveSourceTableIdentifier(permission, checkoutDictionaryLocation) {
+async function resolveSaveContext(permission, checkoutDictionaryLocation) {
   const normalizedCheckOutLocation = String(checkoutDictionaryLocation || "").trim();
   if (!normalizedCheckOutLocation) {
-    return permission.tableIdentifier;
+    return {
+      sourceTableIdentifier: permission.tableIdentifier,
+      columnsDictionaryVersionKey: ""
+    };
   }
 
   if (!permission.canUpdate) {
@@ -48,7 +51,10 @@ async function resolveSourceTableIdentifier(permission, checkoutDictionaryLocati
     throw createAppError("Check-out table does not match active Dictionary check-out details.", 403, "CHECK_OUT_TABLE_MISMATCH");
   }
 
-  return normalizedCheckOutLocation;
+  return {
+    sourceTableIdentifier: normalizedCheckOutLocation,
+    columnsDictionaryVersionKey: String(checkOutDetails.dictionaryVersionKey || "").trim()
+  };
 }
 
 async function saveDictionaryRowForUser(userLogin, dictionaryName, payload = {}) {
@@ -64,14 +70,15 @@ async function saveDictionaryRowForUser(userLogin, dictionaryName, payload = {})
     throw createAppError("Field 'dictionaryVersionKey' is required.", 400, "DICTIONARY_VERSION_KEY_REQUIRED");
   }
 
-  const sourceTableIdentifier = await resolveSourceTableIdentifier(permission, payload.checkoutDictionaryLocation);
-  if (!isSafeDictionaryIdentifier(sourceTableIdentifier)) {
+  const saveContext = await resolveSaveContext(permission, payload.checkoutDictionaryLocation);
+  if (!isSafeDictionaryIdentifier(saveContext.sourceTableIdentifier)) {
     throw createAppError("Dictionary identifier is invalid.", 400, "DICTIONARY_IDENTIFIER_INVALID");
   }
 
   const originalRow = normalizeObject(payload.originalRow);
   const updatedRow = normalizeObject(payload.updatedRow);
-  const columnDefs = await getDictionaryColumns(permission.id, dictionaryVersionKey);
+  const columnsVersionKey = saveContext.columnsDictionaryVersionKey || dictionaryVersionKey;
+  const columnDefs = await getDictionaryColumns(permission.id, columnsVersionKey);
 
   const allowedColumns = new Set(
     (Array.isArray(columnDefs) ? columnDefs : [])
@@ -144,7 +151,7 @@ async function saveDictionaryRowForUser(userLogin, dictionaryName, payload = {})
   const setBinds = changedColumns.map((change) => change.newValue);
 
   const updateSql = `
-    UPDATE ${sourceTableIdentifier}
+    UPDATE ${saveContext.sourceTableIdentifier}
     SET ${setSql}
     WHERE ${whereSql}
   `;

@@ -88,9 +88,9 @@ export function createEditController({
   async function showReaderNoPermissionDialog() {
     if (currentUserHasRole('USER_MANAGER')) {
       const intro = [
-        "The DICTIONARY_READER role doesn't have permissions to edit the Dictionary.",
+        uiTexts.readerNoPermissionLine1 || "The DICTIONARY_READER role doesn't have permissions to edit the Dictionary.",
         "",
-        "You have USER_MANAGER role, so you can change Your permissions."
+        uiTexts.readerNoPermissionUserManagerLine3 || "You have USER_MANAGER role, so you can change Your permissions."
       ].join('<br>');
       showInfoDialogWithUsers(intro, []);
       return;
@@ -105,9 +105,9 @@ export function createEditController({
     }
 
     const intro = [
-      "The DICTIONARY_READER role doesn't have permissions to edit the Dictionary.",
+      uiTexts.readerNoPermissionLine1 || "The DICTIONARY_READER role doesn't have permissions to edit the Dictionary.",
       "",
-      "Please contact someone with the USER_MANAGER role to change Your permissions:"
+      uiTexts.readerNoPermissionNonManagerLine3 || "Please contact someone with the USER_MANAGER role to change Your permissions:"
     ].join('<br>');
     const users = Array.isArray(userManagersCache) ? userManagersCache : [];
 
@@ -116,7 +116,7 @@ export function createEditController({
       return;
     }
 
-    showInfoDialogWithUsers(`${intro}<br>- No USER_MANAGER users found.`, []);
+    showInfoDialogWithUsers(`${intro}<br>${uiTexts.noUserManagersFound || '- No USER_MANAGER users found.'}`, []);
   }
 
   function setupDialogs() {
@@ -130,7 +130,7 @@ export function createEditController({
       }
 
       button.addEventListener('click', () => {
-        showInfoDialogWithUsers('This feature is not implemented yet.');
+        showInfoDialogWithUsers(uiTexts.notImplementedMessage || 'This feature is not implemented yet.');
       });
     });
 
@@ -321,7 +321,7 @@ export function createEditController({
         if (isDictionaryReader) {
           showReaderNoPermissionDialog();
         } else {
-          showInfoDialogWithUsers('This feature is not implemented yet.');
+          showInfoDialogWithUsers(uiTexts.notImplementedMessage || 'This feature is not implemented yet.');
         }
         return;
       }

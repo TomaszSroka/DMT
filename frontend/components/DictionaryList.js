@@ -64,7 +64,7 @@ export async function renderDictionaryList() {
     return Array.isArray(data.dictionaries) ? data.dictionaries : [];
   } catch (error) {
     if (dictionarySelect) {
-      dictionarySelect.innerHTML = `<option>Error: ${error.message}</option>`;
+      dictionarySelect.innerHTML = `<option>${uiTexts.loadError || 'Error'}: ${error.message}</option>`;
       dictionarySelect.disabled = true;
     }
     return [];

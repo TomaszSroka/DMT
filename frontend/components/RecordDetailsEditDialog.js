@@ -13,6 +13,7 @@ let recordDetailsCloseButton;
 let recordDetailsContent;
 let showErrorDetailsDialog = null;
 let saveActionButton = null;
+let saveAndCloseActionButton = null;
 let discardActionButton = null;
 
 let currentContext = {
@@ -30,10 +31,10 @@ const MAX_VISIBLE_FIELDS = 20;
 export function setupRecordDetailsEditDialog({ showErrorDetailsDialog: showErrorDialog } = {}) {
   showErrorDetailsDialog = typeof showErrorDialog === 'function' ? showErrorDialog : null;
 
-  recordDetailsDialog = document.getElementById('showRecordDialog');
-  recordDetailsTitle = document.getElementById('showRecordTitle');
-  recordDetailsCloseButton = document.getElementById('showRecordCloseButton');
-  recordDetailsContent = document.getElementById('showRecordContent');
+  recordDetailsDialog = document.getElementById('editRecordDialog');
+  recordDetailsTitle = document.getElementById('editRecordTitle');
+  recordDetailsCloseButton = document.getElementById('editRecordCloseButton');
+  recordDetailsContent = document.getElementById('editRecordContent');
 
   ensureActionButtons();
 }
@@ -52,9 +53,19 @@ function ensureActionButtons() {
     return;
   }
 
-  const actionsContainer = recordDetailsDialog.querySelector('.show-record-actions');
+  const actionsContainer = recordDetailsDialog.querySelector('.edit-record-actions');
   if (!actionsContainer) {
     return;
+  }
+
+  if (saveActionButton && !actionsContainer.contains(saveActionButton)) {
+    saveActionButton = null;
+  }
+  if (saveAndCloseActionButton && !actionsContainer.contains(saveAndCloseActionButton)) {
+    saveAndCloseActionButton = null;
+  }
+  if (discardActionButton && !actionsContainer.contains(discardActionButton)) {
+    discardActionButton = null;
   }
 
   if (!saveActionButton) {
@@ -66,6 +77,18 @@ function ensureActionButtons() {
     saveActionButton.addEventListener('click', onSaveClick);
     actionsContainer.insertBefore(saveActionButton, recordDetailsCloseButton || null);
   }
+  saveActionButton.style.display = '';
+
+  if (!saveAndCloseActionButton) {
+    saveAndCloseActionButton = document.createElement('button');
+    saveAndCloseActionButton.type = 'button';
+    saveAndCloseActionButton.className = 'btn btn-save';
+    saveAndCloseActionButton.textContent = uiTexts.saveAndClose || 'Save & Close';
+    saveAndCloseActionButton.disabled = true;
+    saveAndCloseActionButton.addEventListener('click', onSaveAndCloseClick);
+    actionsContainer.insertBefore(saveAndCloseActionButton, recordDetailsCloseButton || null);
+  }
+  saveAndCloseActionButton.style.display = '';
 
   if (!discardActionButton) {
     discardActionButton = document.createElement('button');
@@ -76,6 +99,7 @@ function ensureActionButtons() {
     discardActionButton.addEventListener('click', onDiscardClick);
     actionsContainer.insertBefore(discardActionButton, recordDetailsCloseButton || null);
   }
+  discardActionButton.style.display = '';
 
   if (recordDetailsCloseButton) {
     recordDetailsCloseButton.onclick = onCloseClick;
@@ -101,9 +125,12 @@ export function showRecordDetailsEditDialog({
     return;
   }
 
+  ensureActionButtons();
+
   const safeDictionary = String(dictionaryLabel || '').trim();
   const safeVersion = String(versionLabel || '').trim();
-  const titleSuffix = [safeDictionary, safeVersion ? `ver. ${safeVersion}` : ''].filter(Boolean).join(' ');
+  const versionPrefix = uiTexts.recordDialogVersionPrefix || 'ver.';
+  const titleSuffix = [safeDictionary, safeVersion ? `${versionPrefix} ${safeVersion}` : ''].filter(Boolean).join(' ');
 
   currentContext = {
     dictionaryName: String(dictionaryName || '').trim(),
@@ -115,7 +142,7 @@ export function showRecordDetailsEditDialog({
     onAfterSave: typeof onAfterSave === 'function' ? onAfterSave : null
   };
 
-  recordDetailsTitle.textContent = `Record for: ${titleSuffix}`;
+  recordDetailsTitle.textContent = `${uiTexts.recordDialogTitlePrefix || 'Record for: '}${titleSuffix}`;
   renderEditGrid();
   updateActionButtonsState();
   recordDetailsDialog.showModal();
@@ -154,7 +181,7 @@ function buildEditGrid(row, columns) {
   const fieldsToDisplay = [...limitedRegularFields, ...(keyField ? [keyField] : [])];
 
   if (fieldsToDisplay.length === 0) {
-    return '<div class="show-record-empty">No fields to display.</div>';
+    return `<div class="show-record-empty">${uiTexts.recordNoFields || 'No fields to display.'}</div>`;
   }
 
   const changedMap = getChangedMap();
@@ -245,6 +272,9 @@ function updateActionButtonsState() {
   const hasChanges = getChangedEntries().length > 0;
   if (saveActionButton) {
     saveActionButton.disabled = !hasChanges;
+  }
+  if (saveAndCloseActionButton) {
+    saveAndCloseActionButton.disabled = !hasChanges;
   }
   if (discardActionButton) {
     discardActionButton.disabled = !hasChanges;
@@ -378,6 +408,42 @@ async function onSaveClick() {
   }
 }
 
+async function onSaveAndCloseClick() {
+  const changes = getChangedEntries();
+  if (changes.length === 0) {
+    recordDetailsDialog.close();
+    return;
+  }
+
+  const confirmed = await openSaveConfirmation(changes);
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await postJson(`/api/dictionaries/${encodeURIComponent(currentContext.dictionaryName)}/rows/save`, {
+      dictionaryVersionKey: currentContext.dictionaryVersionKey,
+      checkoutDictionaryLocation: currentContext.checkoutDictionaryLocation,
+      originalRow: currentContext.originalRow,
+      updatedRow: currentContext.currentRow
+    });
+
+    if (typeof currentContext.onAfterSave === 'function') {
+      await currentContext.onAfterSave();
+    }
+
+    recordDetailsDialog.close();
+  } catch (error) {
+    const message = error && error.message ? error.message : String(error);
+    const details = error && error.details ? error.details : '';
+    if (showErrorDetailsDialog) {
+      showErrorDetailsDialog(message, details);
+    } else {
+      window.alert(message);
+    }
+  }
+}
+
 async function onDiscardClick() {
   const changes = getChangedEntries();
   if (changes.length === 0) {
@@ -403,7 +469,7 @@ async function onCloseClick() {
 
   const confirmed = await openDiscardConfirmation(
     changes,
-    'Unsaved changes were detected. Are you sure you want to discard these changes?'
+    uiTexts.recordCloseUnsavedPrompt || 'Unsaved changes were detected. Are you sure you want to discard these changes?'
   );
   if (!confirmed) {
     return;

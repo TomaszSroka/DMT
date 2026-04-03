@@ -35,6 +35,7 @@ async function getDictionaryRowsPageForUser(
   const permission = resolveDictionaryPermission(context, dictionaryName);
 
   let sourceTableIdentifier = permission.tableIdentifier;
+  let columnsVersionKeyFromCheckOut = "";
   const normalizedCheckOutLocation = String(checkoutDictionaryLocation || "").trim();
   if (normalizedCheckOutLocation) {
     if (!permission.canUpdate) {
@@ -52,6 +53,7 @@ async function getDictionaryRowsPageForUser(
       throw createAppError("Check-out table does not match active Dictionary check-out details.", 403, "CHECK_OUT_TABLE_MISMATCH");
     }
 
+    columnsVersionKeyFromCheckOut = String(checkOutDetails.dictionaryVersionKey || "").trim();
     sourceTableIdentifier = normalizedCheckOutLocation;
   }
 
@@ -119,7 +121,8 @@ async function getDictionaryRowsPageForUser(
   const rows = stripWindowColumns(rowsWithCount);
   const snapshot = buildSnapshotToken(rows, totalRows, normalizedVersionKey);
 
-  const columns = await getDictionaryColumns(dictionaryName, normalizedVersionKey);
+  const columnsVersionKey = columnsVersionKeyFromCheckOut || normalizedVersionKey;
+  const columns = await getDictionaryColumns(dictionaryName, columnsVersionKey);
 
   return {
     rows: cloneRows(rows),

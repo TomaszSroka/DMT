@@ -132,13 +132,18 @@ function initMainApp() {
     ["filtersApplyButton", "filtersApply"],
     ["filtersApplyCloseButton", "filtersApplyClose"],
     ["filtersClearButton", "filtersClear"],
-    ["filtersCloseButton", "filtersClose"]
+    ["filtersCloseButton", "filtersClose"],
+    ["recordDetailsCloseButton", "closeButton"],
+    ["showRecordCloseButton", "closeButton"],
+    ["editRecordCloseButton", "closeButton"],
+    ["notImplementedCloseButton", "closeButton"],
+    ["notImplementedTitle", "notImplementedTitle"]
   ];
 
   assignText.forEach(([id, key]) => {
     const el = document.getElementById(id);
     if (id === "rolesLabel" && el) {
-      el.textContent = "Dictionary Name - Role Name:";
+      el.textContent = uiTexts[key] || "Dictionary Name - Role Name:";
     } else if (el && (key === "dictionaryLabel" || key === "dictionaryVersionLabel")) {
       el.textContent = uiTexts[key].replace(/:.*/, "") + ":";
     } else if (el && uiTexts[key]) {

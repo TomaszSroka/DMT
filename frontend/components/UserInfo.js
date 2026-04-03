@@ -8,6 +8,7 @@
  */
 
 import { fetchJson } from '../services/ApiClient.js';
+import { uiTexts } from '../config/ui-texts.js';
 
 const ROLES_SCROLL_THRESHOLD = (() => {
   const cfg = window.FRONTEND_CONFIG;
@@ -56,7 +57,7 @@ export async function loadUserInfo() {
     };
     const userNameField = document.getElementById('userNameField');
     const rolesList = document.getElementById('rolesList');
-    if (userNameField) userNameField.textContent = 'Error';
+    if (userNameField) userNameField.textContent = uiTexts.userLoadError || 'Error';
     if (rolesList) rolesList.innerHTML = `<li>${error.message}</li>`;
   }
 }

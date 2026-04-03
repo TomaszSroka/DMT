@@ -100,6 +100,18 @@
   justify-content: center;
 }
 
+.edit-actions {
+  display: flex;
+  gap: var(--btn-gap);
+}
+
+.edit-actions .btn {
+  min-width: 9.5ch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 @media (max-width: 900px) {
   .actions {
     margin-left: 0;

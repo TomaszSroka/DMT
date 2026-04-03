@@ -7,6 +7,8 @@
  * Usage: Call setupVersionHistoryDialog() and showVersionHistoryDialog(row, columns) as needed.
  */
 
+import { uiTexts } from '../config/ui-texts.js';
+
 let recordDetailsDialog, recordDetailsFields, recordDetailsCloseButton;
 
 export function setupVersionHistoryDialog() {
@@ -14,7 +16,7 @@ export function setupVersionHistoryDialog() {
 	recordDetailsFields = document.getElementById("recordDetailsFields");
 	recordDetailsCloseButton = document.getElementById("recordDetailsCloseButton");
 	const recordDetailsTitle = document.getElementById("recordDetailsTitle");
-	if (recordDetailsTitle) recordDetailsTitle.textContent = "Versions";
+	if (recordDetailsTitle) recordDetailsTitle.textContent = uiTexts.showVersionDetails || 'Versions';
 	if (recordDetailsCloseButton && recordDetailsDialog) {
 		recordDetailsCloseButton.addEventListener("click", () => recordDetailsDialog.close());
 	}

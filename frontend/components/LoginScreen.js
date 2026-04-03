@@ -9,6 +9,7 @@
  */
 
 import { fetchJson, setCurrentUserKey } from '../services/ApiClient.js';
+import { uiTexts } from '../config/ui-texts.js';
 
 const ALLOWED_ROLES = ['DICTIONARY_READER', 'DICTIONARY_UPDATER'];
 
@@ -21,6 +22,14 @@ export function setupLoginScreen(onLoginSuccess) {
   const errorEl = document.getElementById('loginError');
 
   if (!select || !button || !errorEl) return;
+
+  const loginTitle = loginScreen.querySelector('.login-title');
+  const loginSubtitle = loginScreen.querySelector('.login-subtitle');
+  const loginLabel = loginScreen.querySelector('.login-label');
+  if (loginTitle) loginTitle.textContent = uiTexts.loginTitle || 'DMT';
+  if (loginSubtitle) loginSubtitle.textContent = uiTexts.loginSubtitle || 'Dictionary Management Tool';
+  if (loginLabel) loginLabel.textContent = uiTexts.loginLabel || 'Login:';
+  if (button) button.textContent = uiTexts.loginButton || 'Login';
 
   button.addEventListener('click', async () => {
     const userKey = select.value;
@@ -41,9 +50,9 @@ export function setupLoginScreen(onLoginSuccess) {
       if (!hasAccess) {
         setCurrentUserKey('');
         if (!hasAnyRoleInDb) {
-          errorEl.textContent = 'Access Denied.\nLogin is not existing.';
+          errorEl.textContent = uiTexts.loginErrorNotFound || 'Access Denied.\nLogin is not existing.';
         } else {
-          errorEl.textContent = 'Access denied.\nUser does not have DICTIONARY_READER or DICTIONARY_UPDATER role.';
+          errorEl.textContent = uiTexts.loginErrorNoRole || 'Access denied.\nUser does not have DICTIONARY_READER or DICTIONARY_UPDATER role.';
         }
         button.disabled = false;
         return;
@@ -52,7 +61,7 @@ export function setupLoginScreen(onLoginSuccess) {
       onLoginSuccess(userKey);
     } catch (err) {
       setCurrentUserKey('');
-      errorEl.textContent = 'Could not validate login. Please try again.';
+      errorEl.textContent = uiTexts.loginErrorGeneral || 'Could not validate login. Please try again.';
       button.disabled = false;
     }
   });

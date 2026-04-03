@@ -42,6 +42,15 @@ function resolveCheckOutLocationFromRow(row) {
   return value ? String(value).trim() : "";
 }
 
+function resolveBaseDictionaryVersionKeyFromRow(row) {
+  const candidates = [
+    row && row.DICTIONARY_VERSION_KEY,
+    row && row.BASE_DICTIONARY_VERSION_KEY
+  ];
+  const value = candidates.find((item) => item !== undefined && item !== null && String(item).trim().length > 0);
+  return value ? String(value).trim() : "";
+}
+
 async function getCheckOutDetailsRows(dictionaryKey) {
   const sqlText = `
     SELECT *
@@ -56,8 +65,10 @@ async function getExistingCheckOutLocation(dictionaryKey) {
   const rows = await getCheckOutDetailsRows(dictionaryKey);
   const row = Array.isArray(rows) ? rows.find((item) => resolveCheckOutLocationFromRow(item)) : null;
   const location = resolveCheckOutLocationFromRow(row);
+  const dictionaryVersionKey = resolveBaseDictionaryVersionKeyFromRow(row);
   return {
     location,
+    dictionaryVersionKey,
     rows: Array.isArray(rows) ? rows : []
   };
 }

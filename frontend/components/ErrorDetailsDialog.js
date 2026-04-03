@@ -37,7 +37,7 @@ export function setupErrorDetailsDialog() {
       const textToCopy = buildCopyText();
       navigator.clipboard.writeText(textToCopy).then(() => {
         const original = _copyButton.textContent;
-        _copyButton.textContent = '✓ Copied';
+        _copyButton.textContent = uiTexts.copied || '✓ Copied';
         setTimeout(() => {
           _copyButton.textContent = original;
         }, 1800);
